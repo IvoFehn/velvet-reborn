@@ -2,20 +2,218 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 
+  Hier definieren wir grundlegende CSS-Variablen für
+  Hintergrund- und Schriftfarbe mit einer hellen und
+  einer dunklen Variante, die per prefers-color-scheme
+  angesprochen werden kann.
+*/
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --accent-color: #bfa26a; /* Gold-Akzent */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --accent-color: #bfa26a;
   }
 }
 
 body {
+  margin: 0;
+  padding: 0;
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* 
+  Tailwind-Layer zum Überschreiben. 
+  Hier stellen wir sicher, dass unsere Root-Variablen 
+  auch per Tailwind-Klassen einheitlich genutzt werden können.
+*/
+@layer base {
+  :root {
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* 
+      Falls du manuell einen Dark Mode via .dark class aktivieren möchtest, 
+      kannst du das hier überschreiben. 
+      Im Normalfall reicht prefers-color-scheme, 
+      aber du könntest hier bei Bedarf weitere Variablen setzen. 
+    */
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* 
+  Die folgenden Klassen überschreiben das Standardlayout der Navbar 
+  bzw. des responsive-navbar-react-Pakets 
+  und passen alles an unser edles, dunkles Layout an.
+*/
+
+:root {
+  --primary-bg: #1a1a1a;
+  --secondary-bg: #2d2d2d;
+  --accent-color: #4a90e2;
+  --text-primary: #ffffff;
+  --text-secondary: #cccccc;
+  --border-radius: 8px;
+  --transition-speed: 0.3s;
+}
+
+/* Header / Navbar-Container */
+.header {
+  background-color: #1b1b1b;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+/* Navbar – Alignment und Grund-Layout */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem 1.5rem;
+  background-color: #1b1b1b;
+}
+
+/* Hamburger-Menü-Button (wird auf Mobile angezeigt) */
+.hamburger {
+  display: none;
+  cursor: pointer;
+}
+
+/* Hamburger-Balken */
+.bar {
+  display: block;
+  width: 25px;
+  height: 3px;
+  margin: 5px auto;
+  background-color: #fff;
+  transition: all 0.3s ease-in-out;
+}
+
+/* Off-Canvas-Menü / Mobile-Menü */
+.nav-menu {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Abstand der einzelnen Menü-Elemente */
+.nav-item {
+  margin-left: 3rem;
+}
+
+/* 
+  Links im Navbar-Menü – großes Schriftbild, 
+  dezent mit einem Gold-Hover-Effekt.
+*/
+.nav-link {
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: #ffffff;
+  transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+  color: var(--accent-color);
+}
+
+/* Logo-Text */
+.nav-logo {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+/* Breakpoint: Mobile */
+@media only screen and (max-width: 768px) {
+  .nav-menu {
+    position: fixed;
+    left: -100%;
+    top: 5rem;
+    flex-direction: column;
+    background-color: #111;
+    width: 100%;
+    text-align: center;
+    transition: 0.3s;
+    box-shadow: 0 10px 27px rgba(0, 0, 0, 0.5);
+    border-radius: 0; /* oder 10px, wenn du abgerundete Ecken möchtest */
+  }
+
+  .nav-menu.active {
+    left: 0;
+  }
+
+  .nav-item {
+    margin: 2rem 0;
+  }
+
+  /* Hamburger-Menü wird sichtbar */
+  .hamburger {
+    display: block;
+  }
+
+  .hamburger.active .bar:nth-child(2) {
+    opacity: 0;
+  }
+
+  .hamburger.active .bar:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+  }
+
+  .hamburger.active .bar:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+  }
+}
+
+@media (max-width: 600px) {
+  .MuiStepper-root {
+    overflow-x: auto;
+    padding: 16px 0;
+  }
+
+  .MuiStepLabel-label {
+    font-size: 0.75rem;
+  }
+}
+
+/* Animierter Regenbogen-Border */
+@keyframes rotate {
+  to {
+    --angle: 360deg;
+  }
+}
+
+/* Damit CSS-Variablen animiert werden können – einige Browser benötigen @property */
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.rainbow-border {
+  border: 2px solid;
+  /* border-image erzeugt einen Border mit einem konischen Farbverlauf */
+  border-image: conic-gradient(
+      from var(--angle),
+      red,
+      yellow,
+      lime,
+      aqua,
+      blue,
+      magenta,
+      red
+    )
+    1;
+  animation: 10s rotate linear infinite;
 }

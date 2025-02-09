@@ -1,0 +1,289 @@
+/* pages/tickets/Ticket.module.css */
+
+/* Hauptcontainer */
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f0f2f5;
+}
+
+/* Header-Bereich */
+.header {
+  padding: 1rem;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.subject {
+  font-size: 1.1rem;
+  margin: 0;
+  color: #2d3436;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.status {
+  font-size: 0.85rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-weight: 500;
+}
+
+.status.open {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status.closed {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.statusButton {
+  background: #4a5568;
+  color: white;
+  border: none;
+  padding: 0.35rem 1rem;
+  border-radius: 1.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.statusButton:hover {
+  opacity: 0.9;
+}
+
+/* Änderungen im Chat-Container Bereich */
+.chatContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  height: calc(100% - 60px); /* Header-Höhe abziehen */
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  padding-bottom: 0;
+  scroll-behavior: smooth;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  /* Neue Stile für begrenzte Höhe */
+  max-height: calc(100vh - 180px); /* Viewport-Höhe minus Header und Input */
+  height: 100%;
+}
+
+/* Anpassung für Mobile */
+@media (max-width: 640px) {
+  .messages {
+    max-height: calc(var(--vh, 1vh) * 100 - 160px);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .chatContainer {
+    height: calc(100% - 50px);
+  }
+}
+
+/* Desktop-Anpassung */
+@media (min-width: 768px) {
+  .messages {
+    max-height: calc(90vh - 140px);
+  }
+}
+
+/* Nachrichtenstile */
+.message {
+  display: flex;
+  gap: 0.75rem;
+  max-width: 90%;
+}
+
+.message.user {
+  align-self: flex-start;
+}
+
+.message.admin {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.message.descriptionMessage {
+  background: #eef5ff;
+  border-radius: 1rem;
+  padding: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  max-width: 90%;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e9ecef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.content {
+  padding: 0.75rem;
+  border-radius: 1rem;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  max-width: 80%;
+}
+
+.message.admin .content {
+  background: #4299e1;
+  color: white;
+}
+
+.sender {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: #718096;
+}
+
+.message.admin .sender {
+  color: #ebf8ff;
+}
+
+.text {
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.timestamp {
+  font-size: 0.7rem;
+  margin-top: 0.25rem;
+  text-align: right;
+  opacity: 0.7;
+}
+
+/* Eingabeformular */
+.messageForm {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  padding: 1rem;
+  border-top: 1px solid #e2e8f0;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  display: flex;
+  gap: 0.5rem;
+  z-index: 1000;
+}
+
+.input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 1px solid #cbd5e0;
+  border-radius: 2rem;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.input:focus {
+  border-color: #4299e1;
+  box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.2);
+}
+
+.sendButton {
+  background: #4299e1;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 2rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sendButton:hover {
+  background: #3182ce;
+}
+
+/* Scrollbar Styling */
+.messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.messages::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.messages::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.messages::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Responsive Anpassungen */
+@media (max-width: 640px) {
+  .container {
+    height: calc(var(--vh, 1vh) * 100);
+  }
+
+  .messageForm {
+    padding: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+
+  .messages {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .content {
+    max-width: 75%;
+  }
+
+  .input {
+    padding: 0.75rem;
+  }
+
+  .sendButton {
+    padding: 0.75rem 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    height: 90vh;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+  }
+
+  .messageForm {
+    position: sticky;
+    bottom: 0;
+    padding: 1rem;
+  }
+}
