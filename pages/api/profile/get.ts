@@ -2,7 +2,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/lib/dbConnect";
 import Profile, { IProfile } from "@/models/Profile";
-import "@/models";
+import Item from "@/models/Item"; // expliziter Import, der nun auch genutzt wird
 
 export default async function handler(
   req: NextApiRequest,
@@ -12,9 +12,10 @@ export default async function handler(
 
   if (req.method !== "GET") {
     console.log("Ungültige Methode:", req.method);
-    return res
-      .status(405)
-      .json({ success: false, message: "Methode nicht erlaubt" });
+    return res.status(405).json({
+      success: false,
+      message: "Methode nicht erlaubt",
+    });
   }
 
   try {
@@ -23,7 +24,7 @@ export default async function handler(
         path: "inventory",
         populate: {
           path: "item",
-          model: "Item",
+          model: Item.modelName, // Hier wird das importierte Item genutzt
         },
       })
       .lean<IProfile>()
@@ -37,10 +38,12 @@ export default async function handler(
     }
 
     console.log("Profil erfolgreich abgerufen:", profile._id);
-
     return res.status(200).json({ success: true, data: profile });
   } catch (error) {
     console.error("Fehler beim Abrufen des Profils:", error);
-    return res.status(500).json({ success: false, message: "Serverfehler" });
+    return res.status(500).json({
+      success: false,
+      message: "Serverfehler",
+    });
   }
 }
