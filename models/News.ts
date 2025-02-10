@@ -5,7 +5,7 @@ import mongoose, { Document, Schema, Model, models } from "mongoose";
 export type Rating = 1 | 2 | 3 | 4 | 5;
 
 /** News-Typen */
-export type NewsType = "general" | "review";
+export type NewsType = "general" | "review" | "failed";
 
 /** Dokumenttyp – beinhaltet auch Mongoose-spezifische Felder */
 export interface INews extends Document {

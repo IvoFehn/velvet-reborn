@@ -120,8 +120,62 @@ export default async function handler(
       }
       break;
 
+    case "PUT":
+      try {
+        // Erwarte im Request-Body die Felder "id" und "newStatus"
+        const { id, newStatus } = req.body;
+
+        if (!id || !newStatus) {
+          return res.status(400).json({
+            success: false,
+            message: "ID und newStatus müssen übergeben werden.",
+          });
+        }
+
+        // Optionale Validierung des Status
+        const allowedStatuses = [
+          "NEW",
+          "ACCEPTED",
+          "PENDING",
+          "DONE",
+          "FAILED",
+        ];
+        if (!allowedStatuses.includes(newStatus)) {
+          return res.status(400).json({
+            success: false,
+            message: "Ungültiger Status.",
+          });
+        }
+
+        // Aktualisiere den Generator anhand der ID
+        const updatedGenerator = await Generator.findByIdAndUpdate(
+          id,
+          { status: newStatus },
+          { new: true, runValidators: true }
+        );
+
+        if (!updatedGenerator) {
+          return res.status(404).json({
+            success: false,
+            message: "Generator nicht gefunden.",
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          data: updatedGenerator,
+        });
+      } catch (error) {
+        console.error("Fehler beim Aktualisieren des Generators:", error);
+        return res.status(500).json({
+          success: false,
+          message: "Serverfehler beim Aktualisieren des Generators",
+        });
+      }
+      break;
+
     default:
-      res.setHeader("Allow", ["GET", "POST"]);
+      res.setHeader("Allow", ["GET", "POST", "PUT"]);
       res.status(405).json({
         success: false,
         message: `Methode ${req.method} ist nicht erlaubt`,

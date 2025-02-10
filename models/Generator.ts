@@ -3,7 +3,7 @@ import { Schema, model, models, Model, Document } from "mongoose";
 
 // **Exportiertes** Interface für das Dokument
 export interface IGenerator extends Document {
-  status?: "NEW" | "ACCEPTED" | "PENDING" | "DECLINED" | "DONE";
+  status?: "NEW" | "ACCEPTED" | "PENDING" | "DECLINED" | "DONE" | "FAILED";
   pose?: {
     chosenPose?: {
       id?: string;
@@ -83,7 +83,7 @@ const GeneratorSchema = new Schema<IGenerator>(
   {
     status: {
       type: String,
-      enum: ["NEW", "ACCEPTED", "PENDING"],
+      enum: ["NEW", "ACCEPTED", "PENDING", "DONE", "DECLINED", "FAILED"],
       default: "NEW",
     },
     pose: {

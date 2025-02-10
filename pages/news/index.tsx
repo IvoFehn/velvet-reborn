@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // components/NewsReviewForm.tsx
 
 import StarRating from "@/components/starRating/StarRating";
@@ -12,9 +13,9 @@ import { useEffect, useState, ChangeEvent, FormEvent } from "react";
 /** Rating scale from 1 to 5 */
 export type Rating = 1 | 2 | 3 | 4 | 5;
 
-/** Daten, die im Formular für eine Bewertung erfasst werden */
+/** Erweiterte Formulardaten, inkl. Felder für fehlgeschlagene Generatoren */
 export interface GeneratorReviewFormData {
-  generatorId: string; // Referenz auf den zu bewertenden Generator (oder das verknüpfte Ticket)
+  generatorId: string; // Referenz auf den zu bewertenden Generator
   title: string;
   message: string;
   obedience: Rating;
@@ -31,6 +32,10 @@ export interface GeneratorReviewFormData {
   improvementSuggestion: string;
   additionalNotes: string;
   seen: boolean;
+  // Neue Felder für den "FAILED"-Flow:
+  isFailed: boolean;
+  goldDeduction: number;
+  expDeduction: number;
 }
 
 const initialFormData: GeneratorReviewFormData = {
@@ -51,6 +56,9 @@ const initialFormData: GeneratorReviewFormData = {
   improvementSuggestion: "",
   additionalNotes: "",
   seen: false,
+  isFailed: false,
+  goldDeduction: 0,
+  expDeduction: 0,
 };
 
 /** Erweiterte Event-Typdefinition – Bonus-Events können einen extra bonusPercentage haben */
@@ -74,7 +82,7 @@ const NewsReviewForm: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string>("");
 
-  // Aktive Bonus-Events laden (Events mit Enddatum in der Zukunft)
+  // Aktive Bonus-Events laden
   const [activeEvents, setActiveEvents] = useState<EventType[]>([]);
   const fetchActiveEvents = async () => {
     try {
@@ -108,8 +116,7 @@ const NewsReviewForm: React.FC = () => {
 
   const handleSelectGenerator = (generator: GeneratorData) => {
     setSelectedGenerator(generator);
-    // Hier wird angenommen, dass generator._id als Referenz verwendet werden kann.
-    // Falls deine Datenstruktur anders ist (z. B. generator.ticketId), passe das hier an.
+    // Setze die generatorId und initialisiere den Rest des Formulars
     setFormData({ ...initialFormData, generatorId: generator._id ?? "" });
   };
 
@@ -117,8 +124,13 @@ const NewsReviewForm: React.FC = () => {
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value, type } = e.target;
+    // Checkbox- und Number-Inputs entsprechend behandeln:
     const newValue =
-      type === "checkbox" ? (e.target as HTMLInputElement).checked : value;
+      type === "checkbox"
+        ? (e.target as HTMLInputElement).checked
+        : type === "number"
+        ? Number(value)
+        : value;
 
     setFormData((prev) => ({
       ...prev,
@@ -130,54 +142,95 @@ const NewsReviewForm: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Erstelle die Review-Nachricht
-      const reviewNews: INewsInput = {
-        ...formData,
-        type: "review", // Typ "review" wie erwartet
-        createdAt: new Date().toISOString(),
-      };
-      await createNews(reviewNews);
+      if (formData.isFailed) {
+        // *** Fall: Generator als "failed" markieren ***
 
-      // Goldberechnung anhand aktiver Events
-      const bonusPercentages = activeEvents
-        .filter((event) => event.bonusPercentage)
-        .map((event) => event.bonusPercentage!);
+        // Erstelle ein News-Objekt mit Typ "failed"
+        // (Stelle sicher, dass in deinem News-Modell "failed" als Typ erlaubt ist.)
+        const failedNews: INewsInput = {
+          title: formData.title,
+          message: formData.message,
+          createdAt: new Date().toISOString(),
+          type: "failed" as any,
+          seen: formData.seen,
+        };
 
-      const goldEarned = calculateGoldReward(formData, {
-        extraBonusPercentages: bonusPercentages,
-      });
+        await createNews(failedNews);
 
-      // Update des Profils: Gold hinzufügen
-      await fetch("/api/profile/update", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gold: goldEarned }),
-      });
-
-      // *** Neuer Code: Ticket-Status aktualisieren ***
-      // Hier nutzen wir den generischen API-Endpunkt /api/tickets/changeStatus
-      // Wir übergeben die ticketId und den gewünschten neuen Status ("DONE" oder "CLOSED").
-      // Dabei gehen wir davon aus, dass der Generator entweder eine Eigenschaft ticketId besitzt
-      // oder seine _id als Ticket-ID verwendet werden kann.
-      if (selectedGenerator && selectedGenerator._id) {
-        await fetch("/api/tickets/changeStatus", {
+        // Profil aktualisieren: Gold und Exp abziehen (als negative Werte)
+        await fetch("/api/profile/update", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            ticketId: selectedGenerator._id, // Passe diesen Wert ggf. an, wenn du eine eigene ticketId hast
-            newStatus: "DONE", // Alternativ: "CLOSED"
+            gold: -formData.goldDeduction,
+            exp: -formData.expDeduction,
           }),
         });
+
+        // Aktualisiere den Generatorstatus über den /api/generator Endpoint auf "FAILED"
+        if (selectedGenerator && selectedGenerator._id) {
+          await fetch("/api/generator", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: selectedGenerator._id,
+              newStatus: "FAILED",
+            }),
+          });
+        }
+
+        setSuccessMessage(
+          `Generator wurde als fehlgeschlagen markiert! ${formData.goldDeduction} Gold und ${formData.expDeduction} Exp wurden abgezogen.`
+        );
+      } else {
+        // *** Normale Bewertung (Review) ***
+
+        const reviewNews: INewsInput = {
+          ...formData,
+          type: "review",
+          createdAt: new Date().toISOString(),
+        };
+        await createNews(reviewNews);
+
+        // Goldberechnung anhand aktiver Events
+        const bonusPercentages = activeEvents
+          .filter((event) => event.bonusPercentage)
+          .map((event) => event.bonusPercentage!);
+
+        const goldEarned = calculateGoldReward(formData, {
+          extraBonusPercentages: bonusPercentages,
+        });
+
+        // Profil aktualisieren: Gold hinzufügen
+        await fetch("/api/profile/update", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ gold: goldEarned }),
+        });
+
+        // Aktualisiere den Generatorstatus über den /api/generator Endpoint auf "DONE"
+        if (selectedGenerator && selectedGenerator._id) {
+          await fetch("/api/generator", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: selectedGenerator._id,
+              newStatus: "DONE",
+            }),
+          });
+        }
+
+        setSuccessMessage(
+          `Bewertung erfolgreich erstellt! Du hast ${goldEarned} Gold erhalten.`
+        );
       }
 
-      setSuccessMessage(
-        `Bewertung erfolgreich erstellt! Du hast ${goldEarned} Gold erhalten.`
-      );
+      // Formular zurücksetzen und Generatorauswahl löschen
       setFormData(initialFormData);
       setSelectedGenerator(null);
-      sendTelegramMessage("user", "Eine neue Bewertung liegt vor.");
+      sendTelegramMessage("user", "Eine neue News wurde erstellt.");
     } catch (error) {
-      console.error("Error creating review:", error);
+      console.error("Error creating news:", error);
     } finally {
       setLoading(false);
     }
@@ -227,8 +280,8 @@ const NewsReviewForm: React.FC = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Grundlegende Felder */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Text Inputs */}
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -243,7 +296,6 @@ const NewsReviewForm: React.FC = () => {
                     required
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Nachricht
@@ -258,7 +310,7 @@ const NewsReviewForm: React.FC = () => {
                 </div>
               </div>
 
-              {/* Rating Categories */}
+              {/* Bewertungsoptionen */}
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
@@ -269,10 +321,9 @@ const NewsReviewForm: React.FC = () => {
                     onChange={(v) => setFormData({ ...formData, obedience: v })}
                   />
                 </div>
-
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
-                    Wie war die Stimmung währenddessen?
+                    Stimmung während dem Sex
                   </label>
                   <StarRating
                     rating={formData.vibeDuringSex}
@@ -281,10 +332,9 @@ const NewsReviewForm: React.FC = () => {
                     }
                   />
                 </div>
-
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
-                    Wie war die Stimmung danach?
+                    Stimmung nach dem Sex
                   </label>
                   <StarRating
                     rating={formData.vibeAfterSex}
@@ -293,10 +343,9 @@ const NewsReviewForm: React.FC = () => {
                     }
                   />
                 </div>
-
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
-                    Wie war der Orgasmus?
+                    Orgasmus
                   </label>
                   <StarRating
                     rating={formData.orgasmIntensity}
@@ -305,10 +354,9 @@ const NewsReviewForm: React.FC = () => {
                     }
                   />
                 </div>
-
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
-                    Gab es Beschwerden?
+                    Schmerzempfinden
                   </label>
                   <StarRating
                     rating={formData.painlessness}
@@ -317,10 +365,9 @@ const NewsReviewForm: React.FC = () => {
                     }
                   />
                 </div>
-
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
-                    Wie sehr war sie an deinen Eiern interessiert?
+                    Interesse an deinen Eiern
                   </label>
                   <StarRating
                     rating={formData.ballsWorshipping}
@@ -329,10 +376,9 @@ const NewsReviewForm: React.FC = () => {
                     }
                   />
                 </div>
-
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
-                    Wie sehr war sie an deinem Sperma interessiert?
+                    Interesse an deinem Sperma
                   </label>
                   <StarRating
                     rating={formData.cumWorshipping}
@@ -341,10 +387,9 @@ const NewsReviewForm: React.FC = () => {
                     }
                   />
                 </div>
-
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
-                    Hat sie alles dafür getan, damit du gut kommst?
+                    Hat sie alles getan, damit du gut kommst?
                   </label>
                   <StarRating
                     rating={formData.didEverythingForHisPleasure}
@@ -359,7 +404,7 @@ const NewsReviewForm: React.FC = () => {
               </div>
             </div>
 
-            {/* Checkboxes */}
+            {/* Checkboxes für zusätzliche Optionen */}
             <div className="flex space-x-6">
               <label className="flex items-center space-x-2">
                 <input
@@ -371,7 +416,6 @@ const NewsReviewForm: React.FC = () => {
                 />
                 <span className="text-gray-700">Squirting erfolgt?</span>
               </label>
-
               <label className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -384,7 +428,7 @@ const NewsReviewForm: React.FC = () => {
               </label>
             </div>
 
-            {/* Additional Fields */}
+            {/* Zusätzliche Textfelder */}
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -399,7 +443,6 @@ const NewsReviewForm: React.FC = () => {
                   required
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Zusätzliche Notizen
@@ -414,13 +457,62 @@ const NewsReviewForm: React.FC = () => {
               </div>
             </div>
 
+            {/* Option: Generator als fehlgeschlagen markieren */}
+            <div className="space-y-4 border-t pt-6">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  name="isFailed"
+                  checked={formData.isFailed}
+                  onChange={handleChange}
+                  className="w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                />
+                <span className="text-red-600 font-medium">
+                  Generator als fehlgeschlagen markieren
+                </span>
+              </label>
+
+              {formData.isFailed && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Gold abziehen
+                    </label>
+                    <input
+                      type="number"
+                      name="goldDeduction"
+                      value={formData.goldDeduction}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      min="0"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Exp abziehen
+                    </label>
+                    <input
+                      type="number"
+                      name="expDeduction"
+                      value={formData.expDeduction}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      min="0"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="border-t pt-6">
               <button
                 type="submit"
                 disabled={loading}
                 className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-300"
               >
-                {loading ? "Wird übermittelt..." : "Bewertung absenden"}
+                {loading ? "Wird übermittelt..." : "News absenden"}
               </button>
             </div>
           </form>
