@@ -1,4 +1,5 @@
 import { Html, Head, Main, NextScript } from "next/document";
+import Link from "next/link";
 
 export default function Document() {
   return (
@@ -59,7 +60,9 @@ export default function Document() {
               Die Regeln müssen erneut und aufmerksam gelesen werden, bevor du
               starten kannst.
             </p>
-            <a href="/rules">Zu den Regeln</a>
+            <Link href="/rules" legacyBehavior>
+              <a>Zu den Regeln</a>
+            </Link>
           </div>
         </div>
 
