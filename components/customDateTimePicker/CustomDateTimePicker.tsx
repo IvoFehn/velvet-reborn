@@ -139,11 +139,11 @@ const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
                   : ""
               }
               ${
-                day?.isSameOrBefore(minDate, "day")
+                day && day.isBefore(minDate, "day")
                   ? "opacity-50 cursor-not-allowed"
                   : ""
               }`}
-            disabled={day?.isSameOrBefore(minDate, "day")}
+            disabled={day ? day.isBefore(minDate, "day") : true}
           >
             {day ? day.format("D") : ""}
           </button>

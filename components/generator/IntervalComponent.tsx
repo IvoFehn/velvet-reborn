@@ -34,8 +34,9 @@ const IntervalComponent: React.FC<Props> = ({ currentValue, setValue }) => {
       return;
     }
 
-    if (newDate.isBefore(dayjs())) {
-      setError("Datum muss in der Zukunft liegen");
+    // Überprüfen, ob das Datum (inklusive Uhrzeit) mindestens 5 Minuten in der Zukunft liegt
+    if (newDate.diff(dayjs(), "minute") < 5) {
+      setError("Datum muss mindestens 5 Minuten in der Zukunft liegen");
       return;
     }
 

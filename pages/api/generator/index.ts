@@ -138,6 +138,7 @@ export default async function handler(
           "ACCEPTED",
           "PENDING",
           "DONE",
+          "DECLINED",
           "FAILED",
         ];
         if (!allowedStatuses.includes(newStatus)) {

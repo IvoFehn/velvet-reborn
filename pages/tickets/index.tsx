@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -25,6 +26,9 @@ import {
   useTheme,
   BottomNavigation,
   BottomNavigationAction,
+  Snackbar,
+  Alert,
+  SnackbarCloseReason,
 } from "@mui/material";
 import {
   MailOutline,
@@ -84,6 +88,27 @@ function UserView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Snackbar State
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error";
+  }>({ open: false, message: "", severity: "success" });
+
+  // onClose-Handler für die Snackbar (zwei Parameter: event und reason)
+  const handleSnackbarClose = (
+    event: React.SyntheticEvent<Element, Event> | Event,
+    reason: SnackbarCloseReason
+  ) => {
+    if (reason === "clickaway") return;
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
+  // onClose-Handler für das Alert (nur ein Parameter, wie von Alert erwartet)
+  const handleAlertClose = (event: React.SyntheticEvent<Element, Event>) => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
   // ---------------------- FETCH-FUNKTIONEN ----------------------
 
   /** Offene Tickets laden */
@@ -127,12 +152,15 @@ function UserView() {
     if (!subject || !description) return;
 
     // Validierung: Bei Änderungs- und Ablehnungsanträgen muss ein Generator ausgewählt werden.
-    // Bei "Sonstiges" ist die Auswahl optional.
     if (
       ["Änderungsantrag", "Ablehnungsantrag"].includes(subject) &&
       !selectedGeneratorId
     ) {
-      alert("Bitte wählen Sie einen Generator aus.");
+      setSnackbar({
+        open: true,
+        message: "Bitte wählen Sie einen Generator aus.",
+        severity: "error",
+      });
       return;
     }
 
@@ -148,28 +176,65 @@ function UserView() {
       });
 
       if (res.ok) {
-        alert("Ticket erfolgreich erstellt!");
+        setSnackbar({
+          open: true,
+          message: "Ticket erfolgreich erstellt!",
+          severity: "success",
+        });
         setShowNewTicket(false);
         await fetchOpenTickets(); // Tickets neu laden
+
+        // Falls ein Generator ausgewählt wurde, aktualisiere dessen Status auf "PENDING"
+        if (selectedGeneratorId) {
+          try {
+            const putRes = await fetch("/api/generator", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                id: selectedGeneratorId,
+                newStatus: "PENDING",
+              }),
+            });
+            if (!putRes.ok) {
+              console.error(
+                "Fehler beim Aktualisieren des Generators auf PENDING",
+                await putRes.json()
+              );
+            }
+          } catch (error) {
+            console.error("Fehler beim Aktualisieren des Generators:", error);
+          }
+        }
 
         // Reset
         setSubject(TICKET_SUBJECTS[0]);
         setDescription("");
         setSelectedGeneratorId("");
 
-        // Telegram-Benachrichtigung
-        sendTelegramMessage(
+        // Telegram-Benachrichtigung über die vorhandene Funktion ausführen
+        const telegramResponse = await sendTelegramMessage(
           "admin",
           `Ein neuer Antrag wurde eingereicht am ${dayjs()
             .locale("de")
             .format("DD.MM.YYYY HH:mm:ss")}`
         );
+        if (!telegramResponse.success) {
+          console.error("Telegram message error:", telegramResponse.error);
+        }
       } else {
-        alert("Fehler beim Erstellen des Tickets.");
+        setSnackbar({
+          open: true,
+          message: "Fehler beim Erstellen des Tickets.",
+          severity: "error",
+        });
       }
     } catch (err) {
       console.error(err);
-      alert("Fehler beim Erstellen des Tickets.");
+      setSnackbar({
+        open: true,
+        message: "Fehler beim Erstellen des Tickets.",
+        severity: "error",
+      });
     }
   };
 
@@ -238,7 +303,6 @@ function UserView() {
   }, [subject]);
 
   // ---------------------- RENDERING ----------------------
-
   return (
     <Box
       sx={{
@@ -439,6 +503,22 @@ function UserView() {
           </Button>
         </Box>
       </Dialog>
+
+      {/* Snackbar: unten zentriert */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleAlertClose}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
