@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // pages/index.tsx
 import React, { useEffect, useState } from "react";
+import { useWindowSize } from "react-use"; // react-use Hook importieren
 import {
   BellIcon,
   DocumentTextIcon,
@@ -11,6 +12,7 @@ import { GeneratorData } from "@/types";
 import dayjs from "dayjs";
 import "dayjs/locale/de"; // Deutsches Locale importieren
 import MoodTachometer from "@/components/moodTachometer/MoodTachometer";
+import Confetti from "react-confetti"; // React-Confetti importieren
 
 dayjs.locale("de");
 
@@ -37,11 +39,16 @@ export default function HomePage() {
   const [activeEvent, setActiveEvent] = useState(false);
   const [bannerVisible, setBannerVisible] = useState(true);
 
+  // Verwendung des useWindowSize Hooks von react-use
+  const { width, height } = useWindowSize();
+
   // Fetching der Generatoren
   useEffect(() => {
     const fetchGenerators = async () => {
       try {
-        const response = await fetch("/api/generator?exclude_status=DONE");
+        const response = await fetch(
+          "/api/generator?exclude_status=DONE&exclude_status=DECLINED"
+        );
         if (!response.ok)
           throw new Error("Fehler beim Abrufen der Generatoren");
         const data = await response.json();
@@ -85,6 +92,7 @@ export default function HomePage() {
     fetchNewsMessages();
   }, []);
 
+  // Prüfen, ob ein aktives Event vorliegt
   useEffect(() => {
     const checkEvents = () => {
       const nowUTC = new Date();
@@ -311,7 +319,12 @@ export default function HomePage() {
 
   return (
     <>
-      {/* Banner oben anzeigen, falls ein aktives Event vorliegt und nicht manuell geschlossen wurde */}
+      {/* Confetti anzeigen, wenn ein aktives Event vorliegt */}
+      {activeEvent && (
+        <Confetti width={width} height={height} numberOfPieces={200} />
+      )}
+
+      {/* Banner unten anzeigen, falls ein aktives Event vorliegt und nicht manuell geschlossen wurde */}
       {activeEvent && bannerVisible && (
         <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-blue-600 to-blue-800 text-white py-3 px-4 flex items-center justify-between shadow-lg z-50">
           <div>

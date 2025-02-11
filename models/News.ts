@@ -1,7 +1,6 @@
-// models/News.ts
 import mongoose, { Document, Schema, Model, models } from "mongoose";
 
-/** Rating scale from 1 to 5 */
+/** Rating-Skala von 1 bis 5 */
 export type Rating = 1 | 2 | 3 | 4 | 5;
 
 /** News-Typen */
@@ -10,7 +9,7 @@ export type NewsType = "general" | "review" | "failed";
 /** Dokumenttyp – beinhaltet auch Mongoose-spezifische Felder */
 export interface INews extends Document {
   title: string;
-  message: string;
+  message?: string; // optional
   createdAt: Date;
   type: NewsType;
   seen: boolean;
@@ -18,26 +17,26 @@ export interface INews extends Document {
 
 /** Erweiterung für Reviews */
 export interface INewsReview extends INews {
-  obedience: Rating;
-  didSquirt: boolean;
-  vibeDuringSex: Rating;
-  vibeAfterSex: Rating;
-  orgasmIntensity: Rating;
-  painlessness: Rating;
-  wasAnal: boolean;
-  ballsWorshipping: Rating;
-  cumWorshipping: Rating;
-  didEverythingForHisPleasure: Rating;
+  obedience?: Rating;
+  didSquirt?: boolean;
+  vibeDuringSex?: Rating;
+  vibeAfterSex?: Rating;
+  orgasmIntensity?: Rating;
+  painlessness?: Rating;
+  wasAnal?: boolean;
+  ballsWorshipping?: Rating;
+  cumWorshipping?: Rating;
+  didEverythingForHisPleasure?: Rating;
   bestMoment?: string;
-  improvementSuggestion: string;
-  additionalNotes: string;
+  improvementSuggestion?: string; // optional
+  additionalNotes?: string; // optional
 }
 
 /** Interface für die Eingabedaten beim Erstellen eines News-Eintrags */
 export interface INewsInput {
   title: string;
-  message: string;
-  createdAt?: string; // Optional – falls nicht angegeben, kann der Default genutzt werden
+  message?: string; // optional
+  createdAt?: string; // Optional – falls nicht angegeben, wird der Default genutzt
   type: NewsType;
   seen?: boolean;
   // Felder für Reviews (optional, nur bei type === "review" erforderlich)
@@ -52,20 +51,18 @@ export interface INewsInput {
   cumWorshipping?: Rating;
   didEverythingForHisPleasure?: Rating;
   bestMoment?: string;
-  improvementSuggestion?: string;
-  additionalNotes?: string;
+  improvementSuggestion?: string; // optional
+  additionalNotes?: string; // optional
 }
 
-/** Basisfelder für allgemeine News */
 const NewsSchemaFields = {
   title: { type: String, required: true },
-  message: { type: String, required: true },
+  message: { type: String }, // optional – required entfernt
   createdAt: { type: Date, default: Date.now },
-  type: { type: String, enum: ["general", "review"], required: true },
+  type: { type: String, enum: ["general", "review", "failed"], required: true },
   seen: { type: Boolean, default: false },
 };
 
-/** Felder, die nur bei Reviews verwendet werden */
 const ReviewFields = {
   obedience: { type: Number, enum: [1, 2, 3, 4, 5] },
   didSquirt: { type: Boolean },
@@ -78,21 +75,21 @@ const ReviewFields = {
   cumWorshipping: { type: Number, enum: [1, 2, 3, 4, 5] },
   didEverythingForHisPleasure: { type: Number, enum: [1, 2, 3, 4, 5] },
   bestMoment: { type: String },
-  improvementSuggestion: { type: String },
-  additionalNotes: { type: String },
+  improvementSuggestion: { type: String }, // optional
+  additionalNotes: { type: String }, // optional
 };
 
 const NewsSchema = new Schema(
   {
     ...NewsSchemaFields,
-    ...ReviewFields, // Bei allgemeinen News werden diese Felder ungenutzt bleiben.
+    ...ReviewFields, // Bei allgemeinen News werden diese Felder ungenutzt bleiben
   },
   {
-    timestamps: false, // Wir nutzen hier explizit das Feld createdAt
+    timestamps: false, // Wir nutzen explizit das Feld createdAt
   }
 );
 
-// Hot Reload-sicher
+// Hot Reload-sicher: Falls das Modell bereits existiert, wird es wiederverwendet
 const News: Model<INews | INewsReview> =
   models.News || mongoose.model<INews | INewsReview>("News", NewsSchema);
 

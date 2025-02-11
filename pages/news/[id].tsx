@@ -1,5 +1,7 @@
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useWindowSize } from "react-use";
+import Confetti from "react-confetti";
 import {
   Container,
   Box,
@@ -29,6 +31,7 @@ import {
 } from "@mui/icons-material";
 import dayjs from "dayjs";
 import { keyframes } from "@emotion/react";
+import { sendTelegramMessage } from "@/util/sendTelegramMessage";
 
 // Keyframe-Animation: sanftes Hereinzoomen von unten
 const fadeInUp = keyframes`
@@ -74,22 +77,18 @@ const NewsDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // State für das geöffnete Modal
+  // State für Modal und Snackbar
   const [openModal, setOpenModal] = useState<string | null>(null);
-
-  // Snackbar-State
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
     "success"
   );
 
-  // Funktion zum Schließen der Snackbar
-  const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
-  };
+  // useWindowSize aus react-use: liefert aktuelle Fenstermaße
+  const { width, height } = useWindowSize();
 
-  // Mapping: Erklärungen für die einzelnen Bewertungen
+  // Mapping: Erklärungen für Bewertungen
   const ratingExplanations: Record<string, string> = {
     obedience:
       "Diese Bewertung misst, wie gehorsam der Partner war. Eine hohe Bewertung zeigt, dass er aufmerksam und folgsam war.",
@@ -101,7 +100,7 @@ const NewsDetailPage = () => {
     painlessness:
       "Diese Bewertung gibt an, wie problemlos der gesamte Auftrag verlaufen ist.",
     ballsWorshipping:
-      "Eier sind das wichtigste für dich. Sie produzieren Sperma. Diese Bewertung zeigt, wie sehr du ihnen Aufmerksamkeit geschenkt hast.",
+      "Eier sind das wichtigste für dich. Diese Bewertung zeigt, wie sehr du ihnen Aufmerksamkeit geschenkt hast.",
     cumWorshipping:
       "Sperma ist für dich weißes Gold. Die Bewertung misst, wie sehr du gezeigt hast, dass du Sperma liebst.",
     didEverythingForHisPleasure:
@@ -110,7 +109,7 @@ const NewsDetailPage = () => {
     wasAnal: "Diese Bewertung zeigt an, ob der Sex anal beinhaltete.",
   };
 
-  // Mapping: Titel, die im Modal angezeigt werden sollen
+  // Mapping: Titel für die Modale
   const ratingTitles: Record<string, string> = {
     obedience: "Gehorsam",
     vibeDuringSex: "Stimmung (während)",
@@ -149,6 +148,10 @@ const NewsDetailPage = () => {
         setSnackbarMessage("News als gesehen markiert.");
         setSnackbarSeverity("success");
         setSnackbarOpen(true);
+        sendTelegramMessage(
+          "admin",
+          `Der Nutzer hat eine News als gesehen markiert. ${window.location.href}`
+        );
       } else {
         setSnackbarMessage(
           result.message || "Fehler beim Aktualisieren des Gesehen-Status."
@@ -188,7 +191,7 @@ const NewsDetailPage = () => {
     fetchNews();
   }, [router.isReady, id]);
 
-  // Hilfsfunktion, um das Overall Rating bei Reviews zu berechnen (falls benötigt)
+  // Hilfsfunktion, um das Overall Rating bei Reviews zu berechnen
   const computeOverallRating = (news: NewsDetail): number => {
     const ratings: number[] = [];
     if (typeof news.obedience === "number") ratings.push(news.obedience);
@@ -248,350 +251,93 @@ const NewsDetailPage = () => {
     news.type === "review" ? computeOverallRating(news) : news.overallRating;
 
   return (
-    <Container maxWidth="md" sx={{ my: 4, px: { xs: 2, sm: 3 } }}>
-      <Paper
-        elevation={4}
-        sx={{
-          p: { xs: 2, sm: 3, md: 4 },
-          borderRadius: 3,
-          animation: `${fadeInUp} 0.6s ease-out`,
-          backgroundColor: "background.paper",
-        }}
-      >
-        {/* Kopfbereich */}
-        <Box
-          display="flex"
-          flexDirection={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-          alignItems="center"
-          mb={4}
+    <>
+      {/* Confetti-Effekt anzeigen, wenn das Overall Rating über 4 liegt */}
+      {displayedOverallRating > 4 && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: width,
+            height: height,
+            pointerEvents: "none",
+            zIndex: 9999,
+          }}
         >
-          <Typography
-            variant="h3"
-            component="h1"
-            gutterBottom
-            sx={{ mb: { xs: 2, sm: 0 }, fontWeight: "bold" }}
-          >
-            {news.title}
-          </Typography>
-        </Box>
+          <Confetti width={width} height={height} numberOfPieces={200} />
+        </div>
+      )}
 
-        {/* Meta-Informationen */}
-        <Box
-          mt={2}
-          display="flex"
-          flexDirection={{ xs: "column", sm: "row" }}
-          alignItems="center"
-          gap={2}
-          mb={4}
+      <Container maxWidth="md" sx={{ my: 4, px: { xs: 2, sm: 3 } }}>
+        <Paper
+          elevation={4}
+          sx={{
+            p: { xs: 2, sm: 3, md: 4 },
+            borderRadius: 3,
+            animation: `${fadeInUp} 0.6s ease-out`,
+            backgroundColor: "background.paper",
+          }}
         >
-          <Chip
-            label={dayjs(news.createdAt)
-              .locale("de")
-              .format("DD. MMMM YYYY - HH:mm")}
-            variant="outlined"
-            size="small"
-            sx={{ backgroundColor: "background.default" }}
-          />
-          <Chip
-            label={news.seen ? "Gesehen" : "Nicht gesehen"}
-            color={news.seen ? "success" : "default"}
-            size="small"
-          />
-          <Box display="flex" alignItems="center">
-            <Rating
-              value={displayedOverallRating}
-              readOnly
-              precision={0.5}
-              icon={<Star fontSize="inherit" color="primary" />}
-              emptyIcon={<Star fontSize="inherit" />}
-            />
-            <Typography variant="body2" ml={1} color="text.secondary">
-              ({displayedOverallRating.toFixed(1)}/5)
+          {/* Kopfbereich */}
+          <Box
+            display="flex"
+            flexDirection={{ xs: "column", sm: "row" }}
+            justifyContent="space-between"
+            alignItems="center"
+            mb={4}
+          >
+            <Typography
+              variant="h3"
+              component="h1"
+              gutterBottom
+              sx={{ mb: { xs: 2, sm: 0 }, fontWeight: "bold" }}
+            >
+              {news.title}
             </Typography>
           </Box>
-        </Box>
 
-        <Divider sx={{ my: 4 }} />
-
-        {/* Hauptinhalt */}
-        <Grid container spacing={4}>
-          {news.message && (
-            <Grid item xs={12}>
-              <Typography
-                variant="h5"
-                gutterBottom
-                display="flex"
-                alignItems="center"
-                sx={{ fontWeight: "bold" }}
-              >
-                <Notes color="primary" sx={{ mr: 1 }} />
-                Hauptnachricht
+          {/* Meta-Informationen */}
+          <Box
+            mt={2}
+            display="flex"
+            flexDirection={{ xs: "column", sm: "row" }}
+            alignItems="center"
+            gap={2}
+            mb={4}
+          >
+            <Chip
+              label={dayjs(news.createdAt)
+                .locale("de")
+                .format("DD. MMMM YYYY - HH:mm")}
+              variant="outlined"
+              size="small"
+              sx={{ backgroundColor: "background.default" }}
+            />
+            <Chip
+              label={news.seen ? "Gesehen" : "Nicht gesehen"}
+              color={news.seen ? "success" : "default"}
+              size="small"
+            />
+            <Box display="flex" alignItems="center">
+              <Rating
+                value={displayedOverallRating}
+                readOnly
+                precision={0.5}
+                icon={<Star fontSize="inherit" color="primary" />}
+                emptyIcon={<Star fontSize="inherit" />}
+              />
+              <Typography variant="body2" ml={1} color="text.secondary">
+                ({displayedOverallRating.toFixed(1)}/5)
               </Typography>
-              <Typography
-                variant="body1"
-                whiteSpace="pre-wrap"
-                sx={{ lineHeight: 1.6 }}
-              >
-                {news.message}
-              </Typography>
-            </Grid>
-          )}
+            </Box>
+          </Box>
 
-          {news.type === "review" && (
-            <>
-              {/* Leistungsbewertungen (boolesche Werte) */}
-              <Grid item xs={12} md={6}>
-                <Typography
-                  variant="h5"
-                  gutterBottom
-                  display="flex"
-                  alignItems="center"
-                  sx={{ fontWeight: "bold" }}
-                >
-                  <Favorite color="primary" sx={{ mr: 1 }} />
-                  Leistungsbewertungen
-                </Typography>
-                <Grid container spacing={2}>
-                  {typeof news.didSquirt !== "undefined" && (
-                    <Grid item xs={12} sm={6}>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        {news.didSquirt ? (
-                          <CheckCircle color="success" />
-                        ) : (
-                          <Cancel color="error" />
-                        )}
-                        <Typography>Squirting</Typography>
-                        {/* Info-Icon */}
-                        <IconButton
-                          onClick={() => handleOpenModal("didSquirt")}
-                        >
-                          <Info fontSize="small" color="action" />
-                        </IconButton>
-                      </Box>
-                    </Grid>
-                  )}
-                  {typeof news.wasAnal !== "undefined" && (
-                    <Grid item xs={12} sm={6}>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        {news.wasAnal ? (
-                          <CheckCircle color="success" />
-                        ) : (
-                          <Cancel color="error" />
-                        )}
-                        <Typography>Anal</Typography>
-                        <IconButton onClick={() => handleOpenModal("wasAnal")}>
-                          <Info fontSize="small" color="action" />
-                        </IconButton>
-                      </Box>
-                    </Grid>
-                  )}
-                </Grid>
-              </Grid>
+          <Divider sx={{ my: 4 }} />
 
-              {/* Detailbewertungen (numerische Bewertungen) */}
-              <Grid item xs={12} md={6}>
-                <Typography
-                  variant="h5"
-                  gutterBottom
-                  display="flex"
-                  alignItems="center"
-                  sx={{ fontWeight: "bold" }}
-                >
-                  <Star color="primary" sx={{ mr: 1 }} />
-                  Detailbewertungen
-                </Typography>
-                <Grid container spacing={2}>
-                  {typeof news.obedience !== "undefined" && (
-                    <Grid item xs={12} sm={6}>
-                      <Box
-                        display="flex"
-                        alignItems="center"
-                        gap={1}
-                        flexWrap="wrap"
-                      >
-                        <Typography>Gehorsam:</Typography>
-                        <Rating
-                          value={news.obedience}
-                          readOnly
-                          size="small"
-                          precision={0.5}
-                        />
-                        <IconButton
-                          onClick={() => handleOpenModal("obedience")}
-                        >
-                          <Info fontSize="small" color="action" />
-                        </IconButton>
-                      </Box>
-                    </Grid>
-                  )}
-                  {typeof news.vibeDuringSex !== "undefined" && (
-                    <Grid item xs={12} sm={6}>
-                      <Box
-                        display="flex"
-                        alignItems="center"
-                        gap={1}
-                        flexWrap="wrap"
-                      >
-                        <Typography>Stimmung (während):</Typography>
-                        <Rating
-                          value={news.vibeDuringSex}
-                          readOnly
-                          size="small"
-                          precision={0.5}
-                        />
-                        <IconButton
-                          onClick={() => handleOpenModal("vibeDuringSex")}
-                        >
-                          <Info fontSize="small" color="action" />
-                        </IconButton>
-                      </Box>
-                    </Grid>
-                  )}
-                  {typeof news.vibeAfterSex !== "undefined" && (
-                    <Grid item xs={12} sm={6}>
-                      <Box
-                        display="flex"
-                        alignItems="center"
-                        gap={1}
-                        flexWrap="wrap"
-                      >
-                        <Typography>Stimmung (nach):</Typography>
-                        <Rating
-                          value={news.vibeAfterSex}
-                          readOnly
-                          size="small"
-                          precision={0.5}
-                        />
-                        <IconButton
-                          onClick={() => handleOpenModal("vibeAfterSex")}
-                        >
-                          <Info fontSize="small" color="action" />
-                        </IconButton>
-                      </Box>
-                    </Grid>
-                  )}
-                  {typeof news.orgasmIntensity !== "undefined" && (
-                    <Grid item xs={12} sm={6}>
-                      <Box
-                        display="flex"
-                        alignItems="center"
-                        gap={1}
-                        flexWrap="wrap"
-                      >
-                        <Typography>Orgasmusintensität:</Typography>
-                        <Rating
-                          value={news.orgasmIntensity}
-                          readOnly
-                          size="small"
-                          precision={0.5}
-                        />
-                        <IconButton
-                          onClick={() => handleOpenModal("orgasmIntensity")}
-                        >
-                          <Info fontSize="small" color="action" />
-                        </IconButton>
-                      </Box>
-                    </Grid>
-                  )}
-                  {typeof news.painlessness !== "undefined" && (
-                    <Grid item xs={12} sm={6}>
-                      <Box
-                        display="flex"
-                        alignItems="center"
-                        gap={1}
-                        flexWrap="wrap"
-                      >
-                        <Typography>Schmerzfreiheit:</Typography>
-                        <Rating
-                          value={news.painlessness}
-                          readOnly
-                          size="small"
-                          precision={0.5}
-                        />
-                        <IconButton
-                          onClick={() => handleOpenModal("painlessness")}
-                        >
-                          <Info fontSize="small" color="action" />
-                        </IconButton>
-                      </Box>
-                    </Grid>
-                  )}
-                  {typeof news.ballsWorshipping !== "undefined" && (
-                    <Grid item xs={12} sm={6}>
-                      <Box
-                        display="flex"
-                        alignItems="center"
-                        gap={1}
-                        flexWrap="wrap"
-                      >
-                        <Typography>Eier-Verehrung:</Typography>
-                        <Rating
-                          value={news.ballsWorshipping}
-                          readOnly
-                          size="small"
-                          precision={0.5}
-                        />
-                        <IconButton
-                          onClick={() => handleOpenModal("ballsWorshipping")}
-                        >
-                          <Info fontSize="small" color="action" />
-                        </IconButton>
-                      </Box>
-                    </Grid>
-                  )}
-                  {typeof news.cumWorshipping !== "undefined" && (
-                    <Grid item xs={12} sm={6}>
-                      <Box
-                        display="flex"
-                        alignItems="center"
-                        gap={1}
-                        flexWrap="wrap"
-                      >
-                        <Typography>Sperma-Verehrung:</Typography>
-                        <Rating
-                          value={news.cumWorshipping}
-                          readOnly
-                          size="small"
-                          precision={0.5}
-                        />
-                        <IconButton
-                          onClick={() => handleOpenModal("cumWorshipping")}
-                        >
-                          <Info fontSize="small" color="action" />
-                        </IconButton>
-                      </Box>
-                    </Grid>
-                  )}
-                  {typeof news.didEverythingForHisPleasure !== "undefined" && (
-                    <Grid item xs={12} sm={6}>
-                      <Box
-                        display="flex"
-                        alignItems="center"
-                        gap={1}
-                        flexWrap="wrap"
-                      >
-                        <Typography>Alles für sein Vergnügen:</Typography>
-                        <Rating
-                          value={news.didEverythingForHisPleasure}
-                          readOnly
-                          size="small"
-                          precision={0.5}
-                        />
-                        <IconButton
-                          onClick={() =>
-                            handleOpenModal("didEverythingForHisPleasure")
-                          }
-                        >
-                          <Info fontSize="small" color="action" />
-                        </IconButton>
-                      </Box>
-                    </Grid>
-                  )}
-                </Grid>
-              </Grid>
-
-              {/* Weitere textuelle Details */}
+          {/* Hauptinhalt */}
+          <Grid container spacing={4}>
+            {news.message && (
               <Grid item xs={12}>
                 <Typography
                   variant="h5"
@@ -601,131 +347,410 @@ const NewsDetailPage = () => {
                   sx={{ fontWeight: "bold" }}
                 >
                   <Notes color="primary" sx={{ mr: 1 }} />
-                  Weitere Details
+                  Hauptnachricht
                 </Typography>
-                <Box>
-                  {news.bestMoment && (
-                    <Box mb={3}>
-                      <Typography variant="subtitle1" fontWeight="bold">
-                        Bester Moment:
-                      </Typography>
-                      <Typography
-                        variant="body1"
-                        whiteSpace="pre-wrap"
-                        sx={{ lineHeight: 1.6 }}
-                      >
-                        {news.bestMoment}
-                      </Typography>
-                    </Box>
-                  )}
-                  {news.improvementSuggestion && (
-                    <Box mb={3}>
-                      <Typography variant="subtitle1" fontWeight="bold">
-                        Verbesserungsvorschlag:
-                      </Typography>
-                      <Typography
-                        variant="body1"
-                        whiteSpace="pre-wrap"
-                        sx={{ lineHeight: 1.6 }}
-                      >
-                        {news.improvementSuggestion}
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
+                <Typography
+                  variant="body1"
+                  whiteSpace="pre-wrap"
+                  sx={{ lineHeight: 1.6 }}
+                >
+                  {news.message}
+                </Typography>
               </Grid>
-            </>
-          )}
+            )}
 
-          {news.additionalNotes && (
-            <Grid item xs={12}>
-              <Divider sx={{ my: 4 }} />
-              <Typography variant="h5" gutterBottom sx={{ fontWeight: "bold" }}>
-                Zusätzliche Anmerkungen
-              </Typography>
-              <Typography
-                variant="body1"
-                color="text.secondary"
-                whiteSpace="pre-wrap"
-                sx={{ lineHeight: 1.6 }}
-              >
-                {news.additionalNotes}
-              </Typography>
-            </Grid>
-          )}
-        </Grid>
-      </Paper>
+            {news.type === "review" && (
+              <>
+                {/* Leistungsbewertungen (boolesche Werte) */}
+                <Grid item xs={12} md={6}>
+                  <Typography
+                    variant="h5"
+                    gutterBottom
+                    display="flex"
+                    alignItems="center"
+                    sx={{ fontWeight: "bold" }}
+                  >
+                    <Favorite color="primary" sx={{ mr: 1 }} />
+                    Leistungsbewertungen
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {typeof news.didSquirt !== "undefined" && (
+                      <Grid item xs={12} sm={6}>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          {news.didSquirt ? (
+                            <CheckCircle color="success" />
+                          ) : (
+                            <Cancel color="error" />
+                          )}
+                          <Typography>Squirting</Typography>
+                          <IconButton
+                            onClick={() => handleOpenModal("didSquirt")}
+                          >
+                            <Info fontSize="small" color="action" />
+                          </IconButton>
+                        </Box>
+                      </Grid>
+                    )}
+                    {typeof news.wasAnal !== "undefined" && (
+                      <Grid item xs={12} sm={6}>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          {news.wasAnal ? (
+                            <CheckCircle color="success" />
+                          ) : (
+                            <Cancel color="error" />
+                          )}
+                          <Typography>Anal</Typography>
+                          <IconButton
+                            onClick={() => handleOpenModal("wasAnal")}
+                          >
+                            <Info fontSize="small" color="action" />
+                          </IconButton>
+                        </Box>
+                      </Grid>
+                    )}
+                  </Grid>
+                </Grid>
 
-      {/* Buttons am Seitenende */}
-      <Box
-        mt={6}
-        textAlign="center"
-        display="flex"
-        justifyContent="center"
-        gap={2}
-      >
-        <Button
-          variant="contained"
-          color="success"
-          onClick={handleMarkAsSeen}
-          disabled={news.seen}
-          sx={{
-            px: 4,
-            py: 1.5,
-            fontSize: "1rem",
-            transition: "transform 0.3s ease",
-            "&:hover": { transform: "scale(1.05)" },
-          }}
+                {/* Detailbewertungen (numerische Bewertungen) */}
+                <Grid item xs={12} md={6}>
+                  <Typography
+                    variant="h5"
+                    gutterBottom
+                    display="flex"
+                    alignItems="center"
+                    sx={{ fontWeight: "bold" }}
+                  >
+                    <Star color="primary" sx={{ mr: 1 }} />
+                    Detailbewertungen
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {typeof news.obedience !== "undefined" && (
+                      <Grid item xs={12} sm={6}>
+                        <Box
+                          display="flex"
+                          alignItems="center"
+                          gap={1}
+                          flexWrap="wrap"
+                        >
+                          <Typography>Gehorsam:</Typography>
+                          <Rating
+                            value={news.obedience}
+                            readOnly
+                            size="small"
+                            precision={0.5}
+                          />
+                          <IconButton
+                            onClick={() => handleOpenModal("obedience")}
+                          >
+                            <Info fontSize="small" color="action" />
+                          </IconButton>
+                        </Box>
+                      </Grid>
+                    )}
+                    {typeof news.vibeDuringSex !== "undefined" && (
+                      <Grid item xs={12} sm={6}>
+                        <Box
+                          display="flex"
+                          alignItems="center"
+                          gap={1}
+                          flexWrap="wrap"
+                        >
+                          <Typography>Stimmung (während):</Typography>
+                          <Rating
+                            value={news.vibeDuringSex}
+                            readOnly
+                            size="small"
+                            precision={0.5}
+                          />
+                          <IconButton
+                            onClick={() => handleOpenModal("vibeDuringSex")}
+                          >
+                            <Info fontSize="small" color="action" />
+                          </IconButton>
+                        </Box>
+                      </Grid>
+                    )}
+                    {typeof news.vibeAfterSex !== "undefined" && (
+                      <Grid item xs={12} sm={6}>
+                        <Box
+                          display="flex"
+                          alignItems="center"
+                          gap={1}
+                          flexWrap="wrap"
+                        >
+                          <Typography>Stimmung (nach):</Typography>
+                          <Rating
+                            value={news.vibeAfterSex}
+                            readOnly
+                            size="small"
+                            precision={0.5}
+                          />
+                          <IconButton
+                            onClick={() => handleOpenModal("vibeAfterSex")}
+                          >
+                            <Info fontSize="small" color="action" />
+                          </IconButton>
+                        </Box>
+                      </Grid>
+                    )}
+                    {typeof news.orgasmIntensity !== "undefined" && (
+                      <Grid item xs={12} sm={6}>
+                        <Box
+                          display="flex"
+                          alignItems="center"
+                          gap={1}
+                          flexWrap="wrap"
+                        >
+                          <Typography>Orgasmusintensität:</Typography>
+                          <Rating
+                            value={news.orgasmIntensity}
+                            readOnly
+                            size="small"
+                            precision={0.5}
+                          />
+                          <IconButton
+                            onClick={() => handleOpenModal("orgasmIntensity")}
+                          >
+                            <Info fontSize="small" color="action" />
+                          </IconButton>
+                        </Box>
+                      </Grid>
+                    )}
+                    {typeof news.painlessness !== "undefined" && (
+                      <Grid item xs={12} sm={6}>
+                        <Box
+                          display="flex"
+                          alignItems="center"
+                          gap={1}
+                          flexWrap="wrap"
+                        >
+                          <Typography>Schmerzfreiheit:</Typography>
+                          <Rating
+                            value={news.painlessness}
+                            readOnly
+                            size="small"
+                            precision={0.5}
+                          />
+                          <IconButton
+                            onClick={() => handleOpenModal("painlessness")}
+                          >
+                            <Info fontSize="small" color="action" />
+                          </IconButton>
+                        </Box>
+                      </Grid>
+                    )}
+                    {typeof news.ballsWorshipping !== "undefined" && (
+                      <Grid item xs={12} sm={6}>
+                        <Box
+                          display="flex"
+                          alignItems="center"
+                          gap={1}
+                          flexWrap="wrap"
+                        >
+                          <Typography>Eier-Verehrung:</Typography>
+                          <Rating
+                            value={news.ballsWorshipping}
+                            readOnly
+                            size="small"
+                            precision={0.5}
+                          />
+                          <IconButton
+                            onClick={() => handleOpenModal("ballsWorshipping")}
+                          >
+                            <Info fontSize="small" color="action" />
+                          </IconButton>
+                        </Box>
+                      </Grid>
+                    )}
+                    {typeof news.cumWorshipping !== "undefined" && (
+                      <Grid item xs={12} sm={6}>
+                        <Box
+                          display="flex"
+                          alignItems="center"
+                          gap={1}
+                          flexWrap="wrap"
+                        >
+                          <Typography>Sperma-Verehrung:</Typography>
+                          <Rating
+                            value={news.cumWorshipping}
+                            readOnly
+                            size="small"
+                            precision={0.5}
+                          />
+                          <IconButton
+                            onClick={() => handleOpenModal("cumWorshipping")}
+                          >
+                            <Info fontSize="small" color="action" />
+                          </IconButton>
+                        </Box>
+                      </Grid>
+                    )}
+                    {typeof news.didEverythingForHisPleasure !==
+                      "undefined" && (
+                      <Grid item xs={12} sm={6}>
+                        <Box
+                          display="flex"
+                          alignItems="center"
+                          gap={1}
+                          flexWrap="wrap"
+                        >
+                          <Typography>Alles für sein Vergnügen:</Typography>
+                          <Rating
+                            value={news.didEverythingForHisPleasure}
+                            readOnly
+                            size="small"
+                            precision={0.5}
+                          />
+                          <IconButton
+                            onClick={() =>
+                              handleOpenModal("didEverythingForHisPleasure")
+                            }
+                          >
+                            <Info fontSize="small" color="action" />
+                          </IconButton>
+                        </Box>
+                      </Grid>
+                    )}
+                  </Grid>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography
+                    variant="h5"
+                    gutterBottom
+                    display="flex"
+                    alignItems="center"
+                    sx={{ fontWeight: "bold" }}
+                  >
+                    <Notes color="primary" sx={{ mr: 1 }} />
+                    Weitere Details
+                  </Typography>
+                  <Box>
+                    {news.bestMoment && (
+                      <Box mb={3}>
+                        <Typography variant="subtitle1" fontWeight="bold">
+                          Bester Moment:
+                        </Typography>
+                        <Typography
+                          variant="body1"
+                          whiteSpace="pre-wrap"
+                          sx={{ lineHeight: 1.6 }}
+                        >
+                          {news.bestMoment}
+                        </Typography>
+                      </Box>
+                    )}
+                    {news.improvementSuggestion && (
+                      <Box mb={3}>
+                        <Typography variant="subtitle1" fontWeight="bold">
+                          Verbesserungsvorschlag:
+                        </Typography>
+                        <Typography
+                          variant="body1"
+                          whiteSpace="pre-wrap"
+                          sx={{ lineHeight: 1.6 }}
+                        >
+                          {news.improvementSuggestion}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </Grid>
+              </>
+            )}
+            {news.additionalNotes && (
+              <Grid item xs={12}>
+                <Divider sx={{ my: 4 }} />
+                <Typography
+                  variant="h5"
+                  gutterBottom
+                  sx={{ fontWeight: "bold" }}
+                >
+                  Zusätzliche Anmerkungen
+                </Typography>
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
+                  whiteSpace="pre-wrap"
+                  sx={{ lineHeight: 1.6 }}
+                >
+                  {news.additionalNotes}
+                </Typography>
+              </Grid>
+            )}
+          </Grid>
+        </Paper>
+
+        {/* Buttons am Seitenende */}
+        <Box
+          mt={6}
+          textAlign="center"
+          display="flex"
+          justifyContent="center"
+          gap={2}
         >
-          {news.seen ? "Bereits gesehen" : "Gesehen"}
-        </Button>
-        <Button
-          variant="outlined"
-          color="primary"
-          onClick={() => router.push("/")}
-          sx={{
-            px: 4,
-            py: 1.5,
-            fontSize: "1rem",
-            transition: "transform 0.3s ease",
-            "&:hover": { transform: "scale(1.05)" },
-          }}
-        >
-          Zurück zur Übersicht
-        </Button>
-      </Box>
-
-      {/* Modal Dialog für die Erklärungen */}
-      <Dialog open={openModal !== null} onClose={handleCloseModal}>
-        <DialogTitle>{openModal ? ratingTitles[openModal] : ""}</DialogTitle>
-        <DialogContent>
-          <Typography>
-            {openModal ? ratingExplanations[openModal] : ""}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseModal} color="primary">
-            Schließen
+          <Button
+            variant="contained"
+            color="success"
+            onClick={handleMarkAsSeen}
+            disabled={news.seen}
+            sx={{
+              px: 4,
+              py: 1.5,
+              fontSize: "1rem",
+              transition: "transform 0.3s ease",
+              "&:hover": { transform: "scale(1.05)" },
+            }}
+          >
+            {news.seen ? "Bereits gesehen" : "Gesehen"}
           </Button>
-        </DialogActions>
-      </Dialog>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={() => router.push("/")}
+            sx={{
+              px: 4,
+              py: 1.5,
+              fontSize: "1rem",
+              transition: "transform 0.3s ease",
+              "&:hover": { transform: "scale(1.05)" },
+            }}
+          >
+            Zurück zur Übersicht
+          </Button>
+        </Box>
 
-      {/* Snackbar unten mittig */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbarSeverity}
-          sx={{ width: "100%" }}
+        {/* Modal Dialog für Erklärungen */}
+        <Dialog open={openModal !== null} onClose={handleCloseModal}>
+          <DialogTitle>{openModal ? ratingTitles[openModal] : ""}</DialogTitle>
+          <DialogContent>
+            <Typography>
+              {openModal ? ratingExplanations[openModal] : ""}
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseModal} color="primary">
+              Schließen
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Snackbar */}
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={6000}
+          onClose={() => setSnackbarOpen(false)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
-    </Container>
+          <Alert
+            onClose={() => setSnackbarOpen(false)}
+            severity={snackbarSeverity}
+            sx={{ width: "100%" }}
+          >
+            {snackbarMessage}
+          </Alert>
+        </Snackbar>
+      </Container>
+    </>
   );
 };
 

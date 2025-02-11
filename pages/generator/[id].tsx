@@ -94,7 +94,7 @@ const GeneratorDetailView = () => {
       setSnackbarOpen(true);
       sendTelegramMessage(
         "admin",
-        `Ein Auftrag wurde angenommen. ${router.pathname}`
+        `Ein Auftrag wurde angenommen. ${window.location.href}`
       );
     } catch (error) {
       console.error("handleAccept Error:", error);

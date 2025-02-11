@@ -182,6 +182,10 @@ const NewsReviewForm: React.FC = () => {
         setSuccessMessage(
           `Generator wurde als fehlgeschlagen markiert! ${formData.goldDeduction} Gold und ${formData.expDeduction} Exp wurden abgezogen.`
         );
+        sendTelegramMessage(
+          "user",
+          "❌ Oh oh! Ein Auftrag von dir wurde gerade als fehlerhaft markiert. Schau rein. "
+        );
       } else {
         // *** Normale Bewertung (Review) ***
 
@@ -220,15 +224,50 @@ const NewsReviewForm: React.FC = () => {
           });
         }
 
+        // Berechne das "overall rating" aus den 8 Bewertungsfeldern und bestimme das entsprechende Emoji:
+        const overallRating = Math.round(
+          (formData.obedience +
+            formData.vibeDuringSex +
+            formData.vibeAfterSex +
+            formData.orgasmIntensity +
+            formData.painlessness +
+            formData.ballsWorshipping +
+            formData.cumWorshipping +
+            formData.didEverythingForHisPleasure) /
+            8
+        );
+
+        const getEmojiForRating = (rating: number): string => {
+          switch (rating) {
+            case 1:
+              return "⭐";
+            case 2:
+              return "⭐⭐";
+            case 3:
+              return "⭐⭐⭐";
+            case 4:
+              return "⭐⭐⭐⭐";
+            case 5:
+              return "⭐⭐⭐⭐⭐";
+            default:
+              return "⭐⭐⭐";
+          }
+        };
+
+        const ratingEmoji = getEmojiForRating(overallRating);
+
         setSuccessMessage(
           `Bewertung erfolgreich erstellt! Du hast ${goldEarned} Gold erhalten.`
+        );
+        sendTelegramMessage(
+          "user",
+          `Ein Auftrag wurde gerade von dir bewertet! ${ratingEmoji} Schau rein.`
         );
       }
 
       // Formular zurücksetzen und Generatorauswahl löschen
       setFormData(initialFormData);
       setSelectedGenerator(null);
-      sendTelegramMessage("user", "Eine neue News wurde erstellt.");
     } catch (error) {
       console.error("Error creating news:", error);
     } finally {

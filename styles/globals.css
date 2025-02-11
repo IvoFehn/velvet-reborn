@@ -217,3 +217,49 @@ body {
     1;
   animation: 10s rotate linear infinite;
 }
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes pulse-border {
+  0% {
+    border-color: #fca5a5;
+  }
+  50% {
+    border-color: #ef4444;
+  }
+  100% {
+    border-color: #fca5a5;
+  }
+}
+
+.failed-glitch {
+  position: relative;
+}
+
+.failed-glitch::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    45deg,
+    transparent 45%,
+    rgba(239, 68, 68, 0.1) 50%,
+    transparent 55%
+  );
+  mix-blend-mode: darken;
+  animation: glitch 2s infinite;
+}
