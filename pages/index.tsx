@@ -72,9 +72,11 @@ export default function HomePage() {
   useEffect(() => {
     const fetchNewsMessages = async () => {
       try {
-        const response = await fetch("/api/news?limit=20&type=review");
-        if (!response.ok)
+        // Mehrere Typen per komma-separierter Liste abfragen:
+        const response = await fetch("/api/news?limit=20&type=review,failed");
+        if (!response.ok) {
           throw new Error("Fehler beim Abrufen der Nachrichten");
+        }
         const data = await response.json();
         if (data.success) {
           setNewsMessages(data.data);
@@ -321,7 +323,7 @@ export default function HomePage() {
     <>
       {/* Confetti anzeigen, wenn ein aktives Event vorliegt */}
       {activeEvent && (
-        <Confetti width={width} height={height} numberOfPieces={200} />
+        <Confetti width={width} height={height} numberOfPieces={50} />
       )}
 
       {/* Banner unten anzeigen, falls ein aktives Event vorliegt und nicht manuell geschlossen wurde */}

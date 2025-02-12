@@ -31,6 +31,7 @@ import {
 } from "@mui/icons-material";
 import dayjs from "dayjs";
 import { keyframes } from "@emotion/react";
+import { motion } from "framer-motion";
 import { sendTelegramMessage } from "@/util/sendTelegramMessage";
 
 // Keyframe-Animation: sanftes Hereinzoomen von unten
@@ -45,13 +46,31 @@ const fadeInUp = keyframes`
   }
 `;
 
+// Neue Animationen für den failed state
+const shake = {
+  x: [0, -15, 15, -15, 15, 0],
+  transition: { duration: 0.8, type: "spring" },
+};
+
+const pulse = {
+  scale: [1, 1.05, 1],
+  transition: { duration: 1.5, repeat: Infinity },
+};
+
+// Keyframes für den pulsierenden Hintergrund des Pseudo-Elements
+const pulseKeyframes = keyframes`
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+`;
+
 // Vollständige Typdefinition für News
 interface NewsDetail {
   _id: string;
   title: string;
   message: string;
   createdAt: string;
-  type: "general" | "review";
+  type: "general" | "review" | "failed";
   overallRating: number;
   seen: boolean;
   obedience?: number;
@@ -68,6 +87,9 @@ interface NewsDetail {
   improvementSuggestion?: string;
   additionalNotes?: string;
 }
+
+// Erstelle ein motion-fähiges Paper-Element
+const MotionPaper = motion(Paper);
 
 const NewsDetailPage = () => {
   const router = useRouter();
@@ -191,7 +213,7 @@ const NewsDetailPage = () => {
     fetchNews();
   }, [router.isReady, id]);
 
-  // Hilfsfunktion, um das Overall Rating bei Reviews zu berechnen
+  // Hilfsfunktion, um das Overall Rating bei Reviews oder Failed zu berechnen
   const computeOverallRating = (news: NewsDetail): number => {
     const ratings: number[] = [];
     if (typeof news.obedience === "number") ratings.push(news.obedience);
@@ -210,6 +232,12 @@ const NewsDetailPage = () => {
     if (ratings.length === 0) return 0;
     return ratings.reduce((sum, r) => sum + r, 0) / ratings.length;
   };
+
+  // Falls Overall Rating angezeigt werden soll (bei Reviews oder Failed)
+  const displayedOverallRating =
+    news?.type === "review" || news?.type === "failed"
+      ? computeOverallRating(news)
+      : news?.overallRating || 0;
 
   if (loading) {
     return (
@@ -246,10 +274,6 @@ const NewsDetailPage = () => {
 
   if (!news) return null;
 
-  // Falls Overall Rating angezeigt werden soll (bei Reviews)
-  const displayedOverallRating =
-    news.type === "review" ? computeOverallRating(news) : news.overallRating;
-
   return (
     <>
       {/* Confetti-Effekt anzeigen, wenn das Overall Rating über 4 liegt */}
@@ -265,18 +289,42 @@ const NewsDetailPage = () => {
             zIndex: 9999,
           }}
         >
-          <Confetti width={width} height={height} numberOfPieces={200} />
+          <Confetti width={width} height={height} numberOfPieces={50} />
         </div>
       )}
 
       <Container maxWidth="md" sx={{ my: 4, px: { xs: 2, sm: 3 } }}>
-        <Paper
+        <MotionPaper
           elevation={4}
+          initial={{ opacity: 0, y: 50 }}
+          animate={{
+            opacity: 1,
+            y: 0,
+            ...(news.type === "failed" ? shake : {}),
+          }}
           sx={{
             p: { xs: 2, sm: 3, md: 4 },
             borderRadius: 3,
             animation: `${fadeInUp} 0.6s ease-out`,
             backgroundColor: "background.paper",
+            border: news.type === "failed" ? "3px solid" : "none",
+            borderColor: news.type === "failed" ? "error.main" : undefined,
+            boxShadow: news.type === "failed" ? 6 : 4,
+            position: "relative",
+            overflow: "hidden",
+            "&::after":
+              news.type === "failed"
+                ? {
+                    content: '""',
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: "rgba(244,67,54,0.1)",
+                    animation: `${pulseKeyframes} 2s infinite`,
+                  }
+                : {},
           }}
         >
           {/* Kopfbereich */}
@@ -287,14 +335,29 @@ const NewsDetailPage = () => {
             alignItems="center"
             mb={4}
           >
-            <Typography
-              variant="h3"
-              component="h1"
-              gutterBottom
-              sx={{ mb: { xs: 2, sm: 0 }, fontWeight: "bold" }}
-            >
-              {news.title}
-            </Typography>
+            <motion.div animate={news.type === "failed" ? pulse : {}}>
+              <Typography
+                variant="h3"
+                component="h1"
+                gutterBottom
+                sx={{
+                  mb: { xs: 2, sm: 0 },
+                  fontWeight: "bold",
+                  color: news.type === "failed" ? "error.main" : "inherit",
+                  textShadow:
+                    news.type === "failed"
+                      ? "0 0 10px rgba(244,67,54,0.5)"
+                      : "none",
+                }}
+              >
+                {news.title}
+                {news.type === "failed" && (
+                  <Cancel
+                    sx={{ ml: 2, fontSize: "inherit", color: "error.main" }}
+                  />
+                )}
+              </Typography>
+            </motion.div>
           </Box>
 
           {/* Meta-Informationen */}
@@ -333,6 +396,22 @@ const NewsDetailPage = () => {
             </Box>
           </Box>
 
+          {/* Fehlermeldung für failed state */}
+          {news.type === "failed" && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <Alert severity="error" sx={{ my: 3, fontWeight: "bold" }}>
+                <Typography variant="h6">
+                  Auftrag nicht bestanden! Bitte dringend Verbesserungen
+                  vornehmen!
+                </Typography>
+              </Alert>
+            </motion.div>
+          )}
+
           <Divider sx={{ my: 4 }} />
 
           {/* Hauptinhalt */}
@@ -359,6 +438,7 @@ const NewsDetailPage = () => {
               </Grid>
             )}
 
+            {/* Leistungs- und Detailbewertungen werden nur bei "review" angezeigt */}
             {news.type === "review" && (
               <>
                 {/* Leistungsbewertungen (boolesche Werte) */}
@@ -432,7 +512,14 @@ const NewsDetailPage = () => {
                           gap={1}
                           flexWrap="wrap"
                         >
-                          <Typography>Gehorsam:</Typography>
+                          <Typography
+                            sx={{
+                              color:
+                                news.obedience < 3 ? "error.main" : "inherit",
+                            }}
+                          >
+                            Gehorsam:
+                          </Typography>
                           <Rating
                             value={news.obedience}
                             readOnly
@@ -455,7 +542,16 @@ const NewsDetailPage = () => {
                           gap={1}
                           flexWrap="wrap"
                         >
-                          <Typography>Stimmung (während):</Typography>
+                          <Typography
+                            sx={{
+                              color:
+                                news.vibeDuringSex < 3
+                                  ? "error.main"
+                                  : "inherit",
+                            }}
+                          >
+                            Stimmung (während):
+                          </Typography>
                           <Rating
                             value={news.vibeDuringSex}
                             readOnly
@@ -478,7 +574,16 @@ const NewsDetailPage = () => {
                           gap={1}
                           flexWrap="wrap"
                         >
-                          <Typography>Stimmung (nach):</Typography>
+                          <Typography
+                            sx={{
+                              color:
+                                news.vibeAfterSex < 3
+                                  ? "error.main"
+                                  : "inherit",
+                            }}
+                          >
+                            Stimmung (nach):
+                          </Typography>
                           <Rating
                             value={news.vibeAfterSex}
                             readOnly
@@ -501,7 +606,16 @@ const NewsDetailPage = () => {
                           gap={1}
                           flexWrap="wrap"
                         >
-                          <Typography>Orgasmusintensität:</Typography>
+                          <Typography
+                            sx={{
+                              color:
+                                news.orgasmIntensity < 3
+                                  ? "error.main"
+                                  : "inherit",
+                            }}
+                          >
+                            Orgasmusintensität:
+                          </Typography>
                           <Rating
                             value={news.orgasmIntensity}
                             readOnly
@@ -524,7 +638,16 @@ const NewsDetailPage = () => {
                           gap={1}
                           flexWrap="wrap"
                         >
-                          <Typography>Schmerzfreiheit:</Typography>
+                          <Typography
+                            sx={{
+                              color:
+                                news.painlessness < 3
+                                  ? "error.main"
+                                  : "inherit",
+                            }}
+                          >
+                            Schmerzfreiheit:
+                          </Typography>
                           <Rating
                             value={news.painlessness}
                             readOnly
@@ -547,7 +670,16 @@ const NewsDetailPage = () => {
                           gap={1}
                           flexWrap="wrap"
                         >
-                          <Typography>Eier-Verehrung:</Typography>
+                          <Typography
+                            sx={{
+                              color:
+                                news.ballsWorshipping < 3
+                                  ? "error.main"
+                                  : "inherit",
+                            }}
+                          >
+                            Eier-Verehrung:
+                          </Typography>
                           <Rating
                             value={news.ballsWorshipping}
                             readOnly
@@ -570,7 +702,16 @@ const NewsDetailPage = () => {
                           gap={1}
                           flexWrap="wrap"
                         >
-                          <Typography>Sperma-Verehrung:</Typography>
+                          <Typography
+                            sx={{
+                              color:
+                                news.cumWorshipping < 3
+                                  ? "error.main"
+                                  : "inherit",
+                            }}
+                          >
+                            Sperma-Verehrung:
+                          </Typography>
                           <Rating
                             value={news.cumWorshipping}
                             readOnly
@@ -594,7 +735,16 @@ const NewsDetailPage = () => {
                           gap={1}
                           flexWrap="wrap"
                         >
-                          <Typography>Alles für sein Vergnügen:</Typography>
+                          <Typography
+                            sx={{
+                              color:
+                                news.didEverythingForHisPleasure < 3
+                                  ? "error.main"
+                                  : "inherit",
+                            }}
+                          >
+                            Alles für sein Vergnügen:
+                          </Typography>
                           <Rating
                             value={news.didEverythingForHisPleasure}
                             readOnly
@@ -640,7 +790,17 @@ const NewsDetailPage = () => {
                       </Box>
                     )}
                     {news.improvementSuggestion && (
-                      <Box mb={3}>
+                      <motion.div
+                        initial={{ x: -100, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ delay: 0.5 }}
+                        style={{
+                          borderLeft: "4px solid",
+                          borderColor: "#f44336",
+                          paddingLeft: 8,
+                          marginBottom: 24,
+                        }}
+                      >
                         <Typography variant="subtitle1" fontWeight="bold">
                           Verbesserungsvorschlag:
                         </Typography>
@@ -651,7 +811,7 @@ const NewsDetailPage = () => {
                         >
                           {news.improvementSuggestion}
                         </Typography>
-                      </Box>
+                      </motion.div>
                     )}
                   </Box>
                 </Grid>
@@ -678,7 +838,7 @@ const NewsDetailPage = () => {
               </Grid>
             )}
           </Grid>
-        </Paper>
+        </MotionPaper>
 
         {/* Buttons am Seitenende */}
         <Box

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // components/NewsReviewForm.tsx
 
 import StarRating from "@/components/starRating/StarRating";
@@ -10,12 +9,12 @@ import { sendTelegramMessage } from "@/util/sendTelegramMessage";
 import dayjs from "dayjs";
 import { useEffect, useState, ChangeEvent, FormEvent } from "react";
 
-/** Rating scale from 1 to 5 */
+/** Rating-Skala von 1 bis 5 */
 export type Rating = 1 | 2 | 3 | 4 | 5;
 
 /** Erweiterte Formulardaten, inkl. Felder für fehlgeschlagene Generatoren */
 export interface GeneratorReviewFormData {
-  generatorId: string; // Referenz auf den zu bewertenden Generator
+  generatorId: string;
   title: string;
   message: string;
   obedience: Rating;
@@ -32,7 +31,6 @@ export interface GeneratorReviewFormData {
   improvementSuggestion: string;
   additionalNotes: string;
   seen: boolean;
-  // Neue Felder für den "FAILED"-Flow:
   isFailed: boolean;
   goldDeduction: number;
   expDeduction: number;
@@ -81,9 +79,9 @@ const NewsReviewForm: React.FC = () => {
     useState<GeneratorReviewFormData>(initialFormData);
   const [loading, setLoading] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string>("");
+  const [activeEvents, setActiveEvents] = useState<EventType[]>([]);
 
   // Aktive Bonus-Events laden
-  const [activeEvents, setActiveEvents] = useState<EventType[]>([]);
   const fetchActiveEvents = async () => {
     try {
       const res = await fetch("/api/events");
@@ -144,29 +142,16 @@ const NewsReviewForm: React.FC = () => {
     try {
       if (formData.isFailed) {
         // *** Fall: Generator als "failed" markieren ***
-
-        // Erstelle ein News-Objekt mit Typ "failed"
-        // (Stelle sicher, dass in deinem News-Modell "failed" als Typ erlaubt ist.)
+        // Erstelle ein News-Objekt mit Typ "failed" und übernehme alle Felder aus dem Formular
         const failedNews: INewsInput = {
-          title: formData.title,
-          message: formData.message,
+          ...formData,
+          type: "failed", // Typ explizit überschreiben
           createdAt: new Date().toISOString(),
-          type: "failed" as any,
-          seen: formData.seen,
         };
 
         await createNews(failedNews);
 
-        // Profil aktualisieren: Gold und Exp abziehen (als negative Werte)
-        await fetch("/api/profile/update", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            gold: -formData.goldDeduction,
-            exp: -formData.expDeduction,
-          }),
-        });
-
+        // Das Profil wird in der API automatisch um die Werte aus goldDeduction und expDeduction reduziert.
         // Aktualisiere den Generatorstatus über den /api/generator Endpoint auf "FAILED"
         if (selectedGenerator && selectedGenerator._id) {
           await fetch("/api/generator", {
@@ -184,11 +169,10 @@ const NewsReviewForm: React.FC = () => {
         );
         sendTelegramMessage(
           "user",
-          "❌ Oh oh! Ein Auftrag von dir wurde gerade als fehlerhaft markiert. Schau rein. "
+          "❌ Oh oh! Ein Auftrag von dir wurde gerade als fehlerhaft markiert. Schau rein."
         );
       } else {
         // *** Normale Bewertung (Review) ***
-
         const reviewNews: INewsInput = {
           ...formData,
           type: "review",
@@ -344,7 +328,6 @@ const NewsReviewForm: React.FC = () => {
                     value={formData.message}
                     onChange={handleChange}
                     className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-32"
-                    required
                   />
                 </div>
               </div>
@@ -479,7 +462,6 @@ const NewsReviewForm: React.FC = () => {
                   value={formData.improvementSuggestion}
                   onChange={handleChange}
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
                 />
               </div>
               <div>
@@ -491,7 +473,6 @@ const NewsReviewForm: React.FC = () => {
                   value={formData.additionalNotes}
                   onChange={handleChange}
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-32"
-                  required
                 />
               </div>
             </div>

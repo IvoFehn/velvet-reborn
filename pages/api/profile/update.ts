@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // pages/api/profile/update.ts
 
 import { NextApiRequest, NextApiResponse } from "next";
@@ -14,11 +15,32 @@ export default async function handler(
   try {
     if (req.method === "PUT") {
       const updateData: UpdateProfilePayload = req.body;
+      // Zerlege updateData in gold/exp und die übrigen Felder
+      const { gold, exp, ...otherFields } = updateData;
+
+      // Baue das Update-Objekt mit $set für alle Felder, die direkt überschrieben werden sollen.
+      const updateQuery: any = {
+        $set: {
+          updatedAt: new Date(),
+          ...otherFields,
+        },
+      };
+
+      // Falls gold oder exp vorhanden sind, werden diese Werte inkrementell angepasst.
+      if (gold !== undefined || exp !== undefined) {
+        updateQuery.$inc = {};
+        if (gold !== undefined) {
+          updateQuery.$inc.gold = gold;
+        }
+        if (exp !== undefined) {
+          updateQuery.$inc.exp = exp;
+        }
+      }
 
       // Finde und aktualisiere das erste gefundene Profil
       const updatedProfile = await Profile.findOneAndUpdate(
-        {}, // Leeres Filterkriterium, um das erste Dokument zu finden
-        { ...updateData, updatedAt: new Date() },
+        {}, // Leeres Filterkriterium: Es wird das erste Profil-Dokument verwendet.
+        updateQuery,
         { new: true }
       );
 

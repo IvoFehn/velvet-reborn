@@ -63,7 +63,7 @@ export type OrtItem = {
 
 export interface GeneratorData {
   _id?: string;
-  status: "NEW" | "ACCEPTED" | "PENDING" | "DECLINED" | "DONE";
+  status: "NEW" | "ACCEPTED" | "PENDING" | "DECLINED" | "DONE" | "FAILED";
   pose: PoseObject;
   outfit: string;
   orgasmus: string;

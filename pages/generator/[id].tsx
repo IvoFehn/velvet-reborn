@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import InformationCircleIcon from "@heroicons/react/24/outline/InformationCircleIcon";
 import { InfoRow } from "@/components/generator/InfoRow";
-import { SectionComponent } from "@/components/generator/Section";
+import { SectionComponent } from "@/components/generator/Section"; // Hier die aktualisierte Version
 import { GeneratorData } from "@/types";
 import { useRouter } from "next/router";
 import { saveAs } from "file-saver";
@@ -216,16 +216,24 @@ const GeneratorDetailView = () => {
     );
   }
 
+  // Update statusColors inklusive FAILED
   const statusColors: { [key: string]: string } = {
     NEW: "bg-blue-100 text-blue-800",
     ACCEPTED: "bg-green-100 text-green-800",
     PENDING: "bg-yellow-100 text-yellow-800",
     DECLINED: "bg-red-100 text-red-800",
     DONE: "bg-gray-100 text-gray-800",
+    FAILED: "bg-red-500 text-white animate-pulse",
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div
+      className={`min-h-screen flex flex-col ${
+        generatorData.status === "FAILED"
+          ? "border-4 border-red-500 animate-pulse"
+          : ""
+      }`}
+    >
       {/* SNACKBAR in der unteren Mitte */}
       <Snackbar
         open={snackbarOpen}
@@ -270,7 +278,13 @@ const GeneratorDetailView = () => {
       {/* Hauptinhalt */}
       <main className="flex-grow mx-auto max-w-7xl px-4 py-6">
         {/* Kopfbereich: Titel und Status */}
-        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <header
+          className={`mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between ${
+            generatorData.status === "FAILED"
+              ? "relative bg-red-50 p-4 rounded-lg shadow-red-sm"
+              : ""
+          }`}
+        >
           <div>
             <h1 className="text-2xl font-bold text-gray-800 md:text-3xl">
               Auftragsdetails{" "}
@@ -279,12 +293,27 @@ const GeneratorDetailView = () => {
               </span>
             </h1>
           </div>
-          <Chip
-            label={generatorData.status}
-            className={`font-medium ${
-              statusColors[generatorData.status] ?? ""
-            }`}
-          />
+          <div className="flex items-center">
+            <Chip
+              label={generatorData.status}
+              className={`font-medium ${
+                statusColors[generatorData.status] ?? ""
+              }`}
+            />
+            {generatorData.status === "FAILED" && (
+              <svg
+                className="w-8 h-8 text-red-500 animate-bounce ml-2"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            )}
+          </div>
         </header>
 
         {/* Weitere Inhalte */}
@@ -323,7 +352,14 @@ const GeneratorDetailView = () => {
             {(generatorData.outfit ||
               generatorData.orgasmus ||
               typeof generatorData.blueBalls === "boolean") && (
-              <SectionComponent title="Grundkonfiguration">
+              <SectionComponent
+                title="Grundkonfiguration"
+                className={
+                  generatorData.status === "FAILED"
+                    ? "border-2 border-red-300 shadow-red-lg"
+                    : ""
+                }
+              >
                 <div className="space-y-4">
                   {generatorData.outfit && (
                     <InfoRow label="Outfit" value={generatorData.outfit}>
@@ -385,14 +421,32 @@ const GeneratorDetailView = () => {
             )}
 
             {generatorData.pose?.chosenPose.id && (
-              <SectionComponent title="Pose">
+              <SectionComponent
+                title="Pose"
+                className={
+                  generatorData.status === "FAILED"
+                    ? "border-2 border-red-300 shadow-red-lg"
+                    : ""
+                }
+              >
                 <div className="space-y-4">
                   {generatorData.pose.chosenPose.img && (
                     <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
+                      <div
+                        className={`absolute inset-0 ${
+                          generatorData.status === "FAILED"
+                            ? "failed-glitch"
+                            : ""
+                        }`}
+                      ></div>
                       <img
                         src={generatorData.pose.chosenPose.img}
                         alt={generatorData.pose.chosenPose.title}
-                        className="h-full w-full object-cover"
+                        className={`h-full w-full object-cover ${
+                          generatorData.status === "FAILED"
+                            ? "opacity-90 mix-blend-multiply"
+                            : ""
+                        }`}
                         loading="lazy"
                       />
                     </div>
@@ -429,7 +483,14 @@ const GeneratorDetailView = () => {
 
             {hasItems(generatorData.kondome) &&
               generatorData.kondome.length > 1 && (
-                <SectionComponent title="Kondome">
+                <SectionComponent
+                  title="Kondome"
+                  className={
+                    generatorData.status === "FAILED"
+                      ? "border-2 border-red-300 shadow-red-lg"
+                      : ""
+                  }
+                >
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {generatorData.kondome.map((condom, index) => (
                       <div
@@ -454,7 +515,14 @@ const GeneratorDetailView = () => {
           {/* Rechte Spalte */}
           <div className="flex flex-col gap-6">
             {hasItems(generatorData.regeln) && (
-              <SectionComponent title="Spielregeln">
+              <SectionComponent
+                title="Spielregeln"
+                className={
+                  generatorData.status === "FAILED"
+                    ? "border-2 border-red-300 shadow-red-lg"
+                    : ""
+                }
+              >
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {generatorData.regeln.map((rule, index) => (
                     <div
@@ -484,7 +552,14 @@ const GeneratorDetailView = () => {
             )}
 
             {hasItems(generatorData.vorSex) && (
-              <SectionComponent title="Vorbereitungen">
+              <SectionComponent
+                title="Vorbereitungen"
+                className={
+                  generatorData.status === "FAILED"
+                    ? "border-2 border-red-300 shadow-red-lg"
+                    : ""
+                }
+              >
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {generatorData.vorSex.map((prep, index) => (
                     <div
@@ -522,7 +597,14 @@ const GeneratorDetailView = () => {
 
             {(hasItems(generatorData.interval) ||
               generatorData.dringlichkeit) && (
-              <SectionComponent title="Zeitliche Planung">
+              <SectionComponent
+                title="Zeitliche Planung"
+                className={
+                  generatorData.status === "FAILED"
+                    ? "border-2 border-red-300 shadow-red-lg"
+                    : ""
+                }
+              >
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {hasItems(generatorData.interval) && (
                     <div className="rounded-lg bg-blue-50 p-3 shadow-sm">
@@ -601,7 +683,14 @@ const GeneratorDetailView = () => {
         )}
 
         {(generatorData.loch || generatorData.toys || generatorData.ort) && (
-          <SectionComponent title="Erweiterte Einstellungen">
+          <SectionComponent
+            title="Erweiterte Einstellungen"
+            className={
+              generatorData.status === "FAILED"
+                ? "border-2 border-red-300 shadow-red-lg"
+                : ""
+            }
+          >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {generatorData.loch && (
                 <div className="rounded-lg bg-orange-50 p-4 shadow-sm">
@@ -704,7 +793,7 @@ const GeneratorDetailView = () => {
       </main>
 
       {/* Footer mit den Aktions-Buttons */}
-      <footer className="bg-white border-t p-4">
+      <footer className={`bg-white border-t p-4 `}>
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-end gap-4">
           {generatorData.status === "NEW" && (
             <Button
@@ -730,7 +819,7 @@ const GeneratorDetailView = () => {
 
           <Link href="/tickets?view=create" passHref>
             <Button variant="outlined" color="info">
-              Antrag senden{" "}
+              Antrag senden
             </Button>
           </Link>
         </div>
