@@ -317,7 +317,7 @@ const GeneratorDetailView = () => {
         </header>
 
         {/* Weitere Inhalte */}
-        <div className="mb-8 grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 md:grid-cols-3">
+        {/* <div className="mb-8 grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 md:grid-cols-3">
           <InfoRow label="Gold" value={generatorData.gold} icon="💰" />
           <InfoRow label="EXP" value={generatorData.exp} icon="⭐" />
           {(generatorData.alreadyChangeRequested ||
@@ -344,7 +344,7 @@ const GeneratorDetailView = () => {
               }
             />
           )}
-        </div>
+        </div> */}
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Linke Spalte */}

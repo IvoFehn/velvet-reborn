@@ -1,14 +1,33 @@
-// models/Profile.ts
 import { Schema, model, models, Document } from "mongoose";
-import { IInventoryItem } from "./InventoryItem";
-// IMPORTANT: ensure that InventoryItem.ts is imported here
+
+// Importiere InventoryItem als Seiteneffekt, damit das Modell registriert wird
 import "./InventoryItem";
+import "./Lootbox";
+import { IInventoryItem } from "./InventoryItem";
+
+// types/profile.ts
+export interface UpdateProfilePayload {
+  gold?: number;
+  exp?: number;
+  profileImage?: string;
+  name?: string;
+  // Füge die neuen Felder als optionale Eigenschaften hinzu:
+  spin?: boolean;
+  newCoinItem?: string;
+  modifier?: string;
+}
 
 export interface IProfile extends Document {
   name: string;
   gold: number;
   exp: number;
-  inventory: Schema.Types.ObjectId[] | IInventoryItem[];
+  inventory: Array<Schema.Types.ObjectId | IInventoryItem>;
+  keys: number;
+  // lootboxes enthält jetzt Objekte mit Verweis und Menge
+  lootboxes: {
+    lootbox: Schema.Types.ObjectId;
+    quantity: number;
+  }[];
   profileImage?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -20,6 +39,13 @@ const ProfileSchema = new Schema<IProfile>(
     gold: { type: Number, default: 0 },
     exp: { type: Number, default: 0 },
     inventory: [{ type: Schema.Types.ObjectId, ref: "InventoryItem" }],
+    keys: { type: Number, default: 0 },
+    lootboxes: [
+      {
+        lootbox: { type: Schema.Types.ObjectId, ref: "Lootbox" },
+        quantity: { type: Number, default: 1 },
+      },
+    ],
     profileImage: { type: String },
   },
   { timestamps: true }

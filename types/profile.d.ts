@@ -26,15 +26,21 @@ export interface Profile {
   exp: number;
   inventory: InventoryItem[]; // Array von InventoryItem-Objekten
   profileImage?: string;
+  keys: number; // Anzahl der Keys
+  lootboxes: Lootbox[]; // Array von Lootbox-Objekten
   createdAt: Date;
   updatedAt: Date;
 }
 
+// types/profile.ts
 export interface UpdateProfilePayload {
-  id: string; // Verwendung von '_id' im Payload
-  name?: string;
+  _id?: string;
   gold?: number;
   exp?: number;
-  inventory?: string[];
   profileImage?: string;
+  name?: string;
+  // Füge die neuen Felder als optionale Eigenschaften hinzu:
+  spin?: boolean;
+  newCoinItem?: string;
+  modifier?: string;
 }

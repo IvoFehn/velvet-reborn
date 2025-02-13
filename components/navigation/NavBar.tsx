@@ -13,6 +13,7 @@ const protectedItems = [
   { text: "Review", link: "/news" },
   { text: "Events", link: "/events" },
   { text: "Goldweight", link: "/goldweightsettings" },
+  { text: "Lootboxes", link: "/add-loot" },
 ];
 
 const publicItems = [

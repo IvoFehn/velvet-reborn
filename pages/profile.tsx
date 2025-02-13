@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @next/next/no-img-element */
-// components/ProfilePage.tsx
 import React, { useEffect, useState } from "react";
 import {
   Box,
@@ -28,111 +27,58 @@ import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import PaidIcon from "@mui/icons-material/Paid";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Cancel";
+import VpnKeyIcon from "@mui/icons-material/VpnKey";
+import CardGiftcardIcon from "@mui/icons-material/CardGiftcard";
 import { checkAuth } from "@/components/navigation/NavBar";
+import { useRouter } from "next/router";
 import {
   InventoryItem as InventoryItemType,
   Profile as ProfileType,
 } from "@/types/profile";
-import SlideToConfirm from "@/components/slideToConfirm/SlideToConfirm";
 
 const auth = checkAuth();
 
 const ProfilePage: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const router = useRouter();
 
-  // State für das abgefragte Profil
+  // Profil-Daten
   const [profile, setProfile] = useState<ProfileType | null>(null);
+  // Fehlerstatus (wird angezeigt, falls ein Fehler auftritt)
+  const [error, setError] = useState<string>("");
 
-  // Lokale States für das Bearbeiten
+  // Lokaler Bearbeitungs-Status
   const [editMode, setEditMode] = useState<boolean>(false);
   const [localName, setLocalName] = useState("");
   const [localGold, setLocalGold] = useState(0);
   const [localExp, setLocalExp] = useState(0);
+  const [localKeys, setLocalKeys] = useState(0);
 
-  // Image Modal
+  // Modal für Profilbild
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [tempImageUrl, setTempImageUrl] = useState("");
 
   // Inventar anzeigen/verbergen
   const [showFullInventory, setShowFullInventory] = useState(false);
 
-  // Dialog für Item-Verwendung
+  // Dialog für das Verwenden von Inventar-Items
   const [useDialogOpen, setUseDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItemType | null>(
     null
   );
 
-  // Fehlerstatus
-  const [error, setError] = useState<string>("");
+  // Dialog für das Öffnen von Lootboxes
+  const [lootboxDialogOpen, setLootboxDialogOpen] = useState(false);
+  const [selectedLootbox, setSelectedLootbox] = useState<any>(null);
 
-  // Inventar-Item verwenden
-  const handleUseItem = async () => {
-    if (!selectedItem) return;
+  // Zustand zum Laden aller Lootboxen (für vollständige Daten)
+  const [allLootboxes, setAllLootboxes] = useState<any[]>([]);
+  const [loadingAllLootboxes, setLoadingAllLootboxes] =
+    useState<boolean>(false);
+  const [errorAllLootboxes, setErrorAllLootboxes] = useState<string>("");
 
-    console.log("Verwende InventoryItem:", selectedItem);
-
-    try {
-      // Verwende die InventoryItem-ID statt der Item-ID
-      const response = await fetch(`/api/profile/${selectedItem._id}`, {
-        method: "PUT",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.error || "Item konnte nicht verwendet werden"
-        );
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Aktualisiere lokalen Zustand
-        setProfile((prev) => {
-          if (!prev) return null;
-
-          const updatedInventory = prev.inventory
-            .map((item) => {
-              if (item._id === selectedItem._id) {
-                // Vergleiche mit InventoryItem-ID
-                if (item.quantity === 1) {
-                  return null; // Entferne das Item
-                } else {
-                  return { ...item, quantity: item.quantity - 1 }; // Verringere die Menge
-                }
-              }
-              return item;
-            })
-            .filter(Boolean) as InventoryItemType[];
-
-          return { ...prev, inventory: updatedInventory };
-        });
-
-        setUseDialogOpen(false);
-        setSelectedItem(null);
-        setError("");
-      } else {
-        throw new Error(data.message || "Fehler beim Verwenden des Items");
-      }
-    } catch (error: any) {
-      console.error("Fehler beim Verwenden des Items:", error);
-      setError(error.message || "Unbekannter Fehler");
-    }
-  };
-
-  // Item-Klick-Handler
-  const handleItemClick = (item: InventoryItemType) => {
-    setSelectedItem(item);
-    setUseDialogOpen(true);
-  };
-
-  // Daten für das Inventar anzeigen
-  const displayedInventory = showFullInventory
-    ? profile?.inventory || []
-    : (profile?.inventory || []).slice(0, isMobile ? 4 : 8);
-
-  // Profil-Daten abrufen
+  // Profil abrufen
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -142,14 +88,14 @@ const ProfilePage: React.FC = () => {
         }
         const data = await response.json();
         const fetchedProfile = data.data as ProfileType;
-
         setProfile(fetchedProfile);
         setLocalName(fetchedProfile.name);
         setLocalGold(fetchedProfile.gold);
         setLocalExp(fetchedProfile.exp);
+        setLocalKeys(fetchedProfile.keys);
         setTempImageUrl(fetchedProfile.profileImage || "");
-      } catch (error) {
-        console.error(error);
+      } catch (err: any) {
+        console.error(err);
         setError("Fehler beim Laden des Profils");
       }
     };
@@ -157,128 +103,197 @@ const ProfilePage: React.FC = () => {
     fetchProfile();
   }, []);
 
-  // Bearbeitete Daten speichern
-  const handleSaveEdits = async () => {
-    if (!profile) return;
-
-    try {
-      const payload = {
-        id: profile._id, // Geändert von 'id' zu '_id'
-        name: localName,
-        gold: localGold,
-        exp: localExp,
-      };
-
-      const response = await fetch("/api/profile/update", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.message || "Update fehlgeschlagen");
+  // Alle Lootboxen laden
+  useEffect(() => {
+    const fetchAllLootboxes = async () => {
+      try {
+        setLoadingAllLootboxes(true);
+        const response = await fetch("/api/lootbox");
+        const data = await response.json();
+        if (data.success) {
+          setAllLootboxes(data.lootboxes);
+        } else {
+          setErrorAllLootboxes(
+            data.message || "Fehler beim Laden der Lootboxen"
+          );
+        }
+      } catch (err: any) {
+        console.error(err);
+        setErrorAllLootboxes("Fehler: " + err.message);
+      } finally {
+        setLoadingAllLootboxes(false);
       }
+    };
 
-      // Lokalen Zustand aktualisieren
-      setProfile({
-        ...profile,
-        name: localName,
-        gold: localGold,
-        exp: localExp,
-      });
-      // Bearbeitungsmodus verlassen
-      setEditMode(false);
-      setError("");
-    } catch (error: any) {
-      console.error(error);
-      setError(error.message || "Fehler beim Speichern der Änderungen");
+    fetchAllLootboxes();
+  }, []);
+
+  // Hilfsfunktion: Liefert vollständige Lootbox-Daten für einen Eintrag aus profile.lootboxes
+  const getLootboxData = (entry: any) => {
+    if (
+      entry.lootbox &&
+      typeof entry.lootbox === "object" &&
+      entry.lootbox.img
+    ) {
+      return entry.lootbox;
     }
+    return allLootboxes.find((lb) => lb._id === entry.lootbox) || {};
   };
 
-  // Bild aktualisieren (immer erlaubt)
-  const handleImageUpdate = async () => {
-    if (!profile) return;
-
-    try {
-      const payload = {
-        id: profile._id, // Geändert von 'id' zu '_id'
-        profileImage: tempImageUrl,
-      };
-
-      const response = await fetch("/api/profile/update", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.message || "Update fehlgeschlagen");
-      }
-
-      // Zustand aktualisieren
-      setProfile((prev) =>
-        prev
-          ? {
-              ...prev,
-              profileImage: tempImageUrl,
-            }
-          : null
-      );
-      setImageModalOpen(false);
-      setError("");
-    } catch (error: any) {
-      console.error(error);
-      setError(error.message || "Fehler beim Aktualisieren des Bildes");
-    }
-  };
-
+  // Falls ein Fehler vorliegt, diesen anzeigen
   if (error) {
     return (
-      <Box className="mx-auto max-w-2xl px-4 py-8">
-        <Box className="flex items-center gap-2 rounded-lg bg-red-50 p-4 text-red-600">
-          <WarningAmberIcon fontSize="small" />
+      <Box sx={{ mx: "auto", maxWidth: 800, p: 4 }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            p: 2,
+            backgroundColor: alpha(theme.palette.error.main, 0.1),
+            borderRadius: 2,
+          }}
+        >
+          <WarningAmberIcon />
           <Typography>{error}</Typography>
         </Box>
       </Box>
     );
   }
 
+  // Falls das Profil noch nicht geladen wurde, Ladeanzeige
   if (!profile) {
     return (
       <Box
-        sx={{
-          textAlign: "center",
-          mt: 5,
-          color: theme.palette.text.secondary,
-        }}
+        sx={{ textAlign: "center", mt: 5, color: theme.palette.text.secondary }}
       >
         <Typography variant="h6">Lade Profil ...</Typography>
       </Box>
     );
   }
 
+  // Für die Anzeige des Inventars (limitiert oder voll)
+  const displayedInventory = showFullInventory
+    ? profile.inventory || []
+    : (profile.inventory || []).slice(0, isMobile ? 4 : 8);
+
+  // Handler für Bearbeitungsfunktionen im Admin-Modus (Admin-Endpoint)
+  const handleSaveEdits = async () => {
+    if (!profile) return;
+    try {
+      const payload = {
+        id: profile._id,
+        name: localName,
+        gold: localGold,
+        exp: localExp,
+        keys: localKeys,
+      };
+
+      const response = await fetch("/api/profile/admin-update", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || "Update fehlgeschlagen");
+      }
+      setProfile({
+        ...profile,
+        name: localName,
+        gold: localGold,
+        exp: localExp,
+        keys: localKeys,
+      });
+      setEditMode(false);
+      setError("");
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Fehler beim Speichern der Änderungen");
+    }
+  };
+
+  const handleImageUpdate = async () => {
+    if (!profile) return;
+    try {
+      const payload = {
+        id: profile._id,
+        profileImage: tempImageUrl,
+      };
+      const response = await fetch("/api/profile/update", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || "Update fehlgeschlagen");
+      }
+      setProfile((prev) =>
+        prev ? { ...prev, profileImage: tempImageUrl } : null
+      );
+      setImageModalOpen(false);
+      setError("");
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Fehler beim Aktualisieren des Bildes");
+    }
+  };
+
+  // Handler für die Verwendung eines Inventar-Items
+  const handleUseItem = async () => {
+    if (!selectedItem) return;
+    try {
+      const response = await fetch(`/api/profile/${selectedItem._id}`, {
+        method: "PUT",
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error || "Item konnte nicht verwendet werden"
+        );
+      }
+      const data = await response.json();
+      if (data.success) {
+        setProfile((prev) => {
+          if (!prev) return null;
+          const updatedInventory = prev.inventory
+            .map((item) => {
+              if (item._id === selectedItem._id) {
+                if (item.quantity === 1) {
+                  return null;
+                } else {
+                  return { ...item, quantity: item.quantity - 1 };
+                }
+              }
+              return item;
+            })
+            .filter(Boolean) as InventoryItemType[];
+          return { ...prev, inventory: updatedInventory };
+        });
+        setUseDialogOpen(false);
+        setSelectedItem(null);
+        setError("");
+      } else {
+        throw new Error(data.message || "Fehler beim Verwenden des Items");
+      }
+    } catch (err: any) {
+      console.error("Fehler beim Verwenden des Items:", err);
+      setError(err.message || "Unbekannter Fehler");
+    }
+  };
+
+  const handleItemClick = (item: InventoryItemType) => {
+    setSelectedItem(item);
+    setUseDialogOpen(true);
+  };
+
   return (
     <Box
-      sx={{
-        width: "100%",
-        maxWidth: 800,
-        mx: "auto",
-        p: { xs: 1.5, sm: 4 },
-        background: `linear-gradient(45deg, ${alpha(
-          theme.palette.background.default,
-          0.8
-        )} 0%, ${theme.palette.background.paper} 100%)`,
-        borderRadius: { xs: 2, sm: 4 },
-        boxShadow: theme.shadows[2],
-      }}
+      sx={{ width: "100%", maxWidth: 800, mx: "auto", p: { xs: 1.5, sm: 4 } }}
     >
-      {/* Header + Edit Buttons */}
+      {/* Header und Profilinformationen */}
       <Box
         sx={{
           display: "flex",
@@ -301,7 +316,6 @@ const ProfilePage: React.FC = () => {
           },
         }}
       >
-        {/* Profilbild (immer aktualisierbar) */}
         <Box
           sx={{
             position: "relative",
@@ -352,7 +366,6 @@ const ProfilePage: React.FC = () => {
           </IconButton>
         </Box>
 
-        {/* Profilinfo */}
         <Box sx={{ textAlign: { xs: "center", sm: "left" }, flex: 1 }}>
           {editMode && auth ? (
             <TextField
@@ -396,7 +409,6 @@ const ProfilePage: React.FC = () => {
               />
             }
           >
-            {/* Gold */}
             <Stack direction="row" spacing={1} justifyContent="center">
               <PaidIcon
                 sx={{
@@ -423,7 +435,6 @@ const ProfilePage: React.FC = () => {
               )}
             </Stack>
 
-            {/* Exp */}
             <Stack direction="row" spacing={1} justifyContent="center">
               {editMode && auth ? (
                 <TextField
@@ -443,10 +454,35 @@ const ProfilePage: React.FC = () => {
                 </Typography>
               )}
             </Stack>
+
+            <Stack direction="row" spacing={1} justifyContent="center">
+              <VpnKeyIcon
+                sx={{
+                  fontSize: { xs: "1.4rem", sm: "1.6rem" },
+                  color: theme.palette.info.main,
+                }}
+              />
+              {editMode && auth ? (
+                <TextField
+                  variant="outlined"
+                  size="small"
+                  type="number"
+                  value={localKeys}
+                  onChange={(e) => setLocalKeys(+e.target.value)}
+                  sx={{ maxWidth: 80 }}
+                />
+              ) : (
+                <Typography
+                  variant="h6"
+                  sx={{ fontSize: { xs: "1.1rem", sm: "1.25rem" } }}
+                >
+                  {profile.keys} Keys
+                </Typography>
+              )}
+            </Stack>
           </Stack>
         </Box>
 
-        {/* Edit Mode Buttons (nur wenn auth === true) */}
         {auth && (
           <Stack direction="row" spacing={2}>
             {!editMode ? (
@@ -472,10 +508,10 @@ const ProfilePage: React.FC = () => {
                   color="inherit"
                   startIcon={<CancelIcon />}
                   onClick={() => {
-                    // Setze lokale States auf Originalwerte zurück
                     setLocalName(profile.name);
                     setLocalGold(profile.gold);
                     setLocalExp(profile.exp);
+                    setLocalKeys(profile.keys);
                     setEditMode(false);
                     setError("");
                   }}
@@ -488,7 +524,7 @@ const ProfilePage: React.FC = () => {
         )}
       </Box>
 
-      {/* Inventar Abschnitt */}
+      {/* Inventar-Abschnitt */}
       <Paper
         sx={{
           p: { xs: 2, sm: 3 },
@@ -595,13 +631,7 @@ const ProfilePage: React.FC = () => {
                 >
                   {inventoryItem.item.title}
                 </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: "text.secondary",
-                    fontSize: { xs: "0.75rem", sm: "0.85rem" },
-                  }}
-                >
+                <Typography variant="caption" sx={{ color: "text.secondary" }}>
                   Menge: {inventoryItem.quantity}
                 </Typography>
               </Paper>
@@ -636,7 +666,187 @@ const ProfilePage: React.FC = () => {
         )}
       </Paper>
 
-      {/* Bild Bearbeitungs-Modal */}
+      {/* Lootbox-Abschnitt */}
+      <Paper
+        sx={{
+          p: { xs: 2, sm: 3 },
+          borderRadius: { xs: 2, sm: 3 },
+          bgcolor: alpha(theme.palette.background.paper, 0.9),
+          backdropFilter: "blur(8px)",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+          mt: 3,
+        }}
+      >
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={1.5}
+          sx={{ mb: { xs: 2, sm: 3 } }}
+        >
+          <CardGiftcardIcon
+            sx={{
+              fontSize: { xs: 24, sm: 28 },
+              color: theme.palette.primary.main,
+            }}
+          />
+          <Typography
+            variant="h6"
+            sx={{ fontSize: { xs: "1.1rem", sm: "1.25rem" } }}
+          >
+            Lootboxes ({profile.lootboxes?.length || 0})
+          </Typography>
+        </Stack>
+        {loadingAllLootboxes ? (
+          <Typography>Lade Lootboxen...</Typography>
+        ) : errorAllLootboxes ? (
+          <Typography color="error">{errorAllLootboxes}</Typography>
+        ) : (
+          <Grid container spacing={{ xs: 1.5, sm: 2.5 }}>
+            {profile.lootboxes &&
+              profile.lootboxes.map((entry: any, index: number) => {
+                // entry: { lootbox: <ID oder Objekt>, quantity: number }
+                const lb = getLootboxData(entry);
+                return (
+                  <Grid item xs={6} sm={4} md={3} key={index}>
+                    <Paper
+                      onClick={() => {
+                        if (profile.keys < 1) {
+                          setError(
+                            "Nicht genügend Keys, um die Lootbox zu öffnen."
+                          );
+                        } else {
+                          setSelectedLootbox(lb);
+                          setLootboxDialogOpen(true);
+                        }
+                      }}
+                      sx={{
+                        p: { xs: 1.5, sm: 2 },
+                        borderRadius: 2,
+                        position: "relative",
+                        overflow: "hidden",
+                        transition: "all 0.2s ease",
+                        "&:hover": {
+                          transform: "translateY(-2px)",
+                          boxShadow: theme.shadows[2],
+                        },
+                        "&::before": {
+                          content: '""',
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: 3,
+                          bgcolor: theme.palette.primary.main,
+                        },
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          mb: 1,
+                          width: "100%",
+                          height: 100,
+                          borderRadius: 1,
+                          overflow: "hidden",
+                        }}
+                      >
+                        {lb.img ? (
+                          <img
+                            src={lb.img}
+                            alt={lb.type}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                            }}
+                          />
+                        ) : (
+                          <Box
+                            sx={{
+                              width: "100%",
+                              height: "100%",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              bgcolor: alpha(theme.palette.divider, 0.2),
+                            }}
+                          >
+                            <ImageIcon
+                              sx={{
+                                fontSize: 40,
+                                color: theme.palette.text.secondary,
+                              }}
+                            />
+                          </Box>
+                        )}
+                      </Box>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 500,
+                          fontSize: { xs: "0.9rem", sm: "1rem" },
+                          lineHeight: 1.2,
+                          mb: 0.5,
+                        }}
+                      >
+                        {lb.type}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{ color: "text.secondary" }}
+                      >
+                        Menge: {entry.quantity}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                );
+              })}
+          </Grid>
+        )}
+      </Paper>
+
+      {/* Dialog für das Öffnen einer Lootbox */}
+      <Dialog
+        open={lootboxDialogOpen}
+        onClose={() => setLootboxDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ textAlign: "center" }}>
+          {selectedLootbox?.type} öffnen?
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ textAlign: "center", mb: 2 }}>
+            {profile.keys < 1 ? (
+              <Typography variant="body2" color="error">
+                Nicht genügend Keys vorhanden.
+              </Typography>
+            ) : (
+              <Typography variant="body2">Lootbox öffnen.</Typography>
+            )}
+          </Box>
+          {profile.keys >= 1 && (
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={() => router.push(`/lootbox?id=${selectedLootbox?._id}`)}
+            >
+              Lootbox öffnen
+            </Button>
+          )}
+          {profile.keys < 1 && (
+            <Button
+              variant="outlined"
+              fullWidth
+              onClick={() => setLootboxDialogOpen(false)}
+            >
+              Schließen
+            </Button>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal zum Bearbeiten des Profilbildes */}
       <Modal
         open={imageModalOpen}
         onClose={() => setImageModalOpen(false)}
@@ -675,11 +885,7 @@ const ProfilePage: React.FC = () => {
               <img
                 src={tempImageUrl}
                 alt="Preview"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                }}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
             </Box>
           )}
@@ -692,10 +898,7 @@ const ProfilePage: React.FC = () => {
             onChange={(e) => setTempImageUrl(e.target.value)}
             sx={{ mb: 2.5 }}
             InputProps={{
-              sx: {
-                borderRadius: 1.5,
-                fontSize: { xs: "0.9rem", sm: "1rem" },
-              },
+              sx: { borderRadius: 1.5, fontSize: { xs: "0.9rem", sm: "1rem" } },
             }}
           />
 
@@ -729,7 +932,7 @@ const ProfilePage: React.FC = () => {
         </Box>
       </Modal>
 
-      {/* Use Item Dialog */}
+      {/* Dialog für das Verwenden eines Inventar-Items */}
       <Dialog
         open={useDialogOpen}
         onClose={() => setUseDialogOpen(false)}
@@ -745,12 +948,16 @@ const ProfilePage: React.FC = () => {
               Ziehe den Schieber nach rechts, um das Item zu verwenden
             </Typography>
           </Box>
-          <SlideToConfirm
-            onConfirm={() => {
+          <Button
+            variant="contained"
+            fullWidth
+            onClick={() => {
               handleUseItem();
               setUseDialogOpen(false);
             }}
-          />
+          >
+            Item verwenden
+          </Button>
         </DialogContent>
       </Dialog>
     </Box>

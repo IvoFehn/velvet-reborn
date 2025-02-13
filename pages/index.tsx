@@ -1,7 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// pages/index.tsx
 import React, { useEffect, useState } from "react";
-import { useWindowSize } from "react-use"; // react-use Hook importieren
+import { useWindowSize } from "react-use";
 import {
   BellIcon,
   DocumentTextIcon,
@@ -10,9 +8,11 @@ import {
 import Link from "next/link";
 import { GeneratorData } from "@/types";
 import dayjs from "dayjs";
-import "dayjs/locale/de"; // Deutsches Locale importieren
+import "dayjs/locale/de";
 import MoodTachometer from "@/components/moodTachometer/MoodTachometer";
-import Confetti from "react-confetti"; // React-Confetti importieren
+import Confetti from "react-confetti";
+import { isEventActive } from "@/util/isEventActive";
+import DailyRewardsWidget from "@/components/dailyRewardsWidget/DailyRewardsWidget";
 
 dayjs.locale("de");
 
@@ -94,71 +94,16 @@ export default function HomePage() {
     fetchNewsMessages();
   }, []);
 
-  // Prüfen, ob ein aktives Event vorliegt
+  // useEffect: Prüfe, ob ein aktives Event vorliegt, mittels der ausgelagerten Funktion
   useEffect(() => {
-    const checkEvents = () => {
-      const nowUTC = new Date();
-
-      fetch("/api/events")
-        .then((res) => res.json())
-        .then((data) => {
-          if (!data.success || !data.events) {
-            setActiveEvent(false);
-            return;
-          }
-
-          const isAnyEventActive = data.events.some((event: any) => {
-            // UTC-Zeitstempel für alle Event-Daten
-            const startDate = new Date(event.startDate);
-            const endDate = new Date(event.endDate);
-            const recurrenceEnd = event.recurrenceEnd
-              ? new Date(event.recurrenceEnd)
-              : null;
-
-            // 1. Prüfe für wiederkehrende Events
-            if (event.recurring) {
-              // a) Wiederholungsende checken
-              if (recurrenceEnd && nowUTC > recurrenceEnd) return false;
-
-              // b) Tägliche Wiederholung checken
-              const startUTCHours = startDate.getUTCHours();
-              const startUTCMinutes = startDate.getUTCMinutes();
-              const endUTCHours = endDate.getUTCHours();
-              const endUTCMinutes = endDate.getUTCMinutes();
-
-              const currentUTCDay = nowUTC.getUTCDay();
-              const eventStartUTCDay = startDate.getUTCDay();
-              const currentUTCTime =
-                nowUTC.getUTCHours() * 60 + nowUTC.getUTCMinutes();
-              const eventStartTime = startUTCHours * 60 + startUTCMinutes;
-              const eventEndTime = endUTCHours * 60 + endUTCMinutes;
-
-              // c) Wöchentliche Wiederholung
-              if (event.recurrence === "weekly") {
-                return (
-                  currentUTCDay === eventStartUTCDay &&
-                  currentUTCTime >= eventStartTime &&
-                  currentUTCTime <= eventEndTime
-                );
-              }
-
-              // Hier können weitere Recurrence-Typen ergänzt werden
-            }
-
-            // 2. Nicht-wiederkehrende Events
-            return nowUTC >= startDate && nowUTC <= endDate;
-          });
-
-          setActiveEvent(isAnyEventActive);
-        })
-        .catch((error) => {
-          console.error("Event check failed:", error);
-          setActiveEvent(false);
-        });
+    const checkEvents = async () => {
+      const active = await isEventActive();
+      setActiveEvent(active);
     };
 
+    // Initialer Check und dann alle 5 Minuten (300.000ms)
     checkEvents();
-    const interval = setInterval(checkEvents, 300000); // Alle 5 Minuten
+    const interval = setInterval(checkEvents, 300000);
     return () => clearInterval(interval);
   }, []);
 
@@ -175,11 +120,13 @@ export default function HomePage() {
           <div className="mb-4 flex items-center">
             <HeartIcon className="mr-2 h-5 w-5 text-red-500 md:h-6 md:w-6" />
             <h2 className="text-lg font-semibold text-gray-700 md:text-xl">
-              Lustlevel
+              Lust-o-meter
             </h2>
           </div>
           <MoodTachometer />
         </section>
+
+        <DailyRewardsWidget />
 
         {/* News Section */}
         <section className="col-span-full rounded-xl bg-white p-4 shadow-sm md:p-6">
@@ -283,7 +230,6 @@ export default function HomePage() {
                       <p className="truncate text-sm font-medium text-gray-800 md:text-base">
                         {generator.dringlichkeit?.title || "Unbekannter Kunde"}
                       </p>
-
                       <div className="mt-1 space-y-1">
                         <p className="text-xs text-gray-500 md:text-sm">
                           Erstellt:{" "}
@@ -291,7 +237,6 @@ export default function HomePage() {
                             "DD MMM YYYY"
                           )}
                         </p>
-
                         {generator.blueBalls && (
                           <div className="flex items-center gap-1.5">
                             <span className="relative flex h-2 w-2">
@@ -305,7 +250,6 @@ export default function HomePage() {
                         )}
                       </div>
                     </div>
-
                     <span className="inline-flex h-8 items-center rounded-full bg-gray-100 px-3 text-sm font-medium text-gray-600">
                       {generator.status}
                     </span>
@@ -341,7 +285,8 @@ export default function HomePage() {
           </button>
         </div>
       )}
-      {/* Falls der Banner angezeigt wird, wird auch oben etwas Platz freigehalten */}
+
+      {/* Hauptinhalt */}
       <div
         className="min-h-screen bg-gray-50 p-4 md:p-6"
         style={{

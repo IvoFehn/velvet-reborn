@@ -2,7 +2,8 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/lib/dbConnect";
 import Profile, { IProfile } from "@/models/Profile";
-import Item from "@/models/Item"; // expliziter Import, der nun auch genutzt wird
+import Item from "@/models/Item";
+import Lootbox from "@/models/Lootbox";
 
 export default async function handler(
   req: NextApiRequest,
@@ -24,14 +25,18 @@ export default async function handler(
         path: "inventory",
         populate: {
           path: "item",
-          model: Item.modelName, // Hier wird das importierte Item genutzt
+          model: Item.modelName,
         },
+      })
+      .populate({
+        path: "lootboxes.lootbox", // Hier der verschachtelte Pfad
+        model: Lootbox.modelName,
       })
       .lean<IProfile>()
       .exec();
 
     if (!profile) {
-      console.log("Profil nicht gefunden");
+      console.log("Kein Profil gefunden");
       return res
         .status(404)
         .json({ success: false, message: "Profil nicht gefunden" });

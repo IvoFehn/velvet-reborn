@@ -46,23 +46,11 @@ const fadeInUp = keyframes`
   }
 `;
 
-// Neue Animationen für den failed state
-const shake = {
-  x: [0, -15, 15, -15, 15, 0],
-  transition: { duration: 0.8, type: "spring" },
-};
-
+// Neue Animationen (weitere Animationen wie z.B. pulse können noch genutzt werden)
 const pulse = {
   scale: [1, 1.05, 1],
   transition: { duration: 1.5, repeat: Infinity },
 };
-
-// Keyframes für den pulsierenden Hintergrund des Pseudo-Elements
-const pulseKeyframes = keyframes`
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
-`;
 
 // Vollständige Typdefinition für News
 interface NewsDetail {
@@ -86,6 +74,8 @@ interface NewsDetail {
   bestMoment?: string;
   improvementSuggestion?: string;
   additionalNotes?: string;
+  goldDeduction?: number; // Neu hinzugefügt
+  expDeduction?: number; // Neu hinzugefügt
 }
 
 // Erstelle ein motion-fähiges Paper-Element
@@ -294,25 +284,24 @@ const NewsDetailPage = () => {
       )}
 
       <Container maxWidth="md" sx={{ my: 4, px: { xs: 2, sm: 3 } }}>
+        {/* Angepasstes MotionPaper */}
         <MotionPaper
           elevation={4}
           initial={{ opacity: 0, y: 50 }}
-          animate={{
-            opacity: 1,
-            y: 0,
-            ...(news.type === "failed" ? shake : {}),
-          }}
+          animate={{ opacity: 1, y: 0 }}
           sx={{
             p: { xs: 2, sm: 3, md: 4 },
             borderRadius: 3,
             animation: `${fadeInUp} 0.6s ease-out`,
             backgroundColor: "background.paper",
-            border: news.type === "failed" ? "3px solid" : "none",
             borderColor: news.type === "failed" ? "error.main" : undefined,
-            boxShadow: news.type === "failed" ? 6 : 4,
+            boxShadow:
+              news.type === "failed"
+                ? "0px 3px 5px -1px rgba(244,67,54,0.1), 0px 6px 10px 0px rgba(244,67,54,0.08), 0px 1px 18px 0px rgba(244,67,54,0.06)"
+                : 4,
             position: "relative",
             overflow: "hidden",
-            "&::after":
+            "&::before":
               news.type === "failed"
                 ? {
                     content: '""',
@@ -321,8 +310,8 @@ const NewsDetailPage = () => {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    background: "rgba(244,67,54,0.1)",
-                    animation: `${pulseKeyframes} 2s infinite`,
+                    background:
+                      "linear-gradient(135deg, rgba(244,67,54,0.03) 0%, rgba(255,255,255,0) 50%)",
                   }
                 : {},
           }}
@@ -336,27 +325,38 @@ const NewsDetailPage = () => {
             mb={4}
           >
             <motion.div animate={news.type === "failed" ? pulse : {}}>
+              {/* Angepasste Titeldarstellung */}
               <Typography
                 variant="h3"
                 component="h1"
                 gutterBottom
                 sx={{
                   mb: { xs: 2, sm: 0 },
-                  fontWeight: "bold",
-                  color: news.type === "failed" ? "error.main" : "inherit",
-                  textShadow:
+                  fontWeight: 600,
+                  color: news.type === "failed" ? "error.dark" : "inherit",
+                  position: "relative",
+                  "&::after":
                     news.type === "failed"
-                      ? "0 0 10px rgba(244,67,54,0.5)"
-                      : "none",
+                      ? {
+                          content: '""',
+                          position: "absolute",
+                          bottom: -8,
+                          left: 0,
+                          width: "60%",
+                          height: 2,
+                          backgroundColor: "error.main",
+                          borderRadius: 2,
+                        }
+                      : {},
                 }}
               >
                 {news.title}
-                {news.type === "failed" && (
-                  <Cancel
-                    sx={{ ml: 2, fontSize: "inherit", color: "error.main" }}
-                  />
-                )}
               </Typography>
+              {news.type === "failed" && (
+                <Cancel
+                  sx={{ ml: 2, fontSize: "inherit", color: "error.main" }}
+                />
+              )}
             </motion.div>
           </Box>
 
@@ -396,19 +396,74 @@ const NewsDetailPage = () => {
             </Box>
           </Box>
 
-          {/* Fehlermeldung für failed state */}
+          {/* Angepasster Failed-Bereich */}
           {news.type === "failed" && (
             <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 300 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
             >
-              <Alert severity="error" sx={{ my: 3, fontWeight: "bold" }}>
-                <Typography variant="h6">
-                  Auftrag nicht bestanden! Bitte dringend Verbesserungen
-                  vornehmen!
-                </Typography>
-              </Alert>
+              <Paper
+                elevation={0}
+                sx={{
+                  my: 3,
+                  p: 2,
+                  backgroundColor: "rgba(244,67,54,0.05)",
+                  borderColor: "error.main",
+                  borderRadius: 1,
+                }}
+              >
+                <Box display="flex" alignItems="center" gap={2}>
+                  <Cancel color="error" sx={{ fontSize: 32 }} />
+                  <Box>
+                    <Typography
+                      variant="h6"
+                      color="error.dark"
+                      fontWeight="500"
+                    >
+                      Auftrag nicht bestanden
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Bitte dringend Verbesserungen vornehmen
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Grid container spacing={2} sx={{ mt: 1 }}>
+                  <Grid item xs={6}>
+                    <Paper
+                      sx={{
+                        p: 1.5,
+                        textAlign: "center",
+                        bgcolor: "rgba(244,67,54,0.08)",
+                      }}
+                    >
+                      <Typography variant="caption" color="error.dark">
+                        Gold Abzug
+                      </Typography>
+                      <Typography variant="h6" color="error.dark">
+                        -{news.goldDeduction || 0}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Paper
+                      sx={{
+                        p: 1.5,
+                        textAlign: "center",
+                        bgcolor: "rgba(244,67,54,0.08)",
+                      }}
+                    >
+                      <Typography variant="caption" color="error.dark">
+                        EXP Abzug
+                      </Typography>
+                      <Typography variant="h6" color="error.dark">
+                        -{news.expDeduction || 0}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                </Grid>
+              </Paper>
             </motion.div>
           )}
 
@@ -512,10 +567,14 @@ const NewsDetailPage = () => {
                           gap={1}
                           flexWrap="wrap"
                         >
+                          {/* Angepasstes Rating-Beispiel für "obedience" */}
                           <Typography
                             sx={{
                               color:
-                                news.obedience < 3 ? "error.main" : "inherit",
+                                news.obedience < 3
+                                  ? "error.dark"
+                                  : "text.secondary",
+                              fontWeight: news.obedience < 3 ? 500 : "normal",
                             }}
                           >
                             Gehorsam:
