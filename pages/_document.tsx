@@ -10,7 +10,7 @@ export default function Document() {
           main {
             margin-top: 0;
           }
-
+<
           /* Regeln-Modal Styling:
              Das Modal überdeckt den gesamten Bildschirm und zwingt den Nutzer, die Regeln erneut und aufmerksam zu lesen,
              bevor er starten kann.
