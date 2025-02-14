@@ -9,6 +9,7 @@ export type LootboxType =
   | "Legendary Lootbox";
 
 export interface ILootbox extends Document {
+  _id: Schema.Types.ObjectId;
   name?: string; // Optional
   type: LootboxType;
   img: string;

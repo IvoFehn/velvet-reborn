@@ -35,6 +35,7 @@ import {
   InventoryItem as InventoryItemType,
   Profile as ProfileType,
 } from "@/types/profile";
+import { CoinBookWidget } from "@/components/coinBookWidget/CoinBookWidget";
 
 const auth = checkAuth();
 
@@ -803,6 +804,16 @@ const ProfilePage: React.FC = () => {
               })}
           </Grid>
         )}
+      </Paper>
+      <Paper
+        sx={{
+          p: { xs: 2, sm: 3 },
+          borderRadius: { xs: 2, sm: 3 },
+          bgcolor: alpha(theme.palette.background.paper, 0.9),
+          mt: 3,
+        }}
+      >
+        <CoinBookWidget />
       </Paper>
 
       {/* Dialog für das Öffnen einer Lootbox */}

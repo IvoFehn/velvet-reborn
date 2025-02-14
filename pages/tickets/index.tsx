@@ -3,6 +3,8 @@
 
 import React, { useEffect, useState } from "react";
 import {
+  AppBar,
+  Toolbar,
   Container,
   Box,
   Paper,
@@ -11,6 +13,9 @@ import {
   Tabs,
   Tab,
   Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   IconButton,
   FormControl,
   TextField,
@@ -50,7 +55,7 @@ const TICKET_SUBJECTS = ["Änderungsantrag", "Ablehnungsantrag", "Sonstiges"];
 /** Hauptkomponente */
 export default function TicketSystemPage() {
   return (
-    <Container maxWidth="xl" sx={{ p: 0, m: 0 }}>
+    <Container maxWidth="xl" disableGutters>
       <UserView />
     </Container>
   );
@@ -58,8 +63,8 @@ export default function TicketSystemPage() {
 
 /** USER-VIEW */
 function UserView() {
-  // Theme & Responsive
   const theme = useTheme();
+  // Mobile first: Standard ist mobile, ab "md" wird das Desktop‑Layout verwendet
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
 
   // Router-Query
@@ -81,7 +86,7 @@ function UserView() {
   >([]);
   const [selectedGeneratorId, setSelectedGeneratorId] = useState<string>("");
 
-  // "Neues Ticket" Modal
+  // "Neues Ticket" Dialog
   const [showNewTicket, setShowNewTicket] = useState(false);
 
   // Loading & Fehler
@@ -95,7 +100,19 @@ function UserView() {
     severity: "success" | "error";
   }>({ open: false, message: "", severity: "success" });
 
-  // onClose-Handler für die Snackbar (zwei Parameter: event und reason)
+  // ---------------------- HANDLER ----------------------
+
+  const handleTabChange = async (
+    event: React.SyntheticEvent,
+    newValue: number
+  ) => {
+    setTabIndex(newValue);
+    if (newValue === 1 && archivedTickets.length === 0) {
+      await fetchArchivedTickets();
+    }
+  };
+
+  // Handler für Snackbar (benötigt 2 Parameter)
   const handleSnackbarClose = (
     event: React.SyntheticEvent<Element, Event> | Event,
     reason: SnackbarCloseReason
@@ -104,14 +121,13 @@ function UserView() {
     setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
-  // onClose-Handler für das Alert (nur ein Parameter, wie von Alert erwartet)
+  // Handler für Alert (nur 1 Parameter)
   const handleAlertClose = (event: React.SyntheticEvent<Element, Event>) => {
     setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
   // ---------------------- FETCH-FUNKTIONEN ----------------------
 
-  /** Offene Tickets laden */
   const fetchOpenTickets = async () => {
     try {
       const res = await fetch("/api/tickets?archived=false");
@@ -122,7 +138,6 @@ function UserView() {
     }
   };
 
-  /** Archivierte Tickets laden */
   const fetchArchivedTickets = async () => {
     try {
       const res = await fetch("/api/tickets?archived=true");
@@ -133,7 +148,6 @@ function UserView() {
     }
   };
 
-  /** Generatoren für Tickets laden (ohne DONE und DECLINED) */
   const fetchGeneratorsForTicket = async () => {
     try {
       const res = await fetch("/api/generator?exclude_status=DONE,DECLINED");
@@ -147,11 +161,9 @@ function UserView() {
     }
   };
 
-  /** Neues Ticket anlegen */
   const handleSubmit = async () => {
     if (!subject || !description) return;
 
-    // Validierung: Bei Änderungs- und Ablehnungsanträgen muss ein Generator ausgewählt werden.
     if (
       ["Änderungsantrag", "Ablehnungsantrag"].includes(subject) &&
       !selectedGeneratorId
@@ -182,9 +194,8 @@ function UserView() {
           severity: "success",
         });
         setShowNewTicket(false);
-        await fetchOpenTickets(); // Tickets neu laden
+        await fetchOpenTickets();
 
-        // Falls ein Generator ausgewählt wurde, aktualisiere dessen Status auf "PENDING"
         if (selectedGeneratorId) {
           try {
             const putRes = await fetch("/api/generator", {
@@ -211,7 +222,7 @@ function UserView() {
         setDescription("");
         setSelectedGeneratorId("");
 
-        // Telegram-Benachrichtigung über die vorhandene Funktion ausführen
+        // Telegram-Benachrichtigung
         const telegramResponse = await sendTelegramMessage(
           "admin",
           `Ein neuer Antrag wurde eingereicht am ${dayjs()
@@ -238,27 +249,8 @@ function UserView() {
     }
   };
 
-  // ---------------------- HANDLER ----------------------
-
-  /** Manueller Tab-Wechsel (0 = Offen, 1 = Archiv) */
-  const handleTabChange = async (
-    event: React.SyntheticEvent,
-    newValue: number
-  ) => {
-    setTabIndex(newValue);
-
-    // Tickets laden
-    if (newValue === 1) {
-      // Archivierte Tickets laden
-      if (archivedTickets.length === 0) {
-        await fetchArchivedTickets();
-      }
-    }
-  };
-
   // ---------------------- USEEFFECTS ----------------------
 
-  /** Direkt beim Laden: offene Tickets */
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -270,27 +262,22 @@ function UserView() {
     })();
   }, []);
 
-  /** Auswertung des URL-Parameters "view" */
   useEffect(() => {
     if (!view) return;
     const viewParam = (view as string).toUpperCase();
 
     if (viewParam === "ARCHIVED") {
-      // Archiv-Tab
       setTabIndex(1);
       fetchArchivedTickets();
     } else if (viewParam === "CREATE") {
-      // Neues Ticket-Modal
       setShowNewTicket(true);
       setTabIndex(0);
     } else if (viewParam === "TICKET") {
-      // Tab 0 = Offen
       setTabIndex(0);
       fetchOpenTickets();
     }
   }, [view]);
 
-  /** Generatoren laden, wenn der Betreff Änderungsantrag, Ablehnungsantrag oder Sonstiges ist */
   useEffect(() => {
     if (
       ["Änderungsantrag", "Ablehnungsantrag", "Sonstiges"].includes(subject)
@@ -310,19 +297,31 @@ function UserView() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        position: "relative",
       }}
     >
-      {/* Hauptbereich mit Sidebar (nur Desktop) + Inhalt */}
+      {/* Mobile Header */}
+      {!isDesktop && (
+        <AppBar position="static">
+          <Toolbar>
+            <Typography variant="h6" sx={{ flexGrow: 1 }}>
+              Neuer Antrag
+            </Typography>
+            <IconButton color="inherit" onClick={() => setShowNewTicket(true)}>
+              <SendOutlined />
+            </IconButton>
+          </Toolbar>
+        </AppBar>
+      )}
+
+      {/* Hauptbereich: Sidebar (Desktop) + Inhalt */}
       <Box
         sx={{
           flex: 1,
           display: "flex",
           flexDirection: isDesktop ? "row" : "column",
-          position: "relative",
+          pt: !isDesktop ? 2 : 0,
         }}
       >
-        {/* Sidebar nur für Desktop/Tablet */}
         {isDesktop && (
           <Paper
             sx={{
@@ -351,7 +350,6 @@ function UserView() {
               />
               <Tab label="Archiv" />
             </Tabs>
-
             <Box sx={{ mt: 4 }}>
               <Button
                 variant="contained"
@@ -365,7 +363,7 @@ function UserView() {
           </Paper>
         )}
 
-        {/* Inhaltsbereich / Tickets */}
+        {/* Inhaltsbereich */}
         <Box sx={{ flex: 1, p: 2 }}>
           {loading && <Typography variant="body1">Lade Daten...</Typography>}
 
@@ -385,7 +383,7 @@ function UserView() {
         </Box>
       </Box>
 
-      {/* BOTTOM NAV nur auf Mobile */}
+      {/* Bottom Navigation nur auf mobilen Geräten */}
       {!isDesktop && (
         <BottomNavigation
           value={tabIndex}
@@ -409,46 +407,32 @@ function UserView() {
             }
           />
           <BottomNavigationAction label="Archiv" icon={<ArchiveOutlined />} />
-          <BottomNavigationAction
-            label="Neu"
-            icon={<SendOutlined />}
-            onClick={() => setShowNewTicket(true)}
-          />
+          {/* <BottomNavigationAction label="Neu" icon={<SendOutlined />} /> */}
         </BottomNavigation>
       )}
 
-      {/* Dialog / Modal für neues Ticket */}
+      {/* Dialog für Neues Ticket */}
       <Dialog
         open={showNewTicket}
         onClose={() => setShowNewTicket(false)}
         fullScreen={!isDesktop}
-        PaperProps={{
-          sx: isDesktop
-            ? {
-                width: 400,
-                position: "fixed",
-                bottom: 24,
-                right: 24,
-                m: 0,
-              }
-            : {},
-        }}
+        fullWidth
+        maxWidth="sm"
       >
-        <Box sx={{ p: 2 }}>
-          <Box
+        <DialogTitle sx={{ m: 0, p: 2 }}>
+          Neues Ticket
+          <IconButton
+            onClick={() => setShowNewTicket(false)}
             sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 2,
+              position: "absolute",
+              right: 8,
+              top: 8,
             }}
           >
-            <Typography variant="h6">Neues Ticket</Typography>
-            <IconButton onClick={() => setShowNewTicket(false)}>
-              <Close />
-            </IconButton>
-          </Box>
-
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
           <FormControl fullWidth sx={{ mb: 2 }}>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
               Betreff
@@ -459,7 +443,6 @@ function UserView() {
             />
           </FormControl>
 
-          {/* Generator-Auswahl: Wird angezeigt, wenn der Betreff Änderungsantrag, Ablehnungsantrag oder Sonstiges ist */}
           {["Änderungsantrag", "Ablehnungsantrag", "Sonstiges"].includes(
             subject
           ) && (
@@ -497,14 +480,15 @@ function UserView() {
               onChange={(e) => setDescription(e.target.value)}
             />
           </FormControl>
-
+        </DialogContent>
+        <DialogActions>
           <Button variant="contained" fullWidth onClick={handleSubmit}>
             Absenden
           </Button>
-        </Box>
+        </DialogActions>
       </Dialog>
 
-      {/* Snackbar: unten zentriert */}
+      {/* Snackbar */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
@@ -523,7 +507,7 @@ function UserView() {
   );
 }
 
-/** Auswahl Betreff für das Ticket */
+/** Auswahl des Ticket-Betreffs */
 function SelectSubject({
   value,
   onChange,
@@ -547,7 +531,7 @@ function SelectSubject({
   );
 }
 
-/** TICKET-LISTE mit Responsive Design */
+/** Ticket-Liste */
 function TicketList({ tickets, title }: { tickets: ITicket[]; title: string }) {
   if (!tickets || tickets.length === 0) {
     return (

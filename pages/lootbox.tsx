@@ -43,7 +43,7 @@ const LootboxPage: NextPage = () => {
       try {
         const res = await fetch("/api/profile/get");
         const data = await res.json();
-        if (data.success) setProfile(data.profile || null);
+        if (data.success) setProfile(data.data || null);
       } catch (error) {
         console.error("Profile fetch error:", error);
       }
@@ -86,6 +86,7 @@ const LootboxPage: NextPage = () => {
     );
   }
 
+  // Prüfe, ob der Benutzer mindestens einen Schlüssel hat
   if (profile && profile.keys <= 0) {
     return (
       <Box className="min-h-screen flex items-center justify-center">
@@ -122,6 +123,13 @@ const LootboxPage: NextPage = () => {
     );
   }
 
+  // Hier prüfen wir, ob die geladene Lootbox im Profil vorhanden ist
+  const lootboxExistsInProfile =
+    profile?.lootboxes?.some((item) => {
+      // Vergleiche die Lootbox-ID aus dem Profil mit der geladenen Lootbox-ID
+      return item.lootbox._id.toString() === lootbox._id.toString();
+    }) || false;
+
   return (
     <Box className="min-h-screen flex items-center justify-center">
       <Spinner
@@ -131,6 +139,9 @@ const LootboxPage: NextPage = () => {
         // Zusätzlich wird die Lootbox-ID als extra Prop übergeben
         lootboxId={lootbox._id}
         onSpinComplete={() => setRefetch((prev) => !prev)}
+        hasKeys={!!profile?.keys}
+        // Übergibt den Boolean, ob die Lootbox im Profil vorhanden ist
+        lootboxExistsInProfile={lootboxExistsInProfile}
       />
     </Box>
   );

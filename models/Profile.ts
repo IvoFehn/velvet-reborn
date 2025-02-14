@@ -4,6 +4,7 @@ import { Schema, model, models, Document } from "mongoose";
 import "./InventoryItem";
 import "./Lootbox";
 import { IInventoryItem } from "./InventoryItem";
+import { ILootbox } from "./Lootbox";
 
 // types/profile.ts
 export interface UpdateProfilePayload {
@@ -25,7 +26,7 @@ export interface IProfile extends Document {
   keys: number;
   // lootboxes enthält jetzt Objekte mit Verweis und Menge
   lootboxes: {
-    lootbox: Schema.Types.ObjectId;
+    lootbox: ILootbox;
     quantity: number;
   }[];
   profileImage?: string;

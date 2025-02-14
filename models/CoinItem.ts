@@ -4,6 +4,7 @@ import { Schema, model, models, Document } from "mongoose";
 export type RarityType = "Common" | "Uncommon" | "Rare" | "Epic" | "Legendary";
 
 export interface ICoinItem extends Document {
+  _id: string; // explizit das _id-Feld hinzufügen
   name: string;
   description: string;
   color: string;

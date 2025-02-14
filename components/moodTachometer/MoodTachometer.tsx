@@ -117,7 +117,7 @@ const MoodTachometer = () => {
 
   // Extra Tipps je Level (als Liste)
   const extraTips = [
-    ["Nichts"],
+    [],
     ["Gelegentlich mal flashen.", "Gelegentlich mal in die Hose greifen."],
     [
       "Häufiger flashen.",
@@ -220,24 +220,29 @@ const MoodTachometer = () => {
         <p>{tips[level].description}</p>
       </div>
 
-      {/* Toggle-Schriftzug für Extra Tipps */}
-      <div
-        className="extra-tips-toggle"
-        onClick={() => setShowExtraTips(!showExtraTips)}
-      >
-        <span className="toggle-text">
-          {showExtraTips ? "Ausblenden" : "Tipps anzeigen"}
-        </span>
-        <span className={`arrow ${showExtraTips ? "up" : "down"}`}>▼</span>
-      </div>
+      {/* Nur anzeigen, wenn Extra Tipps vorhanden sind */}
+      {extraTips[level].length > 0 && (
+        <>
+          {/* Toggle-Schriftzug für Extra Tipps */}
+          <div
+            className="extra-tips-toggle"
+            onClick={() => setShowExtraTips(!showExtraTips)}
+          >
+            <span className="toggle-text">
+              {showExtraTips ? "Ausblenden" : "Tipps anzeigen"}
+            </span>
+            <span className={`arrow ${showExtraTips ? "up" : "down"}`}>▼</span>
+          </div>
 
-      {/* Ausklappbarer Bereich für Extra Tipps */}
-      {showExtraTips && (
-        <ul className="extra-tips">
-          {extraTips[level].map((tip, idx) => (
-            <li key={idx}>{tip}</li>
-          ))}
-        </ul>
+          {/* Ausklappbarer Bereich für Extra Tipps */}
+          {showExtraTips && (
+            <ul className="extra-tips">
+              {extraTips[level].map((tip, idx) => (
+                <li key={idx}>{tip}</li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
 
       <style jsx>{`

@@ -133,6 +133,9 @@ type Props = {
   modifier?: RarityModifier;
   onSpinComplete?: (wonItem: ICoinItem) => void;
   lootboxId?: string;
+  hasKeys: boolean;
+  // Neuer Prop: Gibt an, ob die Lootbox im Profil vorhanden ist.
+  lootboxExistsInProfile: boolean;
 };
 
 // Interface für die API-Antwort
@@ -146,6 +149,8 @@ const Spinner: React.FC<Props> = ({
   modifier = "Normal",
   onSpinComplete,
   lootboxId,
+  hasKeys,
+  lootboxExistsInProfile,
 }) => {
   // Erstelle eine gewichtete Liste von Items basierend auf TARGET_ITEMS
   const weightedItems = useMemo(() => {
@@ -369,9 +374,9 @@ const Spinner: React.FC<Props> = ({
     <div className="relative w-full min-h-screen bg-gray-900 p-4 sm:p-8 flex flex-col items-center justify-center">
       <div className="w-full max-w-screen-2xl px-4" ref={containerRef}>
         <div className="relative">
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          {/* <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-[140px] h-[140px] sm:w-[180px] sm:h-[180px] border-4 border-white/20 rounded-xl shadow-spinner-glow" />
-          </div>
+          </div> */}
 
           <div className="overflow-hidden mx-auto rounded-xl bg-gray-800/30 backdrop-blur-lg p-4 shadow-2xl">
             <ul className="flex m-0 p-0 list-none" style={listStyle}>
@@ -414,7 +419,7 @@ const Spinner: React.FC<Props> = ({
           <div className="flex justify-center mt-8 sm:mt-12">
             <button
               onClick={autoSpin}
-              disabled={isSpinning}
+              disabled={!lootboxExistsInProfile || !hasKeys || isSpinning}
               className="relative px-8 py-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl font-bold text-white shadow-2xl hover:shadow-3xl transform transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <div className="flex items-center gap-3">

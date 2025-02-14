@@ -71,7 +71,9 @@ const DailyRewardsWidget: React.FC = () => {
   const formatTime = (ms: number) => {
     const hours = Math.floor(ms / 3600000);
     const minutes = Math.floor((ms % 3600000) / 60000);
-    return `${hours}h ${minutes}m`;
+    return `${hours.toString().padStart(2, "0")}h ${minutes
+      .toString()
+      .padStart(2, "0")}m`;
   };
 
   return (
@@ -117,9 +119,11 @@ const DailyRewardsWidget: React.FC = () => {
         ))}
       </div>
 
-      {!clickable && nextRewardTimestamp && (
+      {nextRewardTimestamp && (
         <div className="mt-3 text-center text-sm text-gray-500">
-          Nächster Reward in {formatTime(timeLeft)}
+          {clickable
+            ? "Reward jetzt claimen"
+            : `Nächster Reward in ${formatTime(timeLeft)}`}
         </div>
       )}
     </section>

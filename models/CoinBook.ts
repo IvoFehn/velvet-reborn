@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Schema, model, models, Document } from "mongoose";
+// models/CoinBook.ts
+import { Schema, model, models, Document, Types } from "mongoose";
 import CoinItem, { ICoinItem } from "./CoinItem";
 
 export interface ICoinBookEntry {
-  coinItem: Schema.Types.ObjectId | ICoinItem;
+  coinItem: Types.ObjectId | ICoinItem;
   quantity: number;
 }
 
 export interface ICoinBook extends Document {
-  user: Schema.Types.ObjectId; // Verweis auf den Benutzer (z. B. Profile)
+  user: Types.ObjectId; // statt Schema.Types.ObjectId
   entries: ICoinBookEntry[];
   createdAt: Date;
   updatedAt: Date;
@@ -21,7 +22,6 @@ const CoinBookEntrySchema = new Schema<ICoinBookEntry>(
       type: Number,
       required: true,
       default: 0,
-      // Asynchroner Validator: Die Anzahl darf den Wert von coinItem.neededAmount nicht überschreiten.
       validate: {
         validator: async function (value: number): Promise<boolean> {
           const coinItemDoc = await CoinItem.findById(this.coinItem);
@@ -33,7 +33,7 @@ const CoinBookEntrySchema = new Schema<ICoinBookEntry>(
       },
     },
   },
-  { _id: false } // _id für Unterdokumente deaktivieren, falls nicht benötigt
+  { _id: false }
 );
 
 const CoinBookSchema = new Schema<ICoinBook>(
@@ -41,7 +41,10 @@ const CoinBookSchema = new Schema<ICoinBook>(
     user: { type: Schema.Types.ObjectId, ref: "Profile", required: true },
     entries: [CoinBookEntrySchema],
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    collection: "coinbooks",
+  }
 );
 
 export default models.CoinBook || model<ICoinBook>("CoinBook", CoinBookSchema);
