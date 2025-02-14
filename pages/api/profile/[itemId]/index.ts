@@ -53,8 +53,6 @@ export default async function handler(
       return res.status(404).json({ error: "Profil nicht gefunden" });
     }
 
-    console.log("Gefundenes Profil:", profile._id);
-
     // Optional: Logik zum Verwenden des Items hinzufügen
     // Beispiel: Erfahrungspunkte erhöhen, wenn das Item eine bestimmte Kategorie hat
     if (
