@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/pages/generator.tsx
 
 import React, { useState, useCallback, useEffect } from "react";
@@ -11,8 +12,10 @@ import {
   Grid,
   FormControlLabel,
   Switch,
-  TextField,
+  Snackbar,
+  Alert,
 } from "@mui/material";
+import { useRouter } from "next/router";
 import PoseComponent from "@/components/generator/PoseComponent";
 import OutfitComponent from "@/components/generator/OutfitComponent";
 import OrgasmusComponent from "@/components/generator/OrgasmusComponent";
@@ -50,8 +53,14 @@ const steps = [
 ];
 
 const Generator: React.FC = () => {
+  const router = useRouter();
   const [activeStep, setActiveStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Snackbar States
+  const [snackbarSuccessOpen, setSnackbarSuccessOpen] = useState(false);
+  const [snackbarErrorOpen, setSnackbarErrorOpen] = useState(false);
+  const [snackbarErrorMsg, setSnackbarErrorMsg] = useState("");
 
   // State Management
   const [formData, setFormData] = useState<GeneratorData>({
@@ -140,15 +149,12 @@ const Generator: React.FC = () => {
           .format("DD.MM.YYYY HH:mm:ss")}`
       );
 
-      // Erfolgsmeldung anzeigen oder Weiterleitung durchführen
-      // Beispiel:
-      // alert("Daten erfolgreich gespeichert!");
-      // Router.push("/success");
-    } catch (error) {
+      // Erfolgssnackbar anzeigen
+      setSnackbarSuccessOpen(true);
+    } catch (error: any) {
       console.error("Fehler beim Speichern der Daten:", error);
-      // Fehlerbehandlung: Benutzer informieren
-      // Beispiel:
-      // alert("Fehler beim Speichern der Daten. Bitte versuche es erneut.");
+      setSnackbarErrorMsg(error.message || "Fehler beim Speichern der Daten");
+      setSnackbarErrorOpen(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -281,58 +287,6 @@ const Generator: React.FC = () => {
             return (
               <Box sx={{ textAlign: "center", py: 4 }}>
                 <Grid container spacing={3} sx={{ mb: 4 }}>
-                  <Grid item xs={6}>
-                    <TextField
-                      label="Gold"
-                      type="number"
-                      fullWidth
-                      value={formData.gold}
-                      onChange={(e) => {
-                        const value = Number(e.target.value);
-                        if (!isNaN(value) && value >= 0) {
-                          handlers.setGold(value);
-                        }
-                      }}
-                      InputProps={{
-                        inputProps: {
-                          min: 0,
-                          step: 1,
-                        },
-                      }}
-                      onKeyDown={(e) => {
-                        // Verhindert die Eingabe von Minuszeichen
-                        if (e.key === "-" || e.key === "e" || e.key === "E") {
-                          e.preventDefault();
-                        }
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      label="Erfahrungspunkte"
-                      type="number"
-                      fullWidth
-                      value={formData.exp}
-                      onChange={(e) => {
-                        const value = Number(e.target.value);
-                        if (!isNaN(value) && value >= 0) {
-                          handlers.setExp(value);
-                        }
-                      }}
-                      InputProps={{
-                        inputProps: {
-                          min: 0,
-                          step: 1,
-                        },
-                      }}
-                      onKeyDown={(e) => {
-                        // Verhindert die Eingabe von Minuszeichen
-                        if (e.key === "-" || e.key === "e" || e.key === "E") {
-                          e.preventDefault();
-                        }
-                      }}
-                    />
-                  </Grid>
                   <Grid item xs={12}>
                     <FormControlLabel
                       control={
@@ -344,7 +298,7 @@ const Generator: React.FC = () => {
                           color="primary"
                         />
                       }
-                      label="Blue Balls aktivieren"
+                      label="Blue Balls aktivieren: Mit diesem Schalter markierst du, dass du sehr viel Druck hast und dieser Auftrag besonders wichtig ist."
                       sx={{ mt: 2 }}
                     />
                   </Grid>
@@ -353,11 +307,14 @@ const Generator: React.FC = () => {
                 <Button
                   variant="contained"
                   size="large"
-                  onClick={handleSubmit}
+                  onClick={async () => {
+                    await handleSubmit();
+                    router.push("/");
+                  }}
                   disabled={isSubmitting}
                   sx={{ px: 6, py: 2, fontSize: "1.1rem" }}
                 >
-                  {isSubmitting ? "Wird gesendet..." : "Regelwerk bestätigen"}
+                  {isSubmitting ? "Wird gesendet..." : "Auftrag absenden"}
                 </Button>
               </Box>
             );
@@ -401,6 +358,38 @@ const Generator: React.FC = () => {
           </Button>
         )}
       </Box>
+
+      {/* Erfolgssnackbar */}
+      <Snackbar
+        open={snackbarSuccessOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarSuccessOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setSnackbarSuccessOpen(false)}
+          severity="success"
+          sx={{ width: "100%" }}
+        >
+          Daten erfolgreich gespeichert!
+        </Alert>
+      </Snackbar>
+
+      {/* Fehlersnackbar */}
+      <Snackbar
+        open={snackbarErrorOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarErrorOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setSnackbarErrorOpen(false)}
+          severity="error"
+          sx={{ width: "100%" }}
+        >
+          {snackbarErrorMsg}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

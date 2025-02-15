@@ -167,23 +167,26 @@ const TicketPage = () => {
   if (isLoading)
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="animate-pulse text-gray-600">
-          <span className="mr-2">⏳</span> Lädt Ticket...
+        <div className="flex flex-col items-center space-y-3">
+          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+          <p className="text-gray-500">Lädt Ticketdetails...</p>
         </div>
       </div>
     );
 
   if (!ticket)
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-red-500 text-xl mb-4">⚠️</div>
-        <h1 className="text-xl font-medium text-gray-800">
-          Ticket nicht gefunden
-        </h1>
-        <p className="text-gray-600 mt-2">
-          Das angeforderte Ticket existiert nicht oder Sie haben keine
-          Berechtigung.
-        </p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
+        <div className="text-center space-y-4">
+          <div className="text-6xl">⚠️</div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            Ticket nicht gefunden
+          </h1>
+          <p className="text-gray-600">
+            Das angeforderte Ticket existiert nicht oder Sie haben keine
+            Berechtigung.
+          </p>
+        </div>
       </div>
     );
 
@@ -191,22 +194,38 @@ const TicketPage = () => {
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Header */}
       <header className="sticky top-0 bg-white border-b border-gray-200 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-lg font-semibold text-gray-900 truncate">
-                {ticket.subject}
-              </h1>
-              <div className="mt-1 flex items-center space-x-2">
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    ticket.archived
-                      ? "bg-red-100 text-red-800"
-                      : "bg-green-100 text-green-800"
-                  }`}
+        <div className="container max-w-5xl px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/tickets"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  {ticket.archived ? "Geschlossen" : "Offen"}
-                </span>
+                  ←
+                </Link>
+                <div>
+                  <h1 className="text-xl font-semibold text-gray-800 line-clamp-1">
+                    {ticket.subject}
+                  </h1>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
+                        ticket.archived
+                          ? "bg-red-100 text-red-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full bg-current" />
+                      {ticket.archived ? "Geschlossen" : "Offen"}
+                    </span>
+                    {generator && (
+                      <span className="text-xs text-gray-500">
+                        Generator #{generator._id.slice(-6)}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -214,83 +233,83 @@ const TicketPage = () => {
               <div className="relative" ref={adminMenuRef}>
                 <button
                   onClick={() => setShowAdminMenu(!showAdminMenu)}
-                  className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-sm font-medium transition-colors
-                    bg-gray-800 text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                 >
-                  Aktionen
+                  <span className="hidden sm:inline">Aktionen</span>
                   <svg
-                    className="ml-2 -mr-1 h-4 w-4"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   >
-                    <path
-                      fillRule="evenodd"
-                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                      clipRule="evenodd"
-                    />
+                    <circle cx="12" cy="12" r="1" />
+                    <circle cx="12" cy="5" r="1" />
+                    <circle cx="12" cy="19" r="1" />
                   </svg>
                 </button>
 
-                {/* Admin Dropdown-Menü */}
+                {/* Admin Dropdown */}
                 {showAdminMenu && (
-                  <div className="origin-top-right absolute right-0 mt-2 w-64 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none">
-                    <div className="py-2 px-4 space-y-4">
-                      {/* Ticket Status */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Ticket Status
-                        </label>
-                        <div className="flex rounded-md shadow-sm">
-                          <button
-                            onClick={() => handleStatusChange("open")}
-                            className={`flex-1 px-4 py-2 text-sm ${
-                              !ticket.archived
-                                ? "bg-blue-600 text-white"
-                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                            } rounded-l-md`}
-                          >
-                            Öffnen
-                          </button>
-                          <button
-                            onClick={() => handleStatusChange("closed")}
-                            className={`flex-1 px-4 py-2 text-sm ${
-                              ticket.archived
-                                ? "bg-blue-600 text-white"
-                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                            } rounded-r-md`}
-                          >
-                            Schließen
-                          </button>
+                  <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl p-4 space-y-4 z-50">
+                    {/* Ticket Status Section */}
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                        Ticket Status
+                      </h3>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleStatusChange("open")}
+                          className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                            !ticket.archived
+                              ? "bg-blue-600 text-white shadow-sm"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                        >
+                          Öffnen
+                        </button>
+                        <button
+                          onClick={() => handleStatusChange("closed")}
+                          className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                            ticket.archived
+                              ? "bg-blue-600 text-white shadow-sm"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                        >
+                          Schließen
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Generator Status Section */}
+                    {generator && (
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                          Generator Status
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          {["DECLINED", "NEW", "ACCEPTED"].map((status) => (
+                            <button
+                              key={status}
+                              onClick={() =>
+                                handleGeneratorStatusChange(status)
+                              }
+                              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                                generator.status === status
+                                  ? "bg-blue-600 text-white shadow-sm"
+                                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                              }`}
+                            >
+                              {status.charAt(0) + status.slice(1).toLowerCase()}
+                            </button>
+                          ))}
                         </div>
                       </div>
-
-                      {/* Generator Status */}
-                      {ticket.generatorId && generator && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Generator Status
-                          </label>
-                          <div className="grid grid-cols-3 gap-2">
-                            {["DECLINED", "NEW", "ACCEPTED"].map((status) => (
-                              <button
-                                key={status}
-                                onClick={() =>
-                                  handleGeneratorStatusChange(status)
-                                }
-                                className={`px-3 py-2 text-xs text-center rounded-md transition-colors ${
-                                  generator.status === status
-                                    ? "bg-blue-600 text-white"
-                                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                }`}
-                              >
-                                {status.charAt(0) +
-                                  status.slice(1).toLowerCase()}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -300,127 +319,106 @@ const TicketPage = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 pb-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {/* System Message */}
-          {ticket.description && (
-            <div className="mb-6 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                  <span className="text-blue-600">ℹ️</span>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900 mb-1">
-                    Ticket-Beschreibung
-                  </p>
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                    {ticket.description}
-                  </p>
-                  {ticket.generatorId && (
-                    <div className="mt-3">
-                      <Link
-                        href={`/generator/${ticket.generatorId}`}
-                        className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm"
-                      >
-                        Zum Generator
-                        <svg
-                          className="ml-1 h-4 w-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                          />
-                        </svg>
-                      </Link>
-                    </div>
-                  )}
-                  <p className="mt-2 text-xs text-gray-500">
-                    Erstellt am{" "}
-                    {new Date(ticket.createdAt).toLocaleDateString("de-DE", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })}{" "}
-                    um{" "}
-                    {new Date(ticket.createdAt).toLocaleTimeString("de-DE", {
+      <main className="flex-1 container max-w-5xl px-4 sm:px-6 py-6">
+        {/* System Info */}
+        {ticket.description && (
+          <div className="mb-6 p-5 bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                <span className="text-2xl">📄</span>
+              </div>
+              <div className="space-y-2">
+                <h2 className="font-medium">Ticketbeschreibung</h2>
+                <p className="text-gray-600 whitespace-pre-wrap">
+                  {ticket.description}
+                </p>
+                {ticket.generatorId && (
+                  <Link
+                    href={`/generator/${ticket.generatorId}`}
+                    className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors"
+                  >
+                    Zum Auftrag
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    >
+                      <path d="M7 7h10v10" />
+                      <path d="M7 17 17 7" />
+                    </svg>
+                  </Link>
+                )}
+              </div>
+            </div>
+            <div className="text-xs text-gray-500">
+              Erstellt am{" "}
+              {new Date(ticket.createdAt).toLocaleDateString("de-DE")}
+            </div>
+          </div>
+        )}
+
+        {/* Chat Messages */}
+        <div className="space-y-4">
+          {ticket.messages.map((message, index) => (
+            <div
+              key={index}
+              className={`flex ${
+                message.isAdmin ? "justify-end" : "justify-start"
+              }`}
+            >
+              <div
+                className={`max-w-[85%] lg:max-w-[70%] p-4 rounded-2xl ${
+                  message.isAdmin
+                    ? "bg-blue-600 text-white"
+                    : "bg-white border border-gray-200"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <span className="text-sm font-medium">
+                    {message.isAdmin ? "Support Team" : message.sender}
+                  </span>
+                  <span
+                    className={`text-xs ${
+                      message.isAdmin ? "text-blue-200" : "text-gray-500"
+                    }`}
+                  >
+                    {new Date(message.timestamp).toLocaleTimeString("de-DE", {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
-                  </p>
+                  </span>
                 </div>
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
               </div>
             </div>
-          )}
-
-          {/* Chat Messages */}
-          <div className="space-y-4">
-            {ticket.messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex ${
-                  message.isAdmin ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`max-w-[85%] lg:max-w-[70%] p-4 rounded-xl ${
-                    message.isAdmin
-                      ? "bg-blue-600 text-white"
-                      : "bg-white border border-gray-200"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span
-                      className={`text-xs font-medium ${
-                        message.isAdmin ? "text-blue-100" : "text-gray-600"
-                      }`}
-                    >
-                      {message.sender}
-                    </span>
-                    <span
-                      className={`text-xs ${
-                        message.isAdmin ? "text-blue-200" : "text-gray-500"
-                      }`}
-                    >
-                      {new Date(message.timestamp).toLocaleTimeString("de-DE", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                  <p className="text-sm whitespace-pre-wrap">
-                    {message.content}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
       </main>
 
       {/* Message Input */}
       {(!ticket.archived || isAdmin) && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+        <div className="sticky bottom-0 bg-white border-t border-gray-200">
           <form
             onSubmit={handleSendMessage}
-            className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4"
+            className="container max-w-5xl px-4 sm:px-6 py-4"
           >
-            <div className="flex space-x-3">
+            <div className="flex gap-2">
               <input
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Nachricht schreiben..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="flex-1 px-5 py-3 bg-white border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={ticket.archived && !isAdmin}
               />
               <button
                 type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                className="flex-shrink-0 px-6 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
                 disabled={!newMessage.trim()}
               >
                 Senden

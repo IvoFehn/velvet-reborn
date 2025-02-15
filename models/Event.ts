@@ -3,6 +3,7 @@
 import mongoose, { Document, Schema, Model } from "mongoose";
 
 export interface IEvent extends Document {
+  _id: string;
   title: string;
   description: string;
   startDate: Date; // Beginn des Events bzw. einer Occurrence
@@ -21,6 +22,7 @@ export interface IEvent extends Document {
 
 const eventSchema: Schema<IEvent> = new Schema(
   {
+    _id: Schema.Types.ObjectId,
     title: { type: String, required: true },
     description: { type: String, required: true },
     startDate: { type: Date, required: true },
