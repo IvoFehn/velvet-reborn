@@ -11,10 +11,10 @@ import {
   Theme,
 } from "@mui/material";
 import { Edit, Delete, Repeat } from "@mui/icons-material";
-import { EventType } from "@/pages/events";
+import { IEvent } from "@/models/Event";
 
 interface EventCardProps {
-  event: EventType;
+  event: IEvent;
   onEdit: () => void;
   onDelete: () => void;
 }
