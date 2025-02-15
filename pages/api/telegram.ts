@@ -1,85 +1,91 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { NextApiRequest, NextApiResponse } from "next";
-import formidable, { File } from "formidable";
+import { NextApiRequest, NextApiResponse } from "next";
+import { IncomingForm, File as FormidableFile } from "formidable";
 import fs from "fs";
-import axios from "axios";
 import FormData from "form-data";
+import fetch from "node-fetch";
+import os from "os";
 
-// Deaktiviere den automatischen Body-Parser von Next.js
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: false, // Standard-Bodyparser deaktivieren, damit formidable die Daten parsen kann
   },
 };
 
-type Data = {
-  message?: string;
-  error?: string;
-};
+interface ParsedFiles {
+  file?: FormidableFile | FormidableFile[];
+}
 
-const handler = async (req: NextApiRequest, res: NextApiResponse<Data>) => {
-  if (req.method !== "POST") {
-    res.status(405).json({ error: "Method Not Allowed" });
-    return;
-  }
+export default function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method === "POST") {
+    // Setze uploadDir explizit (optional, os.tmpdir() wird als Default genutzt)
+    const form = new IncomingForm({ uploadDir: os.tmpdir() });
 
-  const form = new formidable.IncomingForm();
+    form.parse(req, async (err, fields, files: ParsedFiles) => {
+      if (err) {
+        console.error("Formular-Parsing-Fehler:", err);
+        return res
+          .status(500)
+          .json({ error: "Fehler beim Verarbeiten des Formulars" });
+      }
 
-  form.parse(req, async (err, _fields, files) => {
-    if (err) {
-      console.error("Fehler beim Parsen:", err);
-      res.status(500).json({ error: "Fehler beim Parsen der Formulardaten." });
-      return;
-    }
+      // Falls mehrere Dateien gesendet wurden, verwende das erste Element
+      let fileObj: FormidableFile | undefined;
+      if (Array.isArray(files.file)) {
+        fileObj = files.file[0];
+      } else {
+        fileObj = files.file;
+      }
 
-    // "photo" entspricht dem Namen, den wir im FormData der Client-Komponente verwendet haben.
-    const fileField = files.photo as File | File[];
-    let uploadedFile: File | null = null;
+      if (!fileObj) {
+        return res.status(400).json({ error: "Keine Datei gefunden" });
+      }
 
-    if (Array.isArray(fileField)) {
-      uploadedFile = fileField[0];
-    } else {
-      uploadedFile = fileField;
-    }
+      // Versuche, den Pfad zu ermitteln (manchmal könnte der Dateipfad auch unter "path" stehen)
+      const filePath = fileObj.filepath || (fileObj as any).path;
+      if (!filePath) {
+        return res.status(400).json({ error: "Dateipfad nicht gefunden" });
+      }
 
-    if (!uploadedFile) {
-      res.status(400).json({ error: "Kein Bild hochgeladen." });
-      return;
-    }
+      // Erstelle einen ReadStream der hochgeladenen Datei
+      const fileStream = fs.createReadStream(filePath);
 
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.TELEGRAM_CHAT_ID_ADMIN;
+      // Überprüfe, ob die erforderlichen Umgebungsvariablen gesetzt sind
+      const telegramChatId = process.env.TELEGRAM_CHAT_ID_ADMIN;
+      const telegramBotToken = process.env.TELEGRAM_BOT_TOKEN;
+      if (!telegramChatId || !telegramBotToken) {
+        return res.status(500).json({
+          error:
+            "Die Umgebungsvariablen TELEGRAM_CHAT_ID_ADMIN und TELEGRAM_BOT_TOKEN müssen gesetzt sein.",
+        });
+      }
 
-    if (!token || !chatId) {
-      res
-        .status(500)
-        .json({ error: "Telegram Token oder Chat ID nicht konfiguriert." });
-      return;
-    }
-
-    const telegramUrl = `https://api.telegram.org/bot${token}/sendPhoto`;
-
-    try {
-      const formData = new FormData();
-      formData.append("chat_id", chatId);
-      // Nutze "filepath" (neu in formidable) oder "path" je nach Version
-      formData.append("photo", fs.createReadStream(uploadedFile.filepath));
-
-      const response = await axios.post(telegramUrl, formData, {
-        headers: formData.getHeaders(),
+      // Erstelle ein neues FormData für die Anfrage an die Telegram-Bot-API
+      const telegramForm = new FormData();
+      telegramForm.append("chat_id", telegramChatId);
+      telegramForm.append("photo", fileStream, {
+        filename: fileObj.originalFilename || "photo.jpg",
+        contentType: fileObj.mimetype || "application/octet-stream",
       });
 
-      if (response.data.ok) {
-        res.status(200).json({ message: "Bild gesendet." });
-      } else {
-        console.error("Telegram API Fehler:", response.data);
-        res.status(500).json({ error: "Telegram API Fehler." });
-      }
-    } catch (error: any) {
-      console.error("Fehler beim Senden an Telegram:", error);
-      res.status(500).json({ error: "Fehler beim Senden an Telegram." });
-    }
-  });
-};
+      const telegramUrl = `https://api.telegram.org/bot${telegramBotToken}/sendPhoto`;
 
-export default handler;
+      try {
+        const telegramResponse = await fetch(telegramUrl, {
+          method: "POST",
+          body: telegramForm,
+          headers: telegramForm.getHeaders(),
+        });
+        const result = await telegramResponse.json();
+        res.status(200).json(result);
+      } catch (error) {
+        console.error("Fehler beim Senden an Telegram:", error);
+        res
+          .status(500)
+          .json({ error: "Fehler beim Senden des Bildes an Telegram" });
+      }
+    });
+  } else {
+    res.status(405).json({ error: "Methode nicht erlaubt" });
+  }
+}
