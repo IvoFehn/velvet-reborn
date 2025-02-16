@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 const LegalBook = () => {
   const [hasAccepted, setHasAccepted] = useState(false);
 
-  // Beim ersten Rendern prüfen, ob das Cookie bereits gesetzt ist
   useEffect(() => {
     if (
       typeof document !== "undefined" &&
@@ -13,9 +12,8 @@ const LegalBook = () => {
     }
   }, []);
 
-  // Handler für den Button "Gelesen und akzeptiert"
   const handleAccept = () => {
-    const maxAge = 15552000; // 6 Monate in Sekunden (6 * 30 * 24 * 3600)
+    const maxAge = 15552000;
     document.cookie = `rulesAccepted=true; max-age=${maxAge}; path=/`;
     setHasAccepted(true);
   };
@@ -99,77 +97,95 @@ const LegalBook = () => {
       content:
         "Die Frau ist verpflichtet, regelmäßig in die App zu schauen, um sich auf den neuesten Stand zu bringen.",
     },
+    {
+      id: "section14",
+      title: "Regeländerungen",
+      content:
+        "Die Frau ist jederzeit damit einverstanden, wenn sich Regeln oder Features ändern. Sie nimmt Regeländerungen oder Feature-Änderungen stillschweigend hin. Sämtliche Meinungsverschiedenheiten über Regeländerungen dürfen über das Ticket-System erfolgen. Allerdings darf der Mann darüber entscheiden, ob er auf die Beschwerde der Frau eingeht oder nicht.",
+    },
+    {
+      id: "section15",
+      title: "Streitfall",
+      content:
+        "Im Falle einses Streites (egal welcher Schwere) hat die Frau trotzdem den Anweisung des Mannes folgezuleisten. Sex und negative Emotionen sind voneinander zu trennen. Die Frau muss trotz der negativen Emotionen das beste geben, um Aufträge möglichst erfolgreich abzuschließen oder die Regeln beizubehalten.",
+    },
+    {
+      id: "section16",
+      title: "Entwicklung",
+      content:
+        "Die Frau ist dazu verpflichtet sich weiterzuentwickeln und neuen Erfahrungen nicht trotzig oder abgeneigt gegenüber zu treten.",
+    },
   ];
 
   return (
-    <div className="relative">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-12 text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">Gesetzbuch</h1>
-          <p className="text-gray-600 text-lg">
-            Aktuelle Fassung vom {new Date().toLocaleDateString("de-DE")}
-          </p>
-        </div>
-
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Inhaltsverzeichnis */}
-          <nav className="lg:w-64 xl:w-72 lg:shrink-0">
-            <div className="lg:sticky lg:top-24">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
-                Inhaltsübersicht
-              </h2>
-              <ul className="space-y-2 border-l-2 border-gray-200 pl-4">
-                {sections.map((section) => (
-                  <li key={section.id}>
-                    <a
-                      href={`#${section.id}`}
-                      className="block text-gray-700 hover:text-blue-600 transition-colors text-sm leading-6 truncate"
-                    >
-                      {section.title}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <header className="mb-12 text-center space-y-4">
+          <div className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 p-1 rounded-2xl">
+            <div className="bg-white px-6 py-3 rounded-xl">
+              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Gesetzbuch
+              </h1>
             </div>
-          </nav>
-
-          {/* Gesetzesabschnitte */}
-          <div className="flex-1">
-            {sections.map((section) => (
-              <section
-                key={section.id}
-                id={section.id}
-                className="group bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow mb-6 p-6"
-              >
-                <div className="flex items-baseline space-x-3">
-                  <div className="flex-shrink-0">
-                    <span className="h-8 w-8 bg-blue-50 text-blue-700 rounded-lg flex items-center justify-center font-medium">
-                      §{section.id.slice(-2)}
-                    </span>
-                  </div>
-                  <h2 className="text-2xl font-semibold text-gray-900">
-                    {section.title}
-                  </h2>
-                </div>
-                <div className="ml-11 mt-4">
-                  <p className="text-gray-600 leading-relaxed">
-                    {section.content}
-                  </p>
-                </div>
-              </section>
-            ))}
           </div>
+          <p className="text-lg text-gray-600 font-medium">
+            Fassung vom {new Date().toLocaleDateString("de-DE")}
+            <span className="ml-2 text-blue-500">✦</span>
+          </p>
+        </header>
+
+        <div className="grid gap-6 md:gap-8">
+          {sections.map((section) => (
+            <article
+              key={section.id}
+              className="relative group bg-white backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 md:p-8 border border-white/20 transform hover:-translate-y-1"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-purple-50/50 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative">
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+                      <span className="text-white font-medium">
+                        {section.id.slice(-2)}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                      {section.title}
+                    </h2>
+                    <p className="text-gray-600 leading-relaxed text-lg">
+                      {section.content}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </article>
+          ))}
         </div>
 
-        {/* Button am Ende der Seite */}
         {!hasAccepted && (
-          <div className="mt-8 text-center">
-            <button
-              onClick={handleAccept}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Gelesen und akzeptiert
-            </button>
+          <div className="sticky bottom-6 mt-12 animate-fade-in-up">
+            <div className="max-w-md mx-auto px-4">
+              <button
+                onClick={handleAccept}
+                className="w-full py-4 px-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-lg shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-center space-x-2"
+              >
+                <span>Regeln akzeptieren</span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         )}
       </div>
