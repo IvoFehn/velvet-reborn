@@ -118,74 +118,42 @@ const LegalBook = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <header className="mb-12 text-center space-y-4">
-          <div className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 p-1 rounded-2xl">
-            <div className="bg-white px-6 py-3 rounded-xl">
-              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Gesetzbuch
-              </h1>
-            </div>
-          </div>
-          <p className="text-lg text-gray-600 font-medium">
-            Fassung vom {new Date().toLocaleDateString("de-DE")}
-            <span className="ml-2 text-blue-500">✦</span>
+    <div className="relative">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-12 text-center">
+          <h1 className="text-4xl font-bold text-gray-900 mb-3">Gesetzbuch</h1>
+          <p className="text-gray-600 text-lg">
+            Aktuelle Fassung vom {new Date().toLocaleDateString("de-DE")}
           </p>
-        </header>
+        </div>
 
-        <div className="grid gap-6 md:gap-8">
-          {sections.map((section) => (
-            <article
-              key={section.id}
-              className="relative group bg-white backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 md:p-8 border border-white/20 transform hover:-translate-y-1"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-purple-50/50 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative">
-                <div className="flex items-start space-x-4">
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-                      <span className="text-white font-medium">
-                        {section.id.slice(-2)}
-                      </span>
-                    </div>
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                      {section.title}
-                    </h2>
-                    <p className="text-gray-600 leading-relaxed text-lg">
-                      {section.content}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </article>
-          ))}
+        <div className="flex flex-col lg:flex-row gap-8">
+          <div className="flex-1">
+            {sections.map((section) => (
+              <section
+                key={section.id}
+                id={section.id}
+                className="group bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow mb-6 p-6"
+              >
+                <h2 className="text-2xl font-semibold text-gray-900">
+                  {section.title}
+                </h2>
+                <p className="text-gray-600 leading-relaxed mt-2">
+                  {section.content}
+                </p>
+              </section>
+            ))}
+          </div>
         </div>
 
         {!hasAccepted && (
-          <div className="sticky bottom-6 mt-12 animate-fade-in-up">
-            <div className="max-w-md mx-auto px-4">
-              <button
-                onClick={handleAccept}
-                className="w-full py-4 px-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-lg shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-center space-x-2"
-              >
-                <span>Regeln akzeptieren</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-            </div>
+          <div className="mt-8 text-center">
+            <button
+              onClick={handleAccept}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Gelesen und akzeptiert
+            </button>
           </div>
         )}
       </div>
