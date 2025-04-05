@@ -156,57 +156,67 @@ const MoodTachometer = () => {
   ];
 
   return (
-    <div className="moodline-wrapper">
-      {/* Info-Icon, das ein Modal öffnet */}
-      <div className="info-icon" onClick={() => setShowModal(true)}>
+    <div className="relative w-full max-w-[380px] px-4 pt-1 font-['Segoe_UI'] text-gray-800">
+      {/* Info Icon */}
+      <div
+        className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full border border-white bg-gray-600 text-xs font-bold text-white shadow-xs hover:bg-gray-700 hover:scale-105 cursor-pointer"
+        onClick={() => setShowModal(true)}
+      >
         i
       </div>
+
+      {/* Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="close-modal" onClick={() => setShowModal(false)}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            className="w-[90%] max-w-[95vw] rounded-xl bg-white p-5 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="absolute right-3 top-3 text-xl text-gray-500 hover:text-gray-800"
+              onClick={() => setShowModal(false)}
+            >
               &times;
             </button>
-            <div className="modal-header">
-              <h2>Lustlevel-Info</h2>
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Lustlevel-Info
+              </h2>
             </div>
-            <div className="modal-body">
-              <div className="info-box">
+            <div className="space-y-3 text-sm">
+              <div className="rounded-md border border-orange-100 bg-orange-50 p-3">
                 <p>
-                  🔍 <strong>Erklärung:</strong> Das Lustlevel bemisst sich an
-                  dem <span className="accent">Zeitpunkt</span> des letzten
-                  angenommenen Auftrags und am{" "}
-                  <span className="accent">analysierten Verhalten</span> von
-                  ihm.
+                  🔍 <strong>Erklärung:</strong> Das Lustlevel bemisst sich am{" "}
+                  <span className="font-medium text-orange-600">
+                    Zeitpunkt des letzten Auftrags
+                  </span>{" "}
+                  und analysiertem Verhalten.
                 </p>
               </div>
-              <div className="info-box">
-                <p>
-                  🔍 <strong>Erklärung 2:</strong> Je höher das Lustlevel, desto
-                  mehr solltest du tun, um ihn zu verführen, damit er{" "}
-                  <span className="accent">Sex</span> will oder einen{" "}
-                  <span className="accent">Auftrag</span> einstellt.
-                </p>
-              </div>
-              <p className="action-tip">
-                💡 Dir werden Tipps je nach Lustlevel angezeigt. Das sind jedoch
-                nur Handlungsvorschläge!{" "}
-                <strong>kreative Eigeninitiative</strong> ist sehr gern gesehen.
+              <p className="rounded-md border border-green-100 bg-green-50 p-3 text-green-700">
+                💡 Tipps sind Vorschläge -{" "}
+                <strong>kreative Eigeninitiative</strong> ist erwünscht!
               </p>
             </div>
           </div>
         </div>
       )}
 
-      <div className="container">
-        {/* Horizontale Linie als Basis */}
-        <div className="line" />
+      {/* Tachometer Container */}
+      <div className="relative my-5 h-20">
+        <div className="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200" />
 
-        {/* Emojis entlang der Linie */}
         {moods.map((mood, index) => (
           <div
             key={index}
-            className={`emoji ${index === level ? "active" : ""}`}
+            className={`absolute top-1/2 -translate-x-1/2 text-xl transition-all duration-300 ease-in-out ${
+              index === level
+                ? "text-3xl grayscale-0 opacity-100 -translate-y-[60%]"
+                : "grayscale opacity-80 -translate-y-1/2"
+            }`}
             style={{ left: `${(index * 100) / (moods.length - 1)}%` }}
           >
             {mood.emoji}
@@ -214,256 +224,46 @@ const MoodTachometer = () => {
         ))}
       </div>
 
-      {/* Aktueller Tippbereich */}
-      <div className="tip">
-        <h3>{tips[level].title}</h3>
-        <p>{tips[level].description}</p>
+      {/* Tip Section */}
+      <div className="my-4 rounded-lg border border-gray-100 bg-gray-50 p-4 text-center">
+        <h3 className="mb-1 text-lg font-medium text-gray-900">
+          {tips[level].title}
+        </h3>
+        <p className="text-sm text-gray-600">{tips[level].description}</p>
       </div>
 
-      {/* Nur anzeigen, wenn Extra Tipps vorhanden sind */}
+      {/* Extra Tips */}
       {extraTips[level].length > 0 && (
-        <>
-          {/* Toggle-Schriftzug für Extra Tipps */}
+        <div className="mx-auto max-w-full">
           <div
-            className="extra-tips-toggle"
+            className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50"
             onClick={() => setShowExtraTips(!showExtraTips)}
           >
-            <span className="toggle-text">
+            <span className="font-medium">
               {showExtraTips ? "Ausblenden" : "Tipps anzeigen"}
             </span>
-            <span className={`arrow ${showExtraTips ? "up" : "down"}`}>▼</span>
+            <span
+              className={`text-[0.6rem] ${showExtraTips ? "rotate-180" : ""}`}
+            >
+              ▼
+            </span>
           </div>
 
-          {/* Ausklappbarer Bereich für Extra Tipps */}
           {showExtraTips && (
-            <ul className="extra-tips">
+            <ul className="my-2 divide-y divide-gray-100 rounded-lg bg-white shadow-md text-sm">
               {extraTips[level].map((tip, idx) => (
-                <li key={idx}>{tip}</li>
+                <li
+                  key={idx}
+                  className="p-3 text-gray-600 transition-colors hover:bg-gray-50"
+                >
+                  {tip}
+                </li>
               ))}
             </ul>
           )}
-        </>
+        </div>
       )}
-
-      <style jsx>{`
-        .moodline-wrapper {
-          position: relative;
-          width: 100%;
-          max-width: 480px;
-          font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-          color: #2d3748;
-          padding: 0.1rem 1.5rem 0 1.5rem;
-        }
-        .info-icon {
-          position: absolute;
-          top: 16px;
-          right: 16px;
-          width: 24px;
-          height: 24px;
-          background: #4a5568;
-          color: #fff;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          font-size: 14px;
-          font-weight: 700;
-          transition: all 0.2s ease;
-          border: 2px solid #fff;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-        .info-icon:hover {
-          background: #2d3748;
-          transform: scale(1.1);
-        }
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100vw;
-          height: 100vh;
-          background: rgba(0, 0, 0, 0.4);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-          backdrop-filter: blur(4px);
-        }
-        .modal-content {
-          background: #fff;
-          padding: 28px;
-          border-radius: 16px;
-          max-width: 440px;
-          width: 90%;
-          position: relative;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-          line-height: 1.6;
-          font-size: 15px;
-          color: #4a5568;
-        }
-        .close-modal {
-          position: absolute;
-          top: 16px;
-          right: 16px;
-          background: transparent;
-          border: none;
-          font-size: 24px;
-          cursor: pointer;
-          color: #718096;
-          transition: color 0.2s ease;
-        }
-        .close-modal:hover {
-          color: #2d3748;
-        }
-        .modal-header {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          margin-bottom: 24px;
-        }
-        .modal-icon {
-          font-size: 32px;
-          background: #f0f4ff;
-          padding: 12px;
-          border-radius: 8px;
-        }
-        .modal-header h2 {
-          margin: 0;
-          font-size: 1.5rem;
-          color: #1a202c;
-        }
-        .modal-body {
-          display: flex;
-          flex-direction: column;
-          gap: 1.2rem;
-        }
-        .info-box {
-          background: #fff7ed;
-          padding: 16px;
-          border-radius: 8px;
-          border: 1px solid #ffedd5;
-        }
-        .accent {
-          color: #dd6b20;
-          font-weight: 600;
-          margin: 0 4px;
-        }
-        .action-tip {
-          font-size: 0.95rem;
-          background: #f0fff4;
-          padding: 16px;
-          border-radius: 8px;
-          border: 1px solid #c6f6d5;
-          color: #2f855a;
-        }
-        .container {
-          position: relative;
-          width: 100%;
-          height: 72px;
-          margin: 2rem 0;
-        }
-        .line {
-          position: absolute;
-          top: 50%;
-          left: 0;
-          right: 0;
-          height: 2px;
-          background: linear-gradient(
-            90deg,
-            #e2e8f0 0%,
-            #cbd5e0 50%,
-            #e2e8f0 100%
-          );
-          border-radius: 2px;
-          transform: translateY(-50%);
-        }
-        .emoji {
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          font-size: 24px;
-          filter: grayscale(100%) opacity(0.8);
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          cursor: pointer;
-          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        .emoji.active {
-          font-size: 40px;
-          filter: none;
-          transform: translate(-50%, -60%);
-          text-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
-        }
-        .tip {
-          text-align: center;
-          background: #f8fafc;
-          padding: 1.5rem;
-          border-radius: 12px;
-          margin: 1.5rem 0;
-          border: 1px solid #e2e8f0;
-        }
-        .tip h3 {
-          margin: 0 0 0.5rem;
-          font-size: 1.25rem;
-          font-weight: 600;
-          color: #1a202c;
-          letter-spacing: -0.02em;
-        }
-        .tip p {
-          margin: 0;
-          font-size: 0.95rem;
-          line-height: 1.5;
-          color: #718096;
-        }
-        .extra-tips-toggle {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          margin: 1rem auto;
-          cursor: pointer;
-          color: #4299e1;
-          font-weight: 500;
-          transition: all 0.2s ease;
-          padding: 8px 12px;
-          border-radius: 8px;
-        }
-        .extra-tips-toggle:hover {
-          background: #ebf8ff;
-          color: #3182ce;
-        }
-        .arrow {
-          font-size: 12px;
-          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .arrow.up {
-          transform: rotate(180deg);
-        }
-        .extra-tips {
-          max-width: 100%;
-          margin: 1rem 0;
-          padding: 0;
-          background: #ffffff;
-          border-radius: 12px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-          list-style: none;
-          overflow: hidden;
-        }
-        .extra-tips li {
-          padding: 1rem 1.5rem;
-          font-size: 0.95rem;
-          color: #4a5568;
-          border-bottom: 1px solid #edf2f7;
-          transition: background 0.2s ease;
-        }
-        .extra-tips li:last-child {
-          border-bottom: none;
-        }
-        .extra-tips li:hover {
-          background: #f8fafc;
-        }
-      `}</style>
     </div>
   );
 };
-
 export default MoodTachometer;

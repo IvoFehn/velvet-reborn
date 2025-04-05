@@ -1,19 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { useWindowSize } from "react-use";
 import {
   BellIcon,
   DocumentTextIcon,
   HeartIcon,
+  ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { GeneratorData } from "@/types";
 import dayjs from "dayjs";
 import "dayjs/locale/de";
 import MoodTachometer from "@/components/moodTachometer/MoodTachometer";
-import Confetti from "react-confetti";
-import { isEventActive } from "@/util/isEventActive";
 import DailyRewardsWidget from "@/components/dailyRewardsWidget/DailyRewardsWidget";
 import DailyTasksWidget from "@/components/dailyTaskWidget/DailyTaskWidget";
+import MoodTrackerWidget from "@/components/moodTrackerWidget/MoodTrackerWidget";
 
 dayjs.locale("de");
 
@@ -35,13 +34,6 @@ export default function HomePage() {
   const [newsMessages, setNewsMessages] = useState<NewsMessage[]>([]);
   const [newsLoading, setNewsLoading] = useState(true);
   const [newsError, setNewsError] = useState<string | null>(null);
-
-  // States für den Event-Banner
-  const [activeEvent, setActiveEvent] = useState(false);
-  const [bannerVisible, setBannerVisible] = useState(true);
-
-  // Verwendung des useWindowSize Hooks von react-use
-  const { width, height } = useWindowSize();
 
   // Fetching der Generatoren
   useEffect(() => {
@@ -95,26 +87,8 @@ export default function HomePage() {
     fetchNewsMessages();
   }, []);
 
-  // useEffect: Prüfe, ob ein aktives Event vorliegt, mittels der ausgelagerten Funktion
-  useEffect(() => {
-    const checkEvents = async () => {
-      const active = await isEventActive();
-      setActiveEvent(active);
-    };
-
-    // Initialer Check und dann alle 5 Minuten (300.000ms)
-    checkEvents();
-    const interval = setInterval(checkEvents, 300000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Dashboard-Inhalt
-  const dashboardContent = (
+  return (
     <div>
-      <h1 className="mb-4 text-2xl font-bold text-gray-800 md:mb-6 md:text-3xl">
-        Dashboard
-      </h1>
-
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Lustlevel-Karte */}
         <section className="col-span-full rounded-xl bg-white p-4 shadow-sm md:p-6">
@@ -261,42 +235,16 @@ export default function HomePage() {
             )}
           </div>
         </section>
+        <section className="col-span-full rounded-xl bg-white p-4 shadow-sm md:p-6">
+          <div className="mb-4 flex items-center">
+            <ShieldCheckIcon className="mr-2 h-5 w-5 text-red-500 md:h-6 md:w-6" />
+            <h2 className="text-lg font-semibold text-gray-700 md:text-xl">
+              Wie fühlst du dich heute?
+            </h2>
+          </div>
+          <MoodTrackerWidget />
+        </section>
       </div>
     </div>
-  );
-
-  return (
-    <>
-      {/* Confetti anzeigen, wenn ein aktives Event vorliegt */}
-      {activeEvent && (
-        <Confetti width={width} height={height} numberOfPieces={50} />
-      )}
-
-      {/* Banner unten anzeigen, falls ein aktives Event vorliegt und nicht manuell geschlossen wurde */}
-      {activeEvent && bannerVisible && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-blue-600 to-blue-800 text-white py-3 px-4 flex items-center justify-between shadow-lg z-50">
-          <div>
-            🎉 Aktuelles Event läuft! Du bekommst jetzt mehr Gold für einen
-            Auftrag!
-          </div>
-          <button
-            className="text-white text-xl"
-            onClick={() => setBannerVisible(false)}
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* Hauptinhalt */}
-      <div
-        className="min-h-screen bg-gray-50 p-4 md:p-6"
-        style={{
-          paddingTop: activeEvent && bannerVisible ? "60px" : undefined,
-        }}
-      >
-        {dashboardContent}
-      </div>
-    </>
   );
 }

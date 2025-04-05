@@ -1,13 +1,21 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, JSX } from "react";
-import { FaCheck, FaGift, FaStar, FaCrown } from "react-icons/fa";
+import {
+  FaCheck,
+  FaGift,
+  FaStar,
+  FaCrown,
+  FaLock,
+  FaClock,
+} from "react-icons/fa";
 
 interface Profile {
   _id: string;
   name: string;
   gold: number;
   exp: number;
-  inventory: any[]; // Kann nach Bedarf typisiert werden
+  inventory: any[];
   keys: number;
   lootboxes: any[];
   profileImage?: string;
@@ -22,7 +30,22 @@ interface Reward {
   special?: boolean;
 }
 
-// Beispielhafte Reward-Daten
+interface Lootbox {
+  _id: string;
+  type: string;
+  img: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface DailyTask {
+  id: string;
+  title: string;
+  description?: string;
+  completed: boolean;
+}
+
+// Reward-Daten
 const rewards: Reward[] = [
   { label: "Reward 1", icon: <FaGift />, description: "Täglicher Bonus" },
   { label: "Reward 2", icon: <FaGift />, description: "Täglicher Bonus" },
@@ -38,44 +61,40 @@ const rewards: Reward[] = [
   },
 ];
 
-// Interface für Lootboxen
-interface Lootbox {
-  _id: string;
-  type: string;
-  img: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 const StampCard: React.FC = () => {
-  // Lokaler State für das geladene Profil (um die userID zu erhalten)
+  // Profil und Status-States
   const [profile, setProfile] = useState<Profile | null>(null);
-  // Daily Login States
   const [currentDay, setCurrentDay] = useState<number>(0);
   const [clickable, setClickable] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [claiming, setClaiming] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
 
-  // State für Lootboxen
+  // Daily Tasks States
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [dailyTasks, setDailyTasks] = useState<DailyTask[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [loadingTasks, setLoadingTasks] = useState<boolean>(true);
+  const [allTasksCompleted, setAllTasksCompleted] = useState<boolean>(false);
+
+  // Lootbox-States
   const [lootboxes, setLootboxes] = useState<Lootbox[]>([]);
   const [loadingLootboxes, setLoadingLootboxes] = useState<boolean>(false);
   const [errorLootboxes, setErrorLootboxes] = useState<string>("");
-
-  // Neuer State für die ausgewählte Lootbox-ID (wird nur für den 7. Tag benötigt)
   const [selectedLootboxId, setSelectedLootboxId] = useState<string>("");
 
-  // Neuer State für den Zeitpunkt, wann der nächste Reward verfügbar ist (als Timestamp)
+  // Zeitmanagement-States
   const [nextRewardTimestamp, setNextRewardTimestamp] = useState<number | null>(
     null
   );
-  // State für den Countdown (Millisekunden bis zum nächsten Reward)
-  const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [streakBroken, setStreakBroken] = useState<boolean>(false);
+  const [formattedTimeLeft, setFormattedTimeLeft] = useState<string>("");
 
-  // Beispielhafter Flag, der angibt, ob ein Event aktiv ist – in der echten Anwendung z. B. aus Konfiguration/CMS
-  const isEventActive = false; // Passe diesen Wert bei Bedarf an
+  // Event-Status (aus Konfiguration/CMS)
+  const isEventActive = false;
 
-  // Lädt zunächst das Profil, um die userID zu erhalten
+  // Profil laden
   const fetchProfile = async () => {
     try {
       setLoading(true);
@@ -94,43 +113,122 @@ const StampCard: React.FC = () => {
     }
   };
 
-  // Holt den aktuellen Daily-Login-Status anhand der userID aus dem geladenen Profil
-  const fetchDailyLoginStatus = async (userId: string) => {
+  // Daily Tasks laden
+  const fetchDailyTasks = async () => {
     try {
-      setLoading(true);
-      const response = await fetch(`/api/daily-login?userId=${userId}`);
-      const data = await response.json();
-      if (data.success) {
-        setCurrentDay(data.user.consecutiveDays);
-        setClickable(data.clickable);
-        // Falls der Reward noch nicht verfügbar ist, berechnen wir den nächsten Zeitpunkt:
-        if (!data.clickable && data.user.lastClaimAt && data.user.lastVisitAt) {
-          const lastClaim = new Date(data.user.lastClaimAt);
-          // Zeitpunkt 2 Stunden nach dem letzten Claim:
-          const twoHoursAfterClaim = lastClaim.getTime() + 2 * 3600 * 1000;
-          // Beginn des nächsten Tages (00:00 Uhr) basierend auf lastClaim:
-          const nextDay = new Date(lastClaim);
-          nextDay.setDate(lastClaim.getDate() + 1);
-          nextDay.setHours(0, 0, 0, 0);
-          // Der nächste Reward ist verfügbar, sobald beide Bedingungen erfüllt sind:
-          const nextRewardTime = Math.max(
-            twoHoursAfterClaim,
-            nextDay.getTime()
+      setLoadingTasks(true);
+      const response = await fetch("/api/tasks");
+      if (response.ok) {
+        const data = await response.json();
+        if (data && Array.isArray(data)) {
+          const tasksWithId = data.map((task: any) => ({
+            ...task,
+            id: task._id ? task._id.toString() : task.id,
+          }));
+          setDailyTasks(tasksWithId);
+
+          // Prüfen, ob alle Aufgaben erledigt sind
+          const completedTasks = tasksWithId.filter((task) => task.completed);
+          setAllTasksCompleted(
+            completedTasks.length === tasksWithId.length &&
+              tasksWithId.length > 0
           );
-          setNextRewardTimestamp(nextRewardTime);
+        } else {
+          setDailyTasks([]);
+          setAllTasksCompleted(false);
         }
       } else {
-        setError(data.message || "Fehler beim Abrufen des Daily Login Status.");
+        setError("Fehler beim Laden der täglichen Aufgaben.");
+        setAllTasksCompleted(false);
+      }
+    } catch (err) {
+      console.error("Fehler beim Laden der täglichen Aufgaben:", err);
+      setError("Fehler beim Laden der täglichen Aufgaben.");
+      setAllTasksCompleted(false);
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
+
+  // Streak-Status prüfen und ggf. zurücksetzen
+  const checkAndUpdateStreakStatus = async (userId: string) => {
+    try {
+      setLoading(true);
+      // Vorübergehend: Nutze den Standard-Endpunkt, bis die neuen Endpunkte implementiert sind
+      const response = await fetch(`/api/daily-login?userId=${userId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        // Füge hier manuelle Streak-Überprüfung hinzu
+        const now = new Date();
+        const lastClaim = data.user.lastClaimAt
+          ? new Date(data.user.lastClaimAt)
+          : null;
+        let streakBroken = false;
+
+        // Wenn es einen vorherigen Claim gibt und Tage aufeinanderfolgend sind
+        if (lastClaim && data.user.consecutiveDays > 0) {
+          const hoursSinceLastClaim =
+            (now.getTime() - lastClaim.getTime()) / (1000 * 60 * 60);
+          const lastClaimDay = new Date(lastClaim);
+          lastClaimDay.setHours(0, 0, 0, 0);
+
+          const yesterdayStart = new Date(now);
+          yesterdayStart.setDate(now.getDate() - 1);
+          yesterdayStart.setHours(0, 0, 0, 0);
+
+          // Streak ist gebrochen, wenn mehr als 48 Stunden vergangen sind und nicht gestern
+          if (hoursSinceLastClaim > 48 && lastClaimDay < yesterdayStart) {
+            streakBroken = true;
+          }
+        }
+
+        if (streakBroken) {
+          setStreakBroken(true);
+          setCurrentDay(0); // Zurücksetzen auf Tag 0
+
+          // Optional: Implementiere einen API-Aufruf zum Zurücksetzen der Streak
+          // Da der Endpunkt noch nicht existiert, können wir eine Benachrichtigung anzeigen
+          console.log(
+            "Streak gebrochen - Backend-Implementierung erforderlich"
+          );
+          setError("Du hast deine Streak verloren! Starte heute neu.");
+        } else {
+          setCurrentDay(data.user.consecutiveDays);
+          setClickable(data.clickable);
+
+          // Zeitpunkt für nächsten Reward berechnen
+          if (!data.clickable && data.user.lastClaimAt) {
+            const lastClaim = new Date(data.user.lastClaimAt);
+            const twoHoursAfterClaim = lastClaim.getTime() + 2 * 3600 * 1000;
+
+            // Für Mitternachtsberechnung verwenden wir die lokale Zeitzone des Nutzers
+            const nextDay = new Date();
+            nextDay.setDate(nextDay.getDate() + 1);
+            nextDay.setHours(0, 0, 0, 0);
+
+            const nextTime = Math.max(twoHoursAfterClaim, nextDay.getTime());
+            setNextRewardTimestamp(nextTime);
+
+            // Initiale Zeit setzen und formatieren
+            const initialTimeLeft = nextTime - now.getTime();
+            setFormattedTimeLeft(
+              formatTime(initialTimeLeft > 0 ? initialTimeLeft : 0)
+            );
+          }
+        }
+      } else {
+        setError(data.message || "Fehler beim Prüfen des Streak-Status.");
       }
     } catch (err) {
       console.error(err);
-      setError("Fehler beim Abrufen des Daily Login Status.");
+      setError("Fehler beim Prüfen des Streak-Status.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Holt alle Lootboxen
+  // Lootboxen laden
   const fetchAllLootboxes = async () => {
     try {
       setLoadingLootboxes(true);
@@ -149,51 +247,72 @@ const StampCard: React.FC = () => {
     }
   };
 
-  // Wird aufgerufen, sobald das Profil geladen ist
+  // Initial-Effekte
   useEffect(() => {
     fetchProfile();
+    fetchAllLootboxes();
+    fetchDailyTasks();
   }, []);
 
-  // Sobald das Profil vorhanden ist, hole den Daily-Login-Status
+  // Sobald das Profil vorhanden ist, Streak-Status prüfen
   useEffect(() => {
     if (profile && profile._id) {
-      fetchDailyLoginStatus(profile._id);
+      checkAndUpdateStreakStatus(profile._id);
     }
   }, [profile]);
 
-  // Lootboxen laden (einmalig beim Mounten)
-  useEffect(() => {
-    fetchAllLootboxes();
-  }, []);
-
-  // Countdown aktualisieren, wenn ein nächster Reward-Zeitpunkt gesetzt wurde
+  // Countdown-Timer aktualisieren
   useEffect(() => {
     if (!nextRewardTimestamp) return;
 
     const updateTimer = () => {
-      const diff = nextRewardTimestamp - Date.now();
-      setTimeLeft(diff > 0 ? diff : 0);
+      const now = Date.now();
+      const diff = nextRewardTimestamp - now;
+      const newTimeLeft = diff > 0 ? diff : 0;
+
+      setFormattedTimeLeft(formatTime(newTimeLeft));
+
+      // Wenn der Timer abgelaufen ist, aktiviere den Claim-Button
+      if (diff <= 0 && !clickable) {
+        setClickable(true);
+      }
     };
 
-    updateTimer();
+    updateTimer(); // Sofort ausführen
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [nextRewardTimestamp]);
+  }, [nextRewardTimestamp, clickable]);
 
-  // Hilfsfunktion zur Formatierung der Zeit (in h und m)
+  // Zeit formatieren (h:m:s)
   const formatTime = (ms: number) => {
+    if (ms <= 0) return "Jetzt verfügbar!";
+
     const totalSeconds = Math.floor(ms / 1000);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
-    return `${hours}h ${minutes}m`;
+    const seconds = totalSeconds % 60;
+
+    return `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   };
 
-  // Funktion, um den Bonus zu beanspruchen.
-  // Wenn currentDay === 6, wird der Claim für den 7. Tag (Lootbox) ausgelöst.
+  // Reward beanspruchen
   const claimReward = async () => {
     if (!profile) return;
 
-    // Falls der 7. Tag erreicht ist, prüfen wir, ob eine Lootbox ausgewählt wurde.
+    // Prüfen, ob alle täglichen Aufgaben erledigt sind
+    if (!allTasksCompleted) {
+      setError(
+        "Du musst erst alle täglichen Aufgaben erledigen, bevor du die Belohnung beanspruchen kannst."
+      );
+      return;
+    }
+
+    setSuccess("");
+    setError("");
+
+    // Bei Tag 7 Lootbox-Prüfung
     if (currentDay === 6 && !selectedLootboxId) {
       setError("Bitte wähle eine Lootbox aus, um den Bonus zu beanspruchen.");
       return;
@@ -204,7 +323,7 @@ const StampCard: React.FC = () => {
       let endpoint = "";
       const body: any = { userId: profile._id };
 
-      // Wenn currentDay 6 ist, dann entspricht der nächste Claim dem 7. Tag
+      // Tag 7 (Lootbox) vs. normale Tage
       if (currentDay === 6) {
         endpoint = `/api/daily-login/claim-lootbox`;
         body.isEventActive = isEventActive;
@@ -218,23 +337,44 @@ const StampCard: React.FC = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+
       const data = await response.json();
+
       if (data.success) {
+        // Erfolgreiche Animation auslösen
+        setSuccess(
+          currentDay === 6
+            ? `Glückwunsch! Du hast die ${
+                lootboxes.find((lb) => lb._id === selectedLootboxId)?.type ||
+                "Lootbox"
+              } erhalten!`
+            : `Belohnung für Tag ${currentDay + 1} erfolgreich erhalten!`
+        );
+
         setCurrentDay(data.consecutiveDays);
         setClickable(false);
-        // Nach dem Claim setzen wir den nächsten Reward-Zeitpunkt neu,
-        // basierend auf lastClaimAt (nun aktualisiert) – siehe Backend-Logik.
-        if (data.user.lastClaimAt && data.user.lastVisitAt) {
+
+        // Nächsten Reward-Zeitpunkt setzen
+        if (data.user?.lastClaimAt) {
+          const now = new Date();
           const lastClaim = new Date(data.user.lastClaimAt);
           const twoHoursAfterClaim = lastClaim.getTime() + 2 * 3600 * 1000;
-          const nextDay = new Date(lastClaim);
-          nextDay.setDate(lastClaim.getDate() + 1);
+
+          // Nächsten Tag in lokaler Zeitzone
+          const nextDay = new Date();
+          nextDay.setDate(nextDay.getDate() + 1);
           nextDay.setHours(0, 0, 0, 0);
+
           const nextRewardTime = Math.max(
             twoHoursAfterClaim,
             nextDay.getTime()
           );
+
           setNextRewardTimestamp(nextRewardTime);
+
+          // Neuen Countdown setzen
+          const newTimeLeft = nextRewardTime - now.getTime();
+          setFormattedTimeLeft(formatTime(newTimeLeft > 0 ? newTimeLeft : 0));
         }
       } else {
         setError(data.message || "Fehler beim Beanspruchen des Rewards.");
@@ -247,59 +387,165 @@ const StampCard: React.FC = () => {
     }
   };
 
+  // Wirklich klickbar? Überprüft sowohl Timer als auch Task-Completion
+  const isReallyClickable = clickable && allTasksCompleted;
+
+  // Zeit-Status-Text
+  const getTimeStatusText = () => {
+    if (isReallyClickable) return "Deine Belohnung ist jetzt verfügbar!";
+    if (!allTasksCompleted)
+      return "Erledige alle täglichen Aufgaben für die Belohnung";
+    if (formattedTimeLeft) return `Nächste Belohnung in: ${formattedTimeLeft}`;
+    return "";
+  };
+
   return (
-    <div className="container">
-      <h2 className="title">Daily Login Rewards</h2>
-      <div className="progress-container">
-        <div
-          className="progress-bar"
-          style={{ width: `${(currentDay / 7) * 100}%` }}
-        />
-        <div className="progress-labels">
-          <span>{currentDay}/7 Days</span>
-          <span>Weekly Goal</span>
+    <div className="max-w-full w-full ">
+      {/* Streak Broken Banner */}
+      {streakBroken && (
+        <div className="bg-gradient-to-r from-red-100 to-red-200 border-l-4 border-red-500 rounded-md p-4 mb-6 animate-fade-in">
+          <div className="flex items-center gap-2">
+            <div className="bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center font-bold">
+              !
+            </div>
+            <div>
+              <h3 className="font-semibold">Streak verloren!</h3>
+              <p className="text-sm text-gray-700">
+                Du hast zu lange gewartet. Deine Streak wurde zurückgesetzt.
+              </p>
+            </div>
+          </div>
         </div>
-        {/* Timer wird hier oben angezeigt */}
-        {!clickable && nextRewardTimestamp && (
-          <div className="reward-timer">
-            Nächster Reward in {formatTime(timeLeft)}
+      )}
+
+      {/* Success/Error Messages */}
+      {success && (
+        <div className="flex items-center gap-2 bg-gradient-to-r from-green-50 to-green-100 text-green-800 p-4 rounded-md mb-4 font-medium animate-slide-in">
+          <FaCheck className="bg-green-500 text-white p-1 rounded-full" />
+          {success}
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-100 text-red-500 p-3 rounded-md mb-4 text-center font-medium animate-shake">
+          {error}
+        </div>
+      )}
+
+      {/* Progress Container */}
+      <div className="bg-white/90 rounded-lg p-5 mb-6 backdrop-blur-sm border border-white/30 shadow-md">
+        <div className="relative w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-blue-400 to-purple-500 transition-all duration-700 ease-out"
+            style={{ width: `${(currentDay / 7) * 100}%` }}
+          />
+        </div>
+
+        <div className="flex justify-between mt-3 text-gray-600 text-sm font-medium">
+          <span>{currentDay}/7 Tage</span>
+          <span>Wöchentliches Ziel</span>
+        </div>
+
+        {/* Countdown Timer Display - NEU */}
+        {!loading && nextRewardTimestamp && !isReallyClickable && (
+          <div className="mt-4 flex items-center justify-center gap-2 text-indigo-600 font-medium bg-indigo-50 p-3 rounded-md">
+            <FaClock />
+            <span>{getTimeStatusText()}</span>
+          </div>
+        )}
+
+        {/* Available Now Indicator - NEU */}
+        {isReallyClickable && (
+          <div className="mt-4 flex items-center justify-center gap-2 text-green-600 font-semibold bg-green-50 p-3 rounded-md animate-pulse">
+            <FaGift className="text-lg" />
+            <span>Deine Belohnung ist jetzt verfügbar!</span>
           </div>
         )}
       </div>
 
-      <div className="stamp-grid">
+      {/* Stamp Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4 pb-2">
         {rewards.map((reward, index) => {
           const isActive = index < currentDay;
           const isSpecial = reward.special;
           const dayNumber = index + 1;
-          // Nur das aktuell aktive (noch nicht beanspruchte) Feld soll klickbar sein
-          const isClickable = clickable && index === currentDay;
+          const isClickable =
+            clickable && index === currentDay && allTasksCompleted;
+          const isPending =
+            clickable && index === currentDay && !allTasksCompleted;
+
           return (
             <div
               key={index}
-              className={`stamp-card ${isActive ? "active" : ""} ${
-                isSpecial ? "special" : ""
-              } ${isClickable ? "clickable" : ""}`}
-              onClick={() => {
-                if (isClickable && !claiming) {
-                  claimReward();
+              className={`relative bg-white/95 rounded-lg p-4 min-h-[160px] flex flex-col border-2 transition-all
+                ${
+                  isActive
+                    ? "bg-gradient-to-br from-white/98 to-indigo-50 border-indigo-200 shadow-lg -translate-y-1"
+                    : "border-blue-100"
                 }
-              }}
+                ${
+                  isSpecial
+                    ? "border-yellow-400 bg-gradient-to-br from-white/98 to-yellow-50"
+                    : ""
+                }
+                ${
+                  isClickable
+                    ? "cursor-pointer border-green-500 shadow-md animate-pulse"
+                    : "hover:border-blue-200 hover:shadow-sm"
+                }
+                ${isPending ? "cursor-not-allowed" : ""}`}
+              onClick={() => isClickable && !claiming && claimReward()}
             >
+              {/* Check Icon */}
+              {isActive && (
+                <div className="absolute top-2 right-2 text-green-500 bg-white rounded-full p-1 shadow">
+                  <FaCheck />
+                </div>
+              )}
+
+              {/* Stamp Content */}
               <div className="stamp-content">
-                {isActive && (
-                  <div className="check-icon">
-                    <FaCheck />
-                  </div>
-                )}
-                <div className="stamp-icon">{reward.icon}</div>
-                <div className="stamp-day">Day {dayNumber}</div>
-                <div className="stamp-label">{reward.label}</div>
-                <div className="stamp-description">{reward.description}</div>
+                <div
+                  className={`text-3xl my-2 transition-colors ${
+                    isActive ? "text-indigo-500" : "text-gray-600"
+                  } ${isSpecial ? "text-yellow-500" : ""}`}
+                >
+                  {reward.icon}
+                </div>
+                <div className="font-bold text-gray-800 mb-1 text-lg">
+                  Tag {dayNumber}
+                </div>
+                <div className="text-sm text-gray-700 mb-0.5 font-semibold">
+                  {reward.label}
+                </div>
+                <div className="text-xs text-gray-600 mt-auto font-medium">
+                  {reward.description}
+                </div>
               </div>
+
+              {/* Special Badge */}
               {isSpecial && (
-                <div className="special-badge">
-                  <FaStar /> Legendary
+                <div className="absolute top-[-10px] right-[-10px] bg-gradient-to-br from-yellow-500 to-orange-500 text-white text-xs py-1 px-2 rounded-full flex items-center gap-1 font-semibold shadow-md">
+                  <FaStar className="text-xs" /> Legendary
+                </div>
+              )}
+
+              {/* Claim Badge */}
+              {isClickable && (
+                <div className="absolute bottom-[-10px] left-1/2 transform -translate-x-1/2 bg-green-500 text-white text-xs py-1 px-3 rounded-full font-semibold shadow-md animate-bounce">
+                  Jetzt einlösen!
+                </div>
+              )}
+
+              {/* Pending Overlay */}
+              {isPending && (
+                <div className="absolute inset-0 bg-white/95 rounded-lg flex items-center justify-center backdrop-blur-sm animate-pulse">
+                  <div className="flex flex-col items-center gap-1 text-indigo-500 text-center p-4">
+                    <FaLock className="text-3xl animate-bounce" />
+                    <span className="text-xs font-semibold max-w-[90px] leading-tight">
+                      Erledige alle täglichen Aufgaben
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
@@ -307,307 +553,54 @@ const StampCard: React.FC = () => {
         })}
       </div>
 
-      {/* Lootbox-Auswahl (nur anzeigen, wenn currentDay === 6) */}
+      {/* Lootbox Selection */}
       {currentDay === 6 && (
-        <div className="lootbox-selection">
-          <h3>Wähle deine Lootbox</h3>
+        <div className="mt-6 p-6 bg-white rounded-lg shadow-md animate-fade-in">
+          <h3 className="mb-4 text-xl text-gray-800 font-semibold">
+            Wähle deine Lootbox
+          </h3>
+
           {loadingLootboxes ? (
             <p>Lade Lootboxen...</p>
           ) : errorLootboxes ? (
-            <p className="error-message">{errorLootboxes}</p>
+            <p className="text-red-500">{errorLootboxes}</p>
           ) : (
-            <select
-              value={selectedLootboxId}
-              onChange={(e) => setSelectedLootboxId(e.target.value)}
-            >
-              <option value="">-- Auswahl --</option>
-              {lootboxes.map((lb) => (
-                <option key={lb._id} value={lb._id}>
-                  {lb.type}
-                </option>
-              ))}
-            </select>
+            <div>
+              <select
+                value={selectedLootboxId}
+                onChange={(e) => setSelectedLootboxId(e.target.value)}
+                className="w-full p-3 rounded-md border border-blue-200 bg-blue-50 focus:ring-2 focus:ring-blue-300 focus:border-blue-500 transition-all"
+                disabled={!allTasksCompleted}
+              >
+                <option value="">-- Auswahl --</option>
+                {lootboxes.map((lb) => (
+                  <option key={lb._id} value={lb._id}>
+                    {lb.type}
+                  </option>
+                ))}
+              </select>
+
+              {selectedLootboxId && (
+                <div className="mt-4 p-4 bg-indigo-50 rounded-md animate-fade-in">
+                  <div className="text-gray-700 font-medium text-center">
+                    {lootboxes.find((lb) => lb._id === selectedLootboxId)
+                      ?.type || "Lootbox"}{" "}
+                    ausgewählt
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}
 
-      {error && <div className="error-message">{error}</div>}
+      {/* Loading Spinner */}
       {loading && (
-        <div className="loader">
-          <div className="loader-spinner"></div>
+        <div className="flex flex-col items-center gap-3 text-gray-700 mt-6">
+          <div className="w-10 h-10 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin"></div>
           <div>Loading rewards...</div>
         </div>
       )}
-
-      <style jsx>{`
-        .container {
-          max-width: 100%;
-          width: 100%;
-          padding: 1rem;
-          background: linear-gradient(145deg, #f8f9ff 0%, #f0f4ff 100%);
-          border-radius: 16px;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
-          box-sizing: border-box;
-        }
-
-        .title {
-          text-align: center;
-          font-size: 2rem;
-          color: #2b2d42;
-          margin-bottom: 1.5rem;
-          font-weight: 700;
-          letter-spacing: -0.5px;
-        }
-
-        .progress-container {
-          background: rgba(255, 255, 255, 0.9);
-          border-radius: 12px;
-          padding: 1rem;
-          margin: 1.5rem 0;
-          backdrop-filter: blur(8px);
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-          text-align: center;
-        }
-
-        .progress-bar {
-          height: 12px;
-          background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
-          border-radius: 6px;
-          transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-          margin-bottom: 0.75rem;
-        }
-
-        .progress-labels {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 0.75rem;
-          color: #4b5563;
-          font-size: 0.9rem;
-          font-weight: 500;
-          flex-wrap: wrap;
-          gap: 0.5rem;
-        }
-
-        .reward-timer {
-          font-size: 0.9rem;
-          font-weight: 500;
-          color: #64748b;
-        }
-
-        .stamp-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-          gap: 1rem;
-          padding: 0.5rem 0;
-        }
-
-        .stamp-card {
-          position: relative;
-          background: rgba(255, 255, 255, 0.95);
-          border-radius: 12px;
-          padding: 1rem;
-          transition: all 0.3s ease;
-          min-height: 200px;
-          display: flex;
-          flex-direction: column;
-          border: 2px solid #e0e7ff;
-          backdrop-filter: blur(4px);
-        }
-
-        .stamp-card.active {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.98) 0%,
-            #f0f4ff 100%
-          );
-          border-color: #818cf8;
-          transform: translateY(-4px);
-          box-shadow: 0 12px 24px -6px rgba(99, 102, 241, 0.15);
-        }
-
-        .stamp-card.special {
-          border-color: #f59e0b;
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.98) 0%,
-            #fff7ed 100%
-          );
-        }
-
-        .stamp-card.clickable {
-          cursor: pointer;
-        }
-
-        .check-icon {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          color: #10b981;
-          background: white;
-          border-radius: 50%;
-          padding: 6px;
-          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
-        }
-
-        .stamp-icon {
-          font-size: 2rem;
-          margin: 0.5rem 0;
-          color: #64748b;
-          transition: transform 0.3s ease;
-        }
-
-        .active .stamp-icon {
-          padding-left: 1rem;
-          color: #6366f1;
-          transform: scale(1.1);
-        }
-
-        .special .stamp-icon {
-          color: #f59e0b;
-        }
-
-        .stamp-day {
-          font-weight: 700;
-          color: #1e293b;
-          margin-bottom: 0.5rem;
-          font-size: 1rem;
-        }
-
-        .stamp-label {
-          font-size: 0.9rem;
-          color: #334155;
-          margin-bottom: 0.25rem;
-          font-weight: 600;
-        }
-
-        .stamp-description {
-          font-size: 0.8rem;
-          color: #64748b;
-          margin-top: auto;
-          font-weight: 500;
-        }
-
-        .special-badge {
-          position: absolute;
-          top: -10px;
-          right: -10px;
-          background: linear-gradient(45deg, #f59e0b 0%, #f97316 100%);
-          color: white;
-          font-size: 0.7rem;
-          padding: 4px 8px;
-          border-radius: 20px;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-weight: 600;
-          box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);
-        }
-
-        .lootbox-selection {
-          margin-top: 1.5rem;
-          padding: 1rem;
-          background: #fff;
-          border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-
-        .lootbox-selection h3 {
-          margin-bottom: 0.75rem;
-          font-size: 1.25rem;
-          color: #2b2d42;
-        }
-
-        .lootbox-selection select {
-          width: 100%;
-          max-width: 300px;
-          padding: 0.5rem;
-          border-radius: 8px;
-          border: 1px solid #e0e7ff;
-          font-size: 0.9rem;
-        }
-
-        .error-message {
-          color: #ef4444;
-          background: rgba(239, 68, 68, 0.1);
-          padding: 0.75rem;
-          border-radius: 8px;
-          margin: 1rem 0;
-          text-align: center;
-          font-weight: 500;
-        }
-
-        .loader {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 0.75rem;
-          color: #64748b;
-          margin: 1.5rem 0;
-        }
-
-        .loader-spinner {
-          width: 40px;
-          height: 40px;
-          border: 4px solid #e0e7ff;
-          border-radius: 50%;
-          border-top-color: #6366f1;
-          animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-          to {
-            transform: rotate(360deg);
-          }
-        }
-
-        @media (max-width: 768px) {
-          .container {
-            padding: 0.75rem;
-            border-radius: 12px;
-          }
-
-          .title {
-            font-size: 1.75rem;
-          }
-
-          .stamp-grid {
-            grid-template-columns: repeat(2, minmax(120px, 1fr));
-          }
-
-          .stamp-card {
-            min-height: 160px;
-            padding: 0.75rem;
-          }
-
-          .stamp-day {
-            font-size: 0.9rem;
-          }
-
-          .stamp-label {
-            font-size: 0.85rem;
-          }
-
-          .stamp-description {
-            font-size: 0.75rem;
-          }
-
-          .progress-labels {
-            font-size: 0.8rem;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .stamp-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .stamp-card {
-            min-height: auto;
-            padding: 1rem;
-          }
-        }
-      `}</style>
     </div>
   );
 };

@@ -8,13 +8,8 @@ const PASSWORD = "Sexlust";
 const COOKIE_NAME = "auth_token";
 const COOKIE_EXPIRY = 10; // Minuten
 
-const protectedItems = [
-  { text: "Generator", link: "/generator" },
-  { text: "Review", link: "/news" },
-  { text: "Events", link: "/events" },
-  { text: "Goldweight", link: "/goldweightsettings" },
-  { text: "Lootboxes", link: "/add-loot" },
-];
+// Nur ein Admin-Link für das Dashboard
+const adminLink = { text: "Admin", link: "/admin" };
 
 const publicItems = [
   { text: "Home", link: "/" },
@@ -35,7 +30,6 @@ const Navigation = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
     setIsAuthenticated(checkAuth());
@@ -66,35 +60,6 @@ const Navigation = () => {
 
   const closeMenu = () => setIsMenuOpen(false);
 
-  const ProtectedLinksDropdown = () => (
-    <div className={styles.dropdown}>
-      <button
-        className={`${styles.navLink} ${dropdownOpen ? styles.active : ""}`}
-        onClick={() => setDropdownOpen(!dropdownOpen)}
-      >
-        Account ▾
-      </button>
-      <div
-        className={`${styles.dropdownContent} ${
-          dropdownOpen ? styles.show : ""
-        }`}
-      >
-        {protectedItems.map((item) => (
-          <Link
-            key={item.link}
-            href={item.link}
-            className={`${styles.dropdownLink} ${
-              isActive(item.link) ? styles.active : ""
-            }`}
-            onClick={() => setDropdownOpen(false)}
-          >
-            {item.text}
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-
   return (
     <nav className={styles.navbar}>
       <div className={styles.container}>
@@ -116,7 +81,17 @@ const Navigation = () => {
             </Link>
           ))}
 
-          {isAuthenticated && <ProtectedLinksDropdown />}
+          {/* Admin Link, nur wenn authentifiziert */}
+          {isAuthenticated && (
+            <Link
+              href={adminLink.link}
+              className={`${styles.navLink} ${
+                isActive(adminLink.link) ? styles.active : ""
+              }`}
+            >
+              {adminLink.text}
+            </Link>
+          )}
 
           {isAuthenticated ? (
             <button className={styles.logoutButton} onClick={handleLogout}>
@@ -177,19 +152,18 @@ const Navigation = () => {
               </Link>
             ))}
 
-            {isAuthenticated &&
-              protectedItems.map((item) => (
-                <Link
-                  key={item.link}
-                  href={item.link}
-                  className={`${styles.mobileLink} ${
-                    isActive(item.link) ? styles.active : ""
-                  }`}
-                  onClick={closeMenu}
-                >
-                  {item.text}
-                </Link>
-              ))}
+            {/* Admin Link in mobiler Ansicht, nur wenn authentifiziert */}
+            {isAuthenticated && (
+              <Link
+                href={adminLink.link}
+                className={`${styles.mobileLink} ${
+                  isActive(adminLink.link) ? styles.active : ""
+                }`}
+                onClick={closeMenu}
+              >
+                {adminLink.text}
+              </Link>
+            )}
 
             {isAuthenticated ? (
               <button
