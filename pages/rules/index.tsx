@@ -139,6 +139,30 @@ const LegalBook = () => {
       content:
         "Wenn der Frau etwas nicht passt an der App, den Praktiken, den Regeln oder sonstigem und sie sich darüber beschweren möchte, dann darf sie dieses nicht mündlich machen, sondern muss das Antragssystem / Ticketsystem dafür verwenden. Sie darf ihren Standpunkt argumentativ begründen. Der Mann entscheidet dann darüber, ob er dem Antrag zustimmt oder diesen ablehnt. Ein abgelehnter Antrag hat stillschweigend hingenommen zu werden. ",
     },
+    {
+      id: "section20",
+      title: "Gesamtheit",
+      content:
+        "Die Frau hat sich um die Gesamtheit des Sex zu kümmern. Das beinhaltet, dass sie sich um die Kontrolle und Versorgung der Kondome kümmert und immer darauf achtet, dass ausreichend Kondome vorhanden sind. Sollten diese knapp werden, dann stellt sie einen Antrag auf neue Beschaffung. Sie ist dafür verantwortlich, dass immer ausreichend Kondome vorhanden sind, immer ausreichend Gleitgel, für das Aufräumen und die Reinigung des Sex-Ortes und der Spielzuege etc. Die einzige Aufgabe des Mannes ist der Sex selbst.",
+    },
+    {
+      id: "section21",
+      title: "Masturbationsverbot",
+      content:
+        "Die Frau hat den Mann immer und ausnahmslos über ihr Verlangen zu informieren. Eigenständige Masturbation ist verboten. Wenn die Frau masturbieren möchte, hat sie einen Antrag zu stellen und auf eine Genehmigung oder weitere Anweisungen des Mannes zu warten.",
+    },
+    {
+      id: "section22",
+      title: "Bestellanträge",
+      content:
+        "Über das Antragssystem kann die Frau Bestellanträge stellen. Bspw. wenn sie ein bestimmtest Dessous oder Spielzeug möchte um die Sexqualität zu verbessern. Ebenso kann sie einen Antrag auf Kondome oder Gleitgel stellen, falls sich dieses dem Ende neigt. Anträge sind immer mit Links zum Wunschprodukt und Begründung zu stellen.",
+    },
+    {
+      id: "section23",
+      title: "Alternativloch",
+      content:
+        "Die Frau muss dem Mann immer alle nutzbaren Löcher zur Verfügung stellen. Sollte er eins fordert, welche aktuell aus bspw. gesundheitlichen Gründen nicht nutzbar ist, hat sie ihm eine Alternative (sofern möglich) anzubieten und schmackhaft zu machen und zu präsentieren.",
+    },
   ];
 
   return (
