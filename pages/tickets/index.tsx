@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
@@ -48,9 +49,16 @@ import { ITicket } from "@/models/Ticket";
 import { GeneratorData } from "@/types";
 import { sendTelegramMessage } from "@/util/sendTelegramMessage";
 import dayjs from "dayjs";
+import { ISanction } from "@/types/index";
 
-// Beispielsubjekte
-const TICKET_SUBJECTS = ["Änderungsantrag", "Ablehnungsantrag", "Sonstiges"];
+// Aktualisierte Beispielsubjekte
+const TICKET_SUBJECTS = [
+  "Änderungsantrag",
+  "Ablehnungsantrag",
+  "Sonstiges",
+  "Sanktionen",
+  "Beschwerden",
+];
 
 /** Hauptkomponente */
 export default function TicketSystemPage() {
@@ -64,12 +72,11 @@ export default function TicketSystemPage() {
 /** USER-VIEW */
 function UserView() {
   const theme = useTheme();
-  // Mobile first: Standard ist mobile, ab "md" wird das Desktop‑Layout verwendet
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
 
   // Router-Query
   const router = useRouter();
-  const { view } = router.query;
+  const { view, subject: urlSubject, sanctionsFrontendId } = router.query; // Änderung von sanctionId zu sanctionsFrontendId
 
   // Tab-Steuerung (0 = Offene Tickets, 1 = Archiv)
   const [tabIndex, setTabIndex] = useState(0);
@@ -85,6 +92,12 @@ function UserView() {
     GeneratorData[]
   >([]);
   const [selectedGeneratorId, setSelectedGeneratorId] = useState<string>("");
+
+  // Sanktionen-spezifisch
+  const [availableSanctions, setAvailableSanctions] = useState<ISanction[]>([]);
+  const [selectedSanctionsFrontendId, setSelectedSanctionsFrontendId] =
+    useState<string>(""); // Änderung von selectedSanctionId zu selectedSanctionsFrontendId
+  const [sanctionDescription, setSanctionDescription] = useState<string>("");
 
   // "Neues Ticket" Dialog
   const [showNewTicket, setShowNewTicket] = useState(false);
@@ -112,7 +125,6 @@ function UserView() {
     }
   };
 
-  // Handler für Snackbar (benötigt 2 Parameter)
   const handleSnackbarClose = (
     event: React.SyntheticEvent<Element, Event> | Event,
     reason: SnackbarCloseReason
@@ -121,9 +133,28 @@ function UserView() {
     setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
-  // Handler für Alert (nur 1 Parameter)
   const handleAlertClose = (event: React.SyntheticEvent<Element, Event>) => {
     setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
+  const handleSubjectChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newSubject = event.target.value;
+    setSubject(newSubject);
+
+    // Zurücksetzen der IDs bei Änderung des Betreffs
+    setSelectedGeneratorId("");
+    setSelectedSanctionsFrontendId(""); // Änderung von setSelectedSanctionId zu setSelectedSanctionsFrontendId
+
+    // Standardtextvorschläge für verschiedene Antragstypen
+    if (newSubject === "Sanktionen") {
+      setSanctionDescription(
+        "Ich beantrage eine Überprüfung der folgenden Sanktion: "
+      );
+    } else if (newSubject === "Beschwerden") {
+      setSanctionDescription("Ich möchte folgende Beschwerde einreichen: ");
+    } else {
+      setSanctionDescription("");
+    }
   };
 
   // ---------------------- FETCH-FUNKTIONEN ----------------------
@@ -161,6 +192,19 @@ function UserView() {
     }
   };
 
+  const fetchSanctionsForTicket = async () => {
+    try {
+      const res = await fetch("/api/sanctions?status=offen,eskaliert");
+      const data = await res.json();
+      if (data.success) {
+        setAvailableSanctions(data.data || []);
+      }
+    } catch (err) {
+      console.error("Fehler beim Laden der Sanktionen:", err);
+      setError("Fehler beim Laden der Sanktionen.");
+    }
+  };
+
   const handleSubmit = async () => {
     if (!subject || !description) return;
 
@@ -176,6 +220,16 @@ function UserView() {
       return;
     }
 
+    if (subject === "Sanktionen" && !selectedSanctionsFrontendId) {
+      // Änderung von selectedSanctionId zu selectedSanctionsFrontendId
+      setSnackbar({
+        open: true,
+        message: "Bitte wählen Sie eine Sanktion aus.",
+        severity: "error",
+      });
+      return;
+    }
+
     try {
       const res = await fetch("/api/tickets", {
         method: "POST",
@@ -184,6 +238,7 @@ function UserView() {
           subject,
           description,
           generatorId: selectedGeneratorId || null,
+          sanctionsFrontendId: selectedSanctionsFrontendId || null, // Änderung von sanctionId zu sanctionsFrontendId
         }),
       });
 
@@ -221,6 +276,7 @@ function UserView() {
         setSubject(TICKET_SUBJECTS[0]);
         setDescription("");
         setSelectedGeneratorId("");
+        setSelectedSanctionsFrontendId(""); // Änderung von setSelectedSanctionId zu setSelectedSanctionsFrontendId
 
         // Telegram-Benachrichtigung
         const telegramResponse = await sendTelegramMessage(
@@ -249,6 +305,49 @@ function UserView() {
     }
   };
 
+  // Lädt Sanktionsdetails wenn eine ausgewählt wurde
+  const handleSanctionSelect = async (id: string) => {
+    setSelectedSanctionsFrontendId(id); // Änderung von setSelectedSanctionId zu setSelectedSanctionsFrontendId
+
+    if (!id) return;
+
+    try {
+      const res = await fetch(`/api/sanctions/${id}`);
+      const data = await res.json();
+
+      if (data.success && data.data) {
+        const sanction = data.data;
+
+        let detailText = "";
+        if (subject === "Sanktionen") {
+          detailText = `Ich beantrage die Überprüfung der folgenden Sanktion:
+          
+Titel: ${sanction.title}
+Aufgabe: ${sanction.task}
+Kategorie: ${sanction.category}
+Menge: ${sanction.amount} ${sanction.unit}
+Status: ${sanction.status}
+
+Ich möchte diese Sanktion als erledigt markieren.
+`;
+        } else if (subject === "Beschwerden") {
+          detailText = `Ich möchte folgende Beschwerde zur Sanktion einreichen:
+          
+Betroffene Sanktion: ${sanction.title}
+Aufgabe: ${sanction.task}
+Menge: ${sanction.amount} ${sanction.unit}
+
+Meine Beschwerde:
+`;
+        }
+
+        setDescription(detailText);
+      }
+    } catch (error) {
+      console.error("Fehler beim Laden der Sanktionsdetails:", error);
+    }
+  };
+
   // ---------------------- USEEFFECTS ----------------------
 
   useEffect(() => {
@@ -272,20 +371,34 @@ function UserView() {
     } else if (viewParam === "CREATE") {
       setShowNewTicket(true);
       setTabIndex(0);
+
+      if (urlSubject) {
+        setSubject(urlSubject as string);
+      }
+
+      if (sanctionsFrontendId) {
+        // Änderung von sanctionId zu sanctionsFrontendId
+        setSelectedSanctionsFrontendId(sanctionsFrontendId as string); // Änderung von setSelectedSanctionId zu setSelectedSanctionsFrontendId
+        handleSanctionSelect(sanctionsFrontendId as string); // Änderung von sanctionId zu sanctionsFrontendId
+      }
     } else if (viewParam === "TICKET") {
       setTabIndex(0);
       fetchOpenTickets();
     }
-  }, [view]);
+  }, [view, urlSubject, sanctionsFrontendId]); // Änderung von sanctionId zu sanctionsFrontendId
 
   useEffect(() => {
     if (
       ["Änderungsantrag", "Ablehnungsantrag", "Sonstiges"].includes(subject)
     ) {
       fetchGeneratorsForTicket();
+    } else if (["Sanktionen", "Beschwerden"].includes(subject)) {
+      fetchSanctionsForTicket();
     } else {
       setAvailableGenerators([]);
       setSelectedGeneratorId("");
+      setAvailableSanctions([]);
+      setSelectedSanctionsFrontendId(""); // Änderung von setSelectedSanctionId zu setSelectedSanctionsFrontendId
     }
   }, [subject]);
 
@@ -407,7 +520,6 @@ function UserView() {
             }
           />
           <BottomNavigationAction label="Archiv" icon={<ArchiveOutlined />} />
-          {/* <BottomNavigationAction label="Neu" icon={<SendOutlined />} /> */}
         </BottomNavigation>
       )}
 
@@ -437,18 +549,16 @@ function UserView() {
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
               Betreff
             </Typography>
-            <SelectSubject
-              value={subject}
-              onChange={(val: string) => setSubject(val)}
-            />
+            <SelectSubject value={subject} onChange={handleSubjectChange} />
           </FormControl>
 
+          {/* Generator-Auswahl für bestimmte Antragsarten */}
           {["Änderungsantrag", "Ablehnungsantrag", "Sonstiges"].includes(
             subject
           ) && (
             <FormControl fullWidth sx={{ mb: 2 }}>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                Bezogener Generator (optional bei Sonstiges)
+                Bezogener Generator {subject === "Sonstiges" && "(optional)"}
               </Typography>
               <TextField
                 select
@@ -463,6 +573,32 @@ function UserView() {
                       ? new Date(generator.createdAt).toLocaleDateString()
                       : "Kein Datum"}{" "}
                     - {generator._id}
+                  </option>
+                ))}
+              </TextField>
+            </FormControl>
+          )}
+
+          {/* Sanktions-Auswahl für sanktionsbezogene Anträge */}
+          {["Sanktionen", "Beschwerden"].includes(subject) && (
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Betroffene Sanktion
+              </Typography>
+              <TextField
+                select
+                value={selectedSanctionsFrontendId} // Änderung von selectedSanctionId zu selectedSanctionsFrontendId
+                onChange={(e) => handleSanctionSelect(e.target.value)}
+                SelectProps={{ native: true }}
+              >
+                <option value="">Bitte wählen...</option>
+                {availableSanctions.map((sanction) => (
+                  <option
+                    key={sanction._id.toString()}
+                    value={sanction._id.toString()}
+                  >
+                    {sanction.title} - {sanction.status} ({sanction.amount}{" "}
+                    {sanction.unit})
                   </option>
                 ))}
               </TextField>
@@ -513,13 +649,13 @@ function SelectSubject({
   onChange,
 }: {
   value: string;
-  onChange: (val: string) => void;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
   return (
     <TextField
       select
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={onChange}
       SelectProps={{ native: true }}
     >
       {TICKET_SUBJECTS.map((sub) => (
@@ -536,7 +672,7 @@ function TicketList({ tickets, title }: { tickets: ITicket[]; title: string }) {
   if (!tickets || tickets.length === 0) {
     return (
       <Typography variant="body1" sx={{ mt: 2 }}>
-        Keine Tickets in &quot;{title}&quot; vorhanden.
+        Keine Tickets in &ldquo;{title}&ldquo; vorhanden.
       </Typography>
     );
   }
@@ -544,7 +680,7 @@ function TicketList({ tickets, title }: { tickets: ITicket[]; title: string }) {
   return (
     <List sx={{ width: "100%", mt: 2 }}>
       {tickets.map((ticket) => (
-        <React.Fragment key={ticket._id}>
+        <React.Fragment key={String(ticket._id)}>
           <ListItem
             component={Link}
             href={`/tickets/${ticket._id}`}

@@ -1,80 +1,109 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+// pages/api/sanctions/index.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/lib/dbConnect";
-import Ticket, { ITicket } from "@/models/Ticket";
-import { sendTelegramMessage } from "@/util/sendTelegramMessage";
-import dayjs from "dayjs";
+import Sanction from "@/models/Sanction";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  const { method } = req;
+
   await dbConnect();
 
-  if (req.method === "GET") {
-    const { archived } = req.query;
+  switch (method) {
+    case "GET":
+      try {
+        const { status, latest, limit = 50 } = req.query;
 
-    // Boolean-Werte korrekt umwandeln
-    const filter: any = {};
-    if (archived === "true") filter.archived = true;
-    if (archived === "false") filter.archived = false;
+        let query = {};
+        // Filtern nach Status, falls angegeben
+        if (status) {
+          // Unterstützt mehrere Status durch Komma getrennt
+          const statusList = (status as string).split(",");
+          query = { status: { $in: statusList } };
+        }
 
-    try {
-      const tickets = await Ticket.find(filter).sort({ createdAt: -1 }).lean();
-      res.status(200).json({ tickets });
-    } catch (error) {
-      console.error("GET /api/tickets Fehler:", error);
-      res.status(500).json({ message: "Interner Serverfehler" });
-    }
-  } else if (req.method === "POST") {
-    const { subject, description, generatorId } = req.body;
+        let sanctions;
+        if (latest === "true") {
+          // Nur die neueste Sanktion abholen
+          sanctions = await Sanction.find(query)
+            .sort({ createdAt: -1 })
+            .limit(1);
+        } else {
+          // Normale Suche mit Limit
+          sanctions = await Sanction.find(query)
+            .sort({ createdAt: -1 })
+            .limit(Number(limit));
+        }
 
-    if (!subject || !description) {
-      return res
-        .status(400)
-        .json({ message: "Betreff und Beschreibung sind erforderlich" });
-    }
+        res.status(200).json({ success: true, data: sanctions });
+      } catch (error) {
+        res.status(400).json({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Fehler beim Abrufen der Sanktionen",
+        });
+      }
+      break;
 
-    // Validierung, ob ein Generator ausgewählt wurde, falls nötig
-    if (
-      ["Änderungsantrag", "Ablehnungsantrag"].includes(subject) &&
-      !generatorId
-    ) {
-      return res.status(400).json({
-        message: "Bitte wählen Sie einen Generator aus.",
-      });
-    }
+    case "PUT":
+      try {
+        const { id, status } = req.body;
 
-    try {
-      const newTicket: ITicket = new Ticket({
-        subject,
-        description,
-        generatorId: generatorId || null, // Speichere die Generator-ID, falls vorhanden
-        archived: false, // Standardmäßig offen
-        messages: [],
-        createdAt: new Date(), // Setze das Erstellungsdatum explizit
-      });
+        if (!id) {
+          return res.status(400).json({
+            success: false,
+            message: "Sanktions-ID ist erforderlich",
+          });
+        }
 
-      await newTicket.save();
+        // Überprüfen, ob der angegebene Status gültig ist
+        if (
+          status &&
+          !["offen", "erledigt", "eskaliert", "abgelaufen"].includes(status)
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Ungültiger Status. Erlaubt sind: offen, erledigt, eskaliert, abgelaufen",
+          });
+        }
 
-      // Benachrichtigung per Telegram
-      sendTelegramMessage(
-        "admin",
-        `Ein neuer Antrag wurde gestellt am ${dayjs()
-          .locale("de")
-          .format("DD.MM.YYYY HH:mm:ss")}`
-      );
+        // Sanktion finden und aktualisieren
+        const updatedSanction = await Sanction.findByIdAndUpdate(
+          id,
+          { status },
+          { new: true, runValidators: true }
+        );
 
-      res.status(201).json({
-        message: "Ticket erfolgreich erstellt",
-        ticket: newTicket.toObject({ virtuals: true }),
-      });
-    } catch (error) {
-      console.error("POST /api/tickets Fehler:", error);
-      res.status(500).json({ message: "Interner Serverfehler" });
-    }
-  } else {
-    res.setHeader("Allow", ["GET", "POST"]);
-    res.status(405).end(`Methode ${req.method} ist nicht erlaubt`);
+        if (!updatedSanction) {
+          return res.status(404).json({
+            success: false,
+            message: "Sanktion nicht gefunden",
+          });
+        }
+
+        res.status(200).json({
+          success: true,
+          data: updatedSanction,
+          message: `Sanktion erfolgreich aktualisiert auf Status: ${status}`,
+        });
+      } catch (error) {
+        res.status(400).json({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Fehler beim Aktualisieren der Sanktion",
+        });
+      }
+      break;
+
+    default:
+      res.setHeader("Allow", ["GET", "PUT"]);
+      res.status(405).end(`Method ${method} Not Allowed`);
   }
 }

@@ -13,6 +13,7 @@ import MoodTachometer from "@/components/moodTachometer/MoodTachometer";
 import DailyRewardsWidget from "@/components/dailyRewardsWidget/DailyRewardsWidget";
 import DailyTasksWidget from "@/components/dailyTaskWidget/DailyTaskWidget";
 import MoodTrackerWidget from "@/components/moodTrackerWidget/MoodTrackerWidget";
+import SanctionWidget from "@/components/sanctionWidget/SanctionWidget";
 
 dayjs.locale("de");
 
@@ -103,6 +104,9 @@ export default function HomePage() {
 
         <DailyRewardsWidget />
         <DailyTasksWidget />
+
+        {/* Sanktions-Widget */}
+        <SanctionWidget />
 
         {/* News Section */}
         <section className="col-span-full rounded-xl bg-white p-4 shadow-sm md:p-6">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { checkAuth } from "../navigation/NavBar";
 import AdminHealthReports from "../AdminHealthReports/AdminHealthReports";
+import SanctionDashboard from "@/components/Sanctions/SanctionDashboard"; // Importiere das Sanktions-Dashboard
 
 // Admin-Module und ihre Links
 const adminModules = [
@@ -38,6 +39,13 @@ const adminModules = [
     icon: "🎁",
   },
   {
+    title: "Sanktionen",
+    link: "#sanctions",
+    description: "Sanktionen verwalten und vergeben",
+    icon: "⚠️",
+    internal: true,
+  },
+  {
     title: "Gesundheitsberichte",
     link: "#health-reports",
     description: "Gesundheitsberichte der Benutzer einsehen",
@@ -50,6 +58,7 @@ const AdminDashboard: React.FC = () => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [showHealthReports, setShowHealthReports] = useState(false);
+  const [showSanctionsDashboard, setShowSanctionsDashboard] = useState(false);
 
   // Überprüfen der Authentifizierung
   useEffect(() => {
@@ -64,8 +73,17 @@ const AdminDashboard: React.FC = () => {
   const handleInternalLinkClick = (moduleId: string) => {
     if (moduleId === "#health-reports") {
       setShowHealthReports(true);
+      setShowSanctionsDashboard(false); // Verstecke andere interne Module
       // Zur Gesundheitsberichte-Sektion scrollen
       const element = document.getElementById("health-reports-section");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    } else if (moduleId === "#sanctions") {
+      setShowSanctionsDashboard(true);
+      setShowHealthReports(false); // Verstecke andere interne Module
+      // Zur Sanktionen-Sektion scrollen
+      const element = document.getElementById("sanctions-section");
       if (element) {
         element.scrollIntoView({ behavior: "smooth" });
       }
@@ -140,6 +158,19 @@ const AdminDashboard: React.FC = () => {
               ))}
             </div>
           </div>
+
+          {/* Sanktionen Sektion */}
+          {showSanctionsDashboard && (
+            <div
+              id="sanctions-section"
+              className="mt-10 pt-6 border-t border-gray-200"
+            >
+              <h2 className="text-lg font-medium text-gray-900 mb-4">
+                Sanktionen-Verwaltung
+              </h2>
+              <SanctionDashboard />
+            </div>
+          )}
 
           {/* Gesundheitsberichte Sektion */}
           {showHealthReports && (

@@ -1,111 +1,126 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// pages/api/profile/[itemId]
 import type { NextApiRequest, NextApiResponse } from "next";
+import dbConnect from "@/lib/dbConnect";
+import InventoryItem from "@/models/InventoryItem";
+import Profile from "@/models/Profile";
 import mongoose from "mongoose";
-import dbConnect from "@/lib/dbConnect"; // Stelle sicher, dass dbConnect korrekt importiert ist
-import InventoryItem, { IInventoryItem } from "@/models/InventoryItem";
-import Profile, { IProfile } from "@/models/Profile";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  console.log("Request method:", req.method);
+  console.log("Request query:", req.query);
+  console.log("Request body:", req.body);
+
   const { itemId } = req.query;
 
-  console.log("Use-Handler aufgerufen mit itemId:", itemId);
-
-  // Überprüfen, ob die Methode PUT ist
   if (req.method !== "PUT") {
-    console.log("Ungültige Methode:", req.method);
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({
+      success: false,
+      error: "Method not allowed",
+      message: "Only PUT requests are allowed",
+    });
   }
 
   if (!itemId || typeof itemId !== "string") {
-    console.log("Ungültige itemId:", itemId);
-    return res.status(400).json({ error: "Ungültige Item-ID" });
+    return res.status(400).json({
+      success: false,
+      error: "Invalid Item ID",
+      message: "A valid item ID is required",
+    });
   }
 
   try {
-    // Stelle sicher, dass die Verbindung zur Datenbank besteht
+    // Ensure database connection
     await dbConnect();
 
-    // Finde das InventoryItem
-    const inventoryItem = await InventoryItem.findById<IInventoryItem>(itemId)
-      .populate("item")
+    // Find the inventory item with populated item details
+    const inventoryItem = await InventoryItem.findById(itemId)
+      .populate({
+        path: "item",
+        select: "category title", // Explicitly select needed fields
+      })
       .exec();
+
     if (!inventoryItem) {
-      console.log("InventoryItem nicht gefunden:", itemId);
-      return res.status(404).json({ error: "Item nicht gefunden" });
+      return res.status(404).json({
+        success: false,
+        error: "Item not found",
+        message: `No inventory item found with ID ${itemId}`,
+      });
     }
 
-    console.log("Gefundenes InventoryItem:", inventoryItem);
+    // Type-safe type guard for populated item
+    if (!inventoryItem.item || typeof inventoryItem.item === "string") {
+      return res.status(404).json({
+        success: false,
+        error: "Item details not found",
+        message: "Inventory item is missing item details",
+      });
+    }
 
-    // Finde das Profil, das dieses InventoryItem enthält
-    const profile = await Profile.findOne<IProfile>({
-      inventory: inventoryItem._id,
+    // Find the profile containing this inventory item
+    const profile = await Profile.findOne({
+      inventory: { $elemMatch: { $eq: inventoryItem._id } },
     }).exec();
 
     if (!profile) {
-      console.log(
-        "Profil nicht gefunden für InventoryItem:",
-        inventoryItem._id
-      );
-      return res.status(404).json({ error: "Profil nicht gefunden" });
+      return res.status(404).json({
+        success: false,
+        error: "Profile not found",
+        message: "No profile contains this inventory item",
+      });
     }
 
-    // Optional: Logik zum Verwenden des Items hinzufügen
-    // Beispiel: Erfahrungspunkte erhöhen, wenn das Item eine bestimmte Kategorie hat
-    if (
-      inventoryItem.item &&
-      (inventoryItem.item as any).category === "exp_boost"
-    ) {
-      profile.exp += 10; // Beispielwert, anpassen nach Bedarf
-      console.log("Exp nach Verwendung:", profile.exp);
+    // Type-safe item usage logic
+    const itemCategory = inventoryItem.item.category;
+
+    switch (itemCategory) {
+      case "exp_boost":
+        profile.exp += 10;
+        break;
+      case "gold_boost":
+        profile.gold += 50;
+        break;
+      default:
+        console.warn(
+          `No specific usage defined for item category: ${itemCategory}`
+        );
     }
 
-    // Verringere die Menge des Items
+    // Reduce item quantity or remove item completely
     if (inventoryItem.quantity > 1) {
       inventoryItem.quantity -= 1;
       await inventoryItem.save();
-      console.log(
-        `Menge des Items ${inventoryItem._id} auf ${inventoryItem.quantity} reduziert`
-      );
     } else {
-      await InventoryItem.findByIdAndDelete(itemId).exec();
+      // Remove the item from inventory
+      await InventoryItem.findByIdAndDelete(inventoryItem._id);
 
-      // Entferne das InventoryItem aus dem Profil-Inventar.
-      // Erstelle zuerst die Ziel-ID als String:
-      const targetId = (
-        inventoryItem._id as mongoose.Types.ObjectId
-      ).toString();
-
-      if (profile.inventory.length > 0) {
-        // Unterscheide, ob das Inventar aus ObjectIds oder befüllten Items besteht
-        if (profile.inventory[0] instanceof mongoose.Types.ObjectId) {
-          profile.inventory = (
-            profile.inventory as unknown as mongoose.Types.ObjectId[]
-          ).filter(
-            (inv: mongoose.Types.ObjectId) => inv.toString() !== targetId
-          ) as unknown as typeof profile.inventory;
-        } else {
-          profile.inventory = (profile.inventory as IInventoryItem[]).filter(
-            (inv: IInventoryItem) =>
-              (inv._id as mongoose.Types.ObjectId).toString() !== targetId
-          ) as unknown as typeof profile.inventory;
-        }
-      }
-      await profile.save();
-      console.log(`InventoryItem ${itemId} gelöscht und aus Profil entfernt`);
+      // Remove from profile's inventory
+      profile.inventory = profile.inventory.filter(
+        (inv: mongoose.Types.ObjectId) =>
+          inv.toString() !== inventoryItem._id.toString()
+      );
     }
 
-    // Speichere das Profil (falls Exp erhöht wurde)
+    // Save updated profile
     await profile.save();
 
-    console.log("Item erfolgreich verwendet");
-
-    return res.status(200).json({ success: true });
+    return res.status(200).json({
+      success: true,
+      message: "Item used successfully",
+      data: {
+        profileExp: profile.exp,
+        profileGold: profile.gold,
+        remainingQuantity: inventoryItem.quantity,
+      },
+    });
   } catch (error) {
-    console.error("Fehler im Use-Handler:", error);
-    return res.status(500).json({ error: "Serverfehler" });
+    console.error("Error in item use handler:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Server error",
+      message: error instanceof Error ? error.message : "Unknown server error",
+    });
   }
 }
