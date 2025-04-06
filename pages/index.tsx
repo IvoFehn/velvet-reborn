@@ -13,7 +13,7 @@ import MoodTachometer from "@/components/moodTachometer/MoodTachometer";
 import DailyRewardsWidget from "@/components/dailyRewardsWidget/DailyRewardsWidget";
 import DailyTasksWidget from "@/components/dailyTaskWidget/DailyTaskWidget";
 import MoodTrackerWidget from "@/components/moodTrackerWidget/MoodTrackerWidget";
-import SanctionWidget from "@/components/sanctionWidget/SanctionWidget";
+import SanctionWidget from "@/components/SanctionWidget/SanctionWidget";
 
 dayjs.locale("de");
 
