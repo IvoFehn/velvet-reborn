@@ -96,12 +96,12 @@ const MoodTachometer = () => {
     {
       title: "Mäßig Lust",
       description:
-        "Es ist wahrscheinlich, dass du dich in einem entspannten Zustand befindest.",
+        "Es ist wahrscheinlich, dass er sich in einem entspannten Zustand befindest.",
     },
     {
       title: "Eventuelle Lust",
       description:
-        "Deine Emotionen kochen! Jetzt könnte der richtige Zeitpunkt sein, um neue Herausforderungen anzunehmen.",
+        "Es könnte langsam der Breakeven-Point sein, an dem er wieder merkbar Lust auf Sex hat.",
     },
     {
       title: "Sexlust",

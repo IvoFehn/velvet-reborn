@@ -74,9 +74,9 @@ export default function HomePageWrapper({ children }: HomePageWrapperProps) {
       {navBarElement}
 
       {/* Confetti anzeigen, wenn ein aktives Event vorliegt */}
-      {activeEvent && (
+      {/* {activeEvent && (
         <Confetti width={width} height={height} numberOfPieces={50} />
-      )}
+      )} */}
 
       {activeEvent && bannerVisible && (
         <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-blue-600 to-blue-800 text-white py-3 px-4 flex items-center justify-between shadow-lg z-50">

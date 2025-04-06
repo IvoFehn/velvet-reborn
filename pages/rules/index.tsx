@@ -53,7 +53,7 @@ const LegalBook = () => {
       id: "section06",
       title: "Auftrag Vergabe",
       content:
-        "Der Mann darf jederzeit live einen Auftrag vergeben. Er benötigt die App nicht. Wenn die Frau sich nicht sicher ist, ob das vom Mann Gewünschte ein Auftrag ist, dann fragt sie nach, ob dies einer ist. Änderungsanträge und Ablehnungsanträge können dann live gestellt werden. Der Mann hat auch hier das Recht, diese abzulehnen.",
+        "Der Mann darf jederzeit live einen Auftrag vergeben. Er benötigt die App nicht. Wenn die Frau sich nicht sicher ist, ob das vom Mann Gewünschte ein Auftrag ist, dann fragt sie nach, ob dies einer ist. Änderungsanträge und Ablehnungsanträge können dann live gestellt werden. Der Mann hat auch hier das Recht, diese abzulehnen. Die Frau hat das Recht für Live-Aufträge pauschal 20 Gold zu verlangen. Der Anspruch muss über einen Antrag binnen 24 Stunden über einen Antrag geltend gemacht werden, ansonsten verfällt der Anspruch.",
     },
     {
       id: "section07",
@@ -162,6 +162,72 @@ const LegalBook = () => {
       title: "Alternativloch",
       content:
         "Die Frau muss dem Mann immer alle nutzbaren Löcher zur Verfügung stellen. Sollte er eins fordert, welche aktuell aus bspw. gesundheitlichen Gründen nicht nutzbar ist, hat sie ihm eine Alternative (sofern möglich) anzubieten und schmackhaft zu machen und zu präsentieren.",
+    },
+    {
+      id: "section23",
+      title: "Alternativloch",
+      content:
+        "Die Frau muss dem Mann immer alle nutzbaren Löcher zur Verfügung stellen. Sollte er eins fordert, welche aktuell aus bspw. gesundheitlichen Gründen nicht nutzbar ist, hat sie ihm eine Alternative (sofern möglich) anzubieten und schmackhaft zu machen und zu präsentieren.",
+    },
+    {
+      id: "section23",
+      title: "App platzierung",
+      content:
+        "Die App muss als Lesezeichen auf dem Handy der Frau auf der ersten Seite platziert werden, damit diese immer sichtbar ist.",
+    },
+    {
+      id: "section23",
+      title: "Warten",
+      content:
+        "Die Frau hat nach vollständiger Vorbereitung auf den Mann zu warten und darf ihre Position nicht verlassen. Sollte sie bedenken haben, dass er das ganze vergessen hat, so kann sie im Auftrag in der App eine Erinnerung an ihn senden. Er ist nicht dazu verpflichtet sofort darauf zu reagieren. Die Frau wartet solange auf den Mann wie nötig. Erst wenn er sie gefickt hat und nur wenn nichts anderes über den Auftrag vereinbart wurde darf sie ihre Positon verlassen.",
+    },
+    {
+      id: "section23",
+      title: "Auträge bewerten",
+      content:
+        "Der Mann sollte einen Auftrag binnen 24 Stunden bewerten. Ist das ganze nach dieser Frist noch nicht passiert, darf die Frau einen Antrag auf ausstehnde Bewertung stellen, um den Mann zu erinnern. Die Frau ist dafür verantwortlich bewertet zu werden. Kümmert sie sich nicht um ihre Bewertung, so kann ihr das als Sorgfaltspflichtverletzung ausgelegt werden.",
+    },
+    {
+      id: "section23",
+      title: "Daily Tasks",
+      content: "Die Frau ist verpflichtet die Daily Tasks zu erledigen.",
+    },
+    {
+      id: "section23",
+      title: "Gesundheitsanzeige",
+      content:
+        "Die Gesundheitsangabe ist wahrheitsgetreu und nicht leichtfertig anzugeben. Nur wenn sie wirklich einen Gesundheitszustand hat, welcher bestimmte Praktiken nicht zulässt darf diese daran angepasst werden. Außerdem is dieser bei jeder Änderung anzupassen. Fühlst du dich bspw. morgens schlecht und mittags besser, so musst du das ganze mit der Besserung anpassen. Falschaussagen werden stark sanktioniert.",
+    },
+
+    {
+      id: "section23",
+      title: "Events",
+      content:
+        "Die Frau muss sich täglich darüber informieren, ob gerade Events am laufen sind und sich nach den Eventbestimmungen richten.",
+    },
+    {
+      id: "section24",
+      title: "Tricks",
+      content:
+        "Tricks oder absichtliches Missverstehen sind nicht erlaubt. Regeln, Beschreibungen o.ä. sind immer zugunsten des Mannes und seinem Wohlbefinden auszulegen. Sollte etwas wirklich nicht klar sein, so ist das ganze über das Antragsportal zu melden und zu erfragen.",
+    },
+    {
+      id: "section24",
+      title: "Items einlösen",
+      content:
+        "Gekaufte Items sind vom Mann einzulösen, damit er sieht, dass diese auch gekauft wurden. Werden gekaufte Items von der Frau eingelöst gelten diese als Verlust und die Frau hat keinen Anspruch mehr darauf oder auf Rückerstattung.",
+    },
+    {
+      id: "section24",
+      title: "Sprechverbot",
+      content:
+        "Während eines Auftrags oder anderer sexueller Handlungen darf die Frau den Mann nicht ohne Aufforderung ansprechen oder störende Geräusche von sich geben, die das Erlebnis beeinträchtigen könnten. Dies gilt für jede Form der Zuwendung, auch für kurze Berührungen wie das Anfassen zwischen den Beinen. Sollte die Frau mit einer Handlung unzufrieden sein, ist dies nicht im Moment der Zuwendung zu äußern. Stattdessen kann sie im Nachhinein eine formelle Beschwerde über das Antragsportal einreichen. Möchte sie während der Handlung sprechen oder etwas mitteilen, hat sie sich zunächst bemerkbar zu machen, indem sie einen Finger hebt. Nur wenn der Mann ausdrücklich das Sprechen erlaubt, darf sie reden. Verweigert er die Erlaubnis, ist der Finger wieder zu senken. Dieselbe Bitte darf nicht unmittelbar erneut gestellt werden – erst bei einem anderen Anliegen ist ein erneutes Handzeichen zulässig..",
+    },
+    {
+      id: "section24",
+      title: "Anträge als erste Wahl",
+      content:
+        "Beschwerden, Anliegen, Wünsche o.ä. die mit Sex oder Praktiken drum herum im Zusammenhang stehen sind immer über einen Antrag zu klären und bis zu Klärung stillschweigend hinzunehmen. Es sollte niemals so-etwas mündlich geklärt werden und nur bei akuten Fällen wie starke Schmerzen etc. um Redeerlaubnis gebeten werden, alles weitere muss über das Antragsportal geklärt werdne. Egal was. ",
     },
   ];
 

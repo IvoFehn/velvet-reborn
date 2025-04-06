@@ -17,6 +17,7 @@ const publicItems = [
   { text: "Anträge", link: "/tickets" },
   { text: "Shop", link: "/shop" },
   { text: "Regeln", link: "/rules" },
+  { text: "Wiki", link: "/wiki/lust-o-meter" },
 ];
 
 const checkAuth = () => {
