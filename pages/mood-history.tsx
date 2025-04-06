@@ -46,8 +46,6 @@ const MoodHistoryPage: React.FC = () => {
 
   // Lade Stimmungsdaten
   const fetchMoodHistory = async (): Promise<void> => {
-    if (status !== "authenticated") return;
-
     setLoading(true);
     setError(null);
 
@@ -87,10 +85,8 @@ const MoodHistoryPage: React.FC = () => {
 
   // Lade Daten beim ersten Rendern und bei Änderungen der Abhängigkeiten
   useEffect(() => {
-    if (status === "authenticated") {
-      fetchMoodHistory();
-    }
-  }, [status, page, startDate, endDate]);
+    fetchMoodHistory();
+  }, [page, startDate, endDate]);
 
   // Formatiere das Datum für die Anzeige
   const formatDate = (dateString: string): string => {
@@ -126,17 +122,6 @@ const MoodHistoryPage: React.FC = () => {
     setStartDate("");
     setEndDate("");
   };
-
-  // Wenn Benutzer nicht angemeldet ist
-  if (status === "unauthenticated") {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <p className="text-lg text-gray-600">
-          Bitte melde dich an, um diese Seite zu sehen.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <>

@@ -95,7 +95,7 @@ const LegalBook = () => {
       id: "section13",
       title: "App-Nutzung",
       content:
-        "Die Frau ist verpflichtet, regelmäßig in die App zu schauen, um sich auf den neuesten Stand zu bringen.",
+        "Die Frau ist verpflichtet, regelmäßig in die App zu schauen, um sich auf den neuesten Stand zu bringen. Vorzugsweise soll die Frau jeden Tag in die App schauen, mindestens jedoch ein Mal die Woche.",
     },
     {
       id: "section14",
@@ -114,6 +114,30 @@ const LegalBook = () => {
       title: "Entwicklung",
       content:
         "Die Frau ist dazu verpflichtet sich weiterzuentwickeln und neuen Erfahrungen nicht trotzig oder abgeneigt gegenüber zu treten.",
+    },
+    {
+      id: "section17",
+      title: "Sanktionierung",
+      content:
+        "Bei mangelnder Leistung oder Missachtung der Regeln können Sanktionen in Form von bspw. Haushaltsaufgaben oder Strafaufgaben im sexuellen Sinne auferlegt werden.",
+    },
+    {
+      id: "section18",
+      title: "Sanktionen",
+      content:
+        "Sanktionen werden stillschweigend hingenommen und abgearbeitet.",
+    },
+    {
+      id: "section19",
+      title: "Regelvertrautheit",
+      content:
+        "Die Frau muss mit den Regeln vertraut sein und sich selbstständig auf den neusten Stand bringen. Die Regeln können jederzeit erweiter werden. Eine Regeländerung bzw. Erweiterung wird stillschweigend hingenommen.",
+    },
+    {
+      id: "section19",
+      title: "Beschwerde",
+      content:
+        "Wenn der Frau etwas nicht passt an der App, den Praktiken, den Regeln oder sonstigem und sie sich darüber beschweren möchte, dann darf sie dieses nicht mündlich machen, sondern muss das Antragssystem / Ticketsystem dafür verwenden. Sie darf ihren Standpunkt argumentativ begründen. Der Mann entscheidet dann darüber, ob er dem Antrag zustimmt oder diesen ablehnt. Ein abgelehnter Antrag hat stillschweigend hingenommen zu werden. ",
     },
   ];
 

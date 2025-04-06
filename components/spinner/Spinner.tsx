@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/rules-of-hooks */
 import React, { useState, useRef, useMemo, useEffect } from "react";
 import { ICoinItem } from "@/models/CoinItem";
 

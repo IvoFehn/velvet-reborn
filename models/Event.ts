@@ -1,55 +1,77 @@
-// models/Event.ts
-
 import mongoose, { Document, Schema, Model } from "mongoose";
 
 export interface IEvent extends Document {
   _id: string;
+  id?: string;
   title: string;
   description: string;
-  startDate: Date; // Beginn des Events bzw. einer Occurrence
-  endDate: Date; // Ende des Events bzw. einer Occurrence
-  recurring: boolean; // Gibt an, ob das Event wiederkehrend ist
-  /**
-   * Für wiederkehrende Events: Gibt die Wiederholungsfrequenz an.
-   * Mögliche Werte: 'daily', 'weekly', 'monthly', 'yearly'
-   */
-  recurrence?: "daily" | "weekly" | "monthly" | "yearly";
-  /**
-   * Für wiederkehrende Events: Gibt an, bis zu welchem Datum das Event wiederholt wird.
-   */
+  startDate: Date;
+  endDate: Date;
+  recurring: boolean;
+  recurrence?:
+    | "daily"
+    | "weekly"
+    | "monthly"
+    | "quarterly"
+    | "biannually"
+    | "yearly";
   recurrenceEnd?: Date;
+  duration?: number;
+  isOccurrence?: boolean;
+  originalEventId?: string;
+}
+
+export interface EventData {
+  _id?: string;
+  id?: string;
+  title: string;
+  description: string;
+  startDate: Date;
+  endDate: Date;
+  recurring: boolean;
+  recurrence?:
+    | "daily"
+    | "weekly"
+    | "monthly"
+    | "quarterly"
+    | "biannually"
+    | "yearly";
+  recurrenceEnd?: Date;
+  duration?: number;
+  isOccurrence?: boolean;
+  originalEventId?: string;
 }
 
 const eventSchema: Schema<IEvent> = new Schema(
   {
-    _id: Schema.Types.ObjectId,
     title: { type: String, required: true },
     description: { type: String, required: true },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
-    recurring: { type: Boolean, required: true },
+    recurring: { type: Boolean, required: true, default: false },
     recurrence: {
       type: String,
-      enum: ["daily", "weekly", "monthly", "yearly"],
-      // Falls das Event wiederkehrend ist, sollte auch eine Wiederholungsfrequenz angegeben werden.
+      enum: ["daily", "weekly", "monthly", "quarterly", "biannually", "yearly"],
       required: function (this: IEvent) {
         return this.recurring;
       },
     },
     recurrenceEnd: {
       type: Date,
-      // Für wiederkehrende Events muss das Enddatum der Wiederholung gesetzt sein.
-      required: function (this: IEvent) {
-        return this.recurring;
+      required: false, // Jetzt optional
+    },
+    duration: {
+      type: Number,
+      default: function (this: IEvent) {
+        return this.endDate.getTime() - this.startDate.getTime();
       },
     },
   },
   {
-    timestamps: true, // Fügt automatisch createdAt und updatedAt hinzu
+    timestamps: true,
   }
 );
 
-// Verhindere Mehrfachregistrierung bei Hot Reload in Next.js
 const Event: Model<IEvent> =
   mongoose.models.Event || mongoose.model<IEvent>("Event", eventSchema);
 

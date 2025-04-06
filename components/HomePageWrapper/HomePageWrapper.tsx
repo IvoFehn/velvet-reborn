@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useState } from "react";
 import { useWindowSize } from "react-use";
 import Confetti from "react-confetti";
@@ -12,6 +13,7 @@ interface HomePageWrapperProps {
 export default function HomePageWrapper({ children }: HomePageWrapperProps) {
   // States für den Event-Banner
   const [activeEvent, setActiveEvent] = useState(false);
+  const [loadingEvents, setLoadingEvents] = useState(true); // Neuer State zur Verfolgung des Ladestatus
   const [bannerVisible, setBannerVisible] = useState(true);
 
   // State für das Rules-Modal
@@ -26,12 +28,23 @@ export default function HomePageWrapper({ children }: HomePageWrapperProps) {
   // useEffect: Prüfe, ob ein aktives Event vorliegt
   useEffect(() => {
     const checkEvents = async () => {
-      const active = await isEventActive();
-      setActiveEvent(active);
+      try {
+        setLoadingEvents(true);
+        const active = await isEventActive();
+        console.log("Ergebnis des Event-Checks:", active);
+        setActiveEvent(active);
+      } catch (error) {
+        console.error("Fehler beim Überprüfen der Events:", error);
+        setActiveEvent(false);
+      } finally {
+        setLoadingEvents(false);
+      }
     };
 
     checkEvents();
-    const interval = setInterval(checkEvents, 300000);
+
+    // Häufigeres Überprüfen (jede Minute statt alle 5 Minuten)
+    const interval = setInterval(checkEvents, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -65,16 +78,25 @@ export default function HomePageWrapper({ children }: HomePageWrapperProps) {
         <Confetti width={width} height={height} numberOfPieces={50} />
       )}
 
-      {/* Banner unten anzeigen, falls ein aktives Event vorliegt */}
       {activeEvent && bannerVisible && (
         <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-blue-600 to-blue-800 text-white py-3 px-4 flex items-center justify-between shadow-lg z-50">
-          <div>
-            🎉 Aktuelles Event läuft! Du bekommst jetzt mehr Gold für einen
-            Auftrag!
-          </div>
+          <Link
+            href="/active-event"
+            className="flex-1 hover:underline cursor-pointer"
+          >
+            <div className="flex items-center">
+              🎉{" "}
+              <span className="ml-2">
+                Aktuelles Event läuft! Klicke hier für Details.
+              </span>
+            </div>
+          </Link>
           <button
-            className="text-white text-xl"
-            onClick={() => setBannerVisible(false)}
+            className="text-white text-xl ml-4"
+            onClick={(e) => {
+              e.preventDefault(); // Verhindert, dass der Link bei Klick auf den Button aktiviert wird
+              setBannerVisible(false);
+            }}
           >
             ✕
           </button>
