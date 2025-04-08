@@ -29,8 +29,18 @@ export interface ISanctionTemplate {
   description: string;
   task: string;
   amount: number;
-  unit: "Minuten" | "Stunden" | "Tage" | "Mal";
-  category: "Hausarbeit" | "Lernen" | "Sport" | "Soziales" | "Sonstiges";
+  unit: "Minuten" | "Stunden" | "Tage" | "Mal" | "Schläge" | "Stunden/Tag";
+  category:
+    | "Hausarbeit"
+    | "Lernen"
+    | "Sport"
+    | "Soziales"
+    | "Sonstiges"
+    | "Erotik"
+    | "Anal"
+    | "Spanking"
+    | "Kraulen"
+    | "Alleine einkaufen";
   escalationFactor: number;
 }
 

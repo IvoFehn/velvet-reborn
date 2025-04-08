@@ -4,16 +4,29 @@ import dbConnect from "@/lib/dbConnect";
 import Generator, { IGenerator } from "@/models/Generator";
 import { sendTelegramMessage } from "@/util/sendTelegramMessage";
 import dayjs from "dayjs";
+import MoodOverride, { IMoodOverride } from "@/models/MoodOverride";
 
 interface SuccessResponse<T = IGenerator | IGenerator[]> {
   success: true;
   data: T;
+  moodOverride?: Partial<IMoodOverride>; // Optional für Mood-Überschreibung
 }
 
 interface ErrorResponse {
   success: false;
   message: string;
 }
+
+// Mongoose Lean Document Typ für MoodOverride
+type LeanMoodOverride = {
+  active: boolean;
+  level: number;
+  expiresAt: Date | null;
+  _id: any;
+  createdAt: Date;
+  updatedAt: Date;
+  __v: number;
+};
 
 export default async function handler(
   req: NextApiRequest,
@@ -31,16 +44,50 @@ export default async function handler(
           const latestGenerator = await Generator.findOne()
             .sort({ createdAt: -1 })
             .lean();
+
           if (!latestGenerator) {
             return res.status(404).json({
               success: false,
               message: "Kein Generator gefunden.",
             });
           }
-          return res.status(200).json({
-            success: true,
-            data: latestGenerator,
-          });
+
+          // Aktuelle Mood-Überschreibung abrufen (falls vorhanden)
+          const moodOverrideDoc = (await MoodOverride.findOne()
+            .sort({ updatedAt: -1 })
+            .lean()) as LeanMoodOverride | null;
+
+          // Prüfen, ob die Überschreibung aktiv ist und nicht abgelaufen
+          if (moodOverrideDoc && moodOverrideDoc.active) {
+            // Wenn ein Ablaufdatum gesetzt ist, prüfen ob es abgelaufen ist
+            if (
+              moodOverrideDoc.expiresAt &&
+              dayjs().isAfter(dayjs(moodOverrideDoc.expiresAt))
+            ) {
+              // Überschreibung ist abgelaufen - nur Generator zurückgeben
+              return res.status(200).json({
+                success: true,
+                data: latestGenerator,
+              });
+            } else {
+              // Überschreibung ist aktiv - Generator und Überschreibung zurückgeben
+              return res.status(200).json({
+                success: true,
+                data: latestGenerator,
+                moodOverride: {
+                  active: moodOverrideDoc.active,
+                  level: moodOverrideDoc.level,
+                  expiresAt: moodOverrideDoc.expiresAt,
+                },
+              });
+            }
+          } else {
+            // Keine aktive Überschreibung
+            return res.status(200).json({
+              success: true,
+              data: latestGenerator,
+            });
+          }
         }
 
         if (id) {

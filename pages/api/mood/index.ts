@@ -11,7 +11,8 @@ interface MoodResponseData {
     total: number;
     page: number;
     limit: number;
-    pages: number;
+    hasMore: boolean;
+    oldestDate?: string;
   };
 }
 
@@ -87,66 +88,95 @@ export default async function handler(
   // GET: Stimmungsprotokoll abrufen
   else if (req.method === "GET") {
     try {
-      // Pagination Parameter
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 10;
-      const skip = (page - 1) * limit;
+      // Pagination und Block-Loading Parameter
+      const limit = parseInt(req.query.limit as string) || 20;
 
       // Datumsfilter
-      let dateFilter: { createdAt?: { $gte?: Date; $lte?: Date } } = {};
-      if (req.query.start && req.query.end) {
-        dateFilter = {
-          createdAt: {
-            $gte: new Date(req.query.start as string),
-            $lte: new Date(req.query.end as string),
-          },
-        };
+      const dateFilter: { createdAt?: any } = {};
+
+      // Startdatum (entweder vom Request oder Standard: letzte 7 Tage)
+      const startDate = req.query.startDate
+        ? new Date(req.query.startDate as string)
+        : req.query.beforeDate
+        ? undefined
+        : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+      // Enddatum (entweder vom Request oder jetzt)
+      const endDate = req.query.endDate
+        ? new Date(req.query.endDate as string)
+        : new Date();
+
+      // Datum für Infinite Scrolling ("Älter als")
+      const beforeDate = req.query.beforeDate
+        ? new Date(req.query.beforeDate as string)
+        : undefined;
+
+      // Filter aufbauen
+      if (beforeDate) {
+        dateFilter.createdAt = { $lt: beforeDate };
+      } else if (startDate) {
+        dateFilter.createdAt = { $gte: startDate, $lte: endDate };
       }
 
-      // Nur schlechte Stimmungen mit Gesundheitsstatus abrufen (für Admins)
-      const adminView = req.query.adminView === "true";
-      const filter = adminView
-        ? { ...dateFilter, feeling: "bad", healthStatus: { $exists: true } }
-        : dateFilter;
+      // Filter für Health Reports
+      // const healthFilter = {};
+
+      // Option: Nur Health Reports anzeigen (unabhängig vom Gefühl)
+      // const onlyWithHealth = req.query.onlyWithHealth === "true";
+      // Wichtig: Diese Option nicht mehr verwenden, da wir auch positive Berichte ohne healthStatus anzeigen wollen
+      // Stattdessen wird die Filterung jetzt über das feeling-Feld gesteuert
+
+      // Filter für Stimmung
+      let feelingFilter = {};
+      if (
+        req.query.feeling &&
+        ["good", "bad", "all"].includes(req.query.feeling as string)
+      ) {
+        if (req.query.feeling !== "all") {
+          feelingFilter = { feeling: req.query.feeling };
+        }
+      }
+
+      // Filter kombinieren - ohne healthFilter, um beide Arten von Berichten zu bekommen
+      const filter = {
+        ...dateFilter,
+        ...feelingFilter,
+      };
 
       // Loggen des Filters für Debugging
       console.log("Query filter:", filter);
 
-      // Testabfrage für adminView
-      if (adminView) {
-        const testCount = await Mood.countDocuments({
-          feeling: "bad",
-          healthStatus: { $exists: true },
-        });
-        console.log(
-          `Found ${testCount} documents with feeling "bad" and healthStatus.`
-        );
-      }
-
       // Stimmungen abrufen
       const moods = await Mood.find(filter)
         .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit);
+        .limit(limit + 1); // Einen extra laden um zu wissen, ob es mehr gibt
 
       console.log(`Retrieved ${moods.length} mood entries.`);
 
-      // Für Debugging - Details der ersten Einträge zeigen
-      if (moods.length > 0) {
-        console.log("First entry:", JSON.stringify(moods[0]));
-      }
+      // Prüfen, ob noch mehr Einträge vorhanden sind
+      const hasMore = moods.length > limit;
 
-      // Gesamtanzahl für Pagination
+      // Den extra Eintrag entfernen, falls vorhanden
+      const limitedMoods = hasMore ? moods.slice(0, limit) : moods;
+
+      // Das älteste Datum in den zurückgegebenen Daten
+      const oldestDate =
+        limitedMoods.length > 0
+          ? limitedMoods[limitedMoods.length - 1].createdAt
+          : undefined;
+
+      // Gesamtanzahl (nur für initiale Anzeige benötigt)
       const total = await Mood.countDocuments(filter);
 
       return res.status(200).json({
         success: true,
-        data: moods,
+        data: limitedMoods,
         pagination: {
           total,
-          page,
+          page: 1,
           limit,
-          pages: Math.ceil(total / limit),
+          hasMore,
+          oldestDate: oldestDate ? oldestDate.toISOString() : undefined,
         },
       });
     } catch (error) {

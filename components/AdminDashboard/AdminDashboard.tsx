@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { checkAuth } from "../navigation/NavBar";
 import AdminHealthReports from "../AdminHealthReports/AdminHealthReports";
-import SanctionDashboard from "@/components/Sanctions/SanctionDashboard"; // Importiere das Sanktions-Dashboard
+import SanctionDashboard from "@/components/Sanctions/SanctionDashboard";
+import MoodLevelAdmin from "@/components/MoodLevelAdmin/MoodLevelAdmin";
+import LevelThresholdSettings from "@/components/LevelThresholdSetting.tsx/LevelThresholdSetting";
 
 // Admin-Module und ihre Links
 const adminModules = [
@@ -39,6 +41,20 @@ const adminModules = [
     icon: "🎁",
   },
   {
+    title: "Lustsensor",
+    link: "#mood-level",
+    description: "Lustlevel einstellen und verwalten",
+    icon: "🌡️",
+    internal: true,
+  },
+  {
+    title: "Schwellenwerte",
+    link: "#level-thresholds",
+    description: "Schwellenwerte für Lustlevel konfigurieren",
+    icon: "🔢",
+    internal: true,
+  },
+  {
     title: "Sanktionen",
     link: "#sanctions",
     description: "Sanktionen verwalten und vergeben",
@@ -59,6 +75,8 @@ const AdminDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showHealthReports, setShowHealthReports] = useState(false);
   const [showSanctionsDashboard, setShowSanctionsDashboard] = useState(false);
+  const [showMoodLevelAdmin, setShowMoodLevelAdmin] = useState(false);
+  const [showLevelThresholds, setShowLevelThresholds] = useState(false); // Neuer State für Schwellenwerte
 
   // Überprüfen der Authentifizierung
   useEffect(() => {
@@ -73,7 +91,9 @@ const AdminDashboard: React.FC = () => {
   const handleInternalLinkClick = (moduleId: string) => {
     if (moduleId === "#health-reports") {
       setShowHealthReports(true);
-      setShowSanctionsDashboard(false); // Verstecke andere interne Module
+      setShowSanctionsDashboard(false);
+      setShowMoodLevelAdmin(false);
+      setShowLevelThresholds(false); // Andere Module ausblenden
       // Zur Gesundheitsberichte-Sektion scrollen
       const element = document.getElementById("health-reports-section");
       if (element) {
@@ -81,9 +101,31 @@ const AdminDashboard: React.FC = () => {
       }
     } else if (moduleId === "#sanctions") {
       setShowSanctionsDashboard(true);
-      setShowHealthReports(false); // Verstecke andere interne Module
+      setShowHealthReports(false);
+      setShowMoodLevelAdmin(false);
+      setShowLevelThresholds(false); // Andere Module ausblenden
       // Zur Sanktionen-Sektion scrollen
       const element = document.getElementById("sanctions-section");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    } else if (moduleId === "#mood-level") {
+      setShowMoodLevelAdmin(true);
+      setShowHealthReports(false);
+      setShowSanctionsDashboard(false);
+      setShowLevelThresholds(false); // Andere Module ausblenden
+      // Zur Lustlevel-Sektion scrollen
+      const element = document.getElementById("mood-level-section");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    } else if (moduleId === "#level-thresholds") {
+      setShowLevelThresholds(true);
+      setShowMoodLevelAdmin(false);
+      setShowHealthReports(false);
+      setShowSanctionsDashboard(false); // Andere Module ausblenden
+      // Zur Schwellenwerte-Sektion scrollen
+      const element = document.getElementById("level-thresholds-section");
       if (element) {
         element.scrollIntoView({ behavior: "smooth" });
       }
@@ -158,6 +200,32 @@ const AdminDashboard: React.FC = () => {
               ))}
             </div>
           </div>
+
+          {/* Lustlevel-Admin Sektion */}
+          {showMoodLevelAdmin && (
+            <div
+              id="mood-level-section"
+              className="mt-10 pt-6 border-t border-gray-200"
+            >
+              <h2 className="text-lg font-medium text-gray-900 mb-4">
+                Lustlevel-Verwaltung
+              </h2>
+              <MoodLevelAdmin />
+            </div>
+          )}
+
+          {/* Schwellenwerte Sektion */}
+          {showLevelThresholds && (
+            <div
+              id="level-thresholds-section"
+              className="mt-10 pt-6 border-t border-gray-200"
+            >
+              <h2 className="text-lg font-medium text-gray-900 mb-4">
+                Schwellenwerte-Konfiguration
+              </h2>
+              <LevelThresholdSettings />
+            </div>
+          )}
 
           {/* Sanktionen Sektion */}
           {showSanctionsDashboard && (

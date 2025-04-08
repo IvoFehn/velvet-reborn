@@ -9,14 +9,16 @@ interface IMessage {
 }
 
 export interface ITicket extends Document {
+  _id: string;
   subject: string;
   description?: string;
-  messages: IMessage[];
+  messages?: IMessage[];
   archived: boolean;
   createdAt: Date;
-  updatedAt: Date;
-  generatorId?: mongoose.Types.ObjectId;
-  sanctionId?: mongoose.Types.ObjectId; // Referenz zur verknüpften Sanktion
+  updatedAt?: Date;
+  generatorId?: string | mongoose.Types.ObjectId | null;
+  sanctionId?: mongoose.Types.ObjectId | null;
+  sanctionsFrontendId?: string | null; // Für Kompatibilität mit bestehendem Code
 }
 
 const MessageSchema = new Schema<IMessage>({
@@ -28,12 +30,43 @@ const MessageSchema = new Schema<IMessage>({
 
 const TicketSchema = new Schema<ITicket>(
   {
-    subject: { type: String, required: true },
-    description: { type: String },
-    messages: { type: [MessageSchema], default: [] },
-    archived: { type: Boolean, default: false },
-    generatorId: { type: Schema.Types.ObjectId, ref: "Generator" },
-    sanctionId: { type: Schema.Types.ObjectId, ref: "Sanction" }, // Referenz zur Sanktion
+    subject: {
+      type: String,
+      required: [true, "Betreff ist erforderlich"],
+      trim: true,
+    },
+    description: {
+      type: String,
+      required: [true, "Beschreibung ist erforderlich"],
+    },
+    messages: {
+      type: [MessageSchema],
+      default: [],
+    },
+    archived: {
+      type: Boolean,
+      default: false,
+    },
+    generatorId: {
+      type: Schema.Types.Mixed, // Unterstützt String und ObjectId
+      default: null,
+    },
+    sanctionId: {
+      type: Schema.Types.ObjectId,
+      ref: "Sanction",
+      default: null,
+    },
+    sanctionsFrontendId: {
+      type: String,
+      default: null,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,

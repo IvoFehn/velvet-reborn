@@ -3,13 +3,24 @@ import dayjs from "dayjs";
 
 // Typdefinition für den Generator (Auftrag)
 interface Generator {
+  _id: string;
   createdAt: string;
+  status: string;
+  content?: string;
   // Weitere Felder können hier ergänzt werden
+}
+
+// Typdefinition für Mood-Überschreibung
+interface MoodOverride {
+  active: boolean;
+  level: number;
+  expiresAt: string | null; // Zeitpunkt, wann die Überschreibung abläuft (null = nie)
 }
 
 interface ApiResponseSuccess {
   success: true;
   data: Generator;
+  moodOverride?: MoodOverride;
 }
 
 interface ApiResponseError {
@@ -46,19 +57,23 @@ const calculateLevel = (createdAt: string): number => {
 
 const MoodTachometer = () => {
   const [generator, setGenerator] = useState<Generator | null>(null);
+  const [moodOverride, setMoodOverride] = useState<MoodOverride | null>(null);
   const [loading, setLoading] = useState(true);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [fetchError, setFetchError] = useState(false);
   const [showExtraTips, setShowExtraTips] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
-  // Beim Mounten den letzten Auftrag abrufen
+  // Beim Mounten den letzten Auftrag und die Mood-Überschreibung abrufen
   useEffect(() => {
-    fetch("/api/generator?last=true")
+    fetch("/api/mood-status")
       .then((response) => response.json())
       .then((data: ApiResponse) => {
         if (data.success) {
           setGenerator(data.data);
+          if (data.moodOverride) {
+            setMoodOverride(data.moodOverride);
+          }
         } else {
           setFetchError(true);
         }
@@ -74,8 +89,24 @@ const MoodTachometer = () => {
     return <div>Lade Daten...</div>;
   }
 
-  // Falls kein Auftrag abgerufen werden konnte, default Level 3
-  const level = generator ? calculateLevel(generator.createdAt) : 2;
+  // Verwendung der Überschreibung, falls aktiv
+  let level = 0;
+  if (moodOverride && moodOverride.active) {
+    // Prüfen, ob die Überschreibung abgelaufen ist
+    if (
+      moodOverride.expiresAt &&
+      dayjs().isAfter(dayjs(moodOverride.expiresAt))
+    ) {
+      // Überschreibung ist abgelaufen, auf Standardberechnung zurückfallen
+      level = generator ? calculateLevel(generator.createdAt) : 2;
+    } else {
+      // Überschreibung aktiv und nicht abgelaufen
+      level = moodOverride.level;
+    }
+  } else {
+    // Falls keine Überschreibung aktiv ist, Standard-Berechnung verwenden
+    level = generator ? calculateLevel(generator.createdAt) : 2;
+  }
 
   // Definition der verfügbaren Mood-Emojis
   const moods = [
@@ -155,6 +186,9 @@ const MoodTachometer = () => {
     ],
   ];
 
+  // Überschreibungsindikator anzeigen
+  const showOverrideIndicator = moodOverride && moodOverride.active;
+
   return (
     <div className="relative w-full max-w-[380px] px-4 pt-1 font-['Segoe_UI'] text-gray-800">
       {/* Info Icon */}
@@ -164,6 +198,19 @@ const MoodTachometer = () => {
       >
         i
       </div>
+
+      {/* Überschreibungsindikator */}
+      {showOverrideIndicator && (
+        <div className="absolute left-3 top-3 flex items-center justify-center rounded-md bg-orange-100 px-2 py-1 text-xs font-medium text-orange-800">
+          <span className="mr-1">⚙️</span>
+          Manuell eingestellt
+          {moodOverride.expiresAt && (
+            <span className="ml-1">
+              (bis {dayjs(moodOverride.expiresAt).format("DD.MM. HH:mm")})
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Modal */}
       {showModal && (
@@ -200,6 +247,26 @@ const MoodTachometer = () => {
                 💡 Tipps sind Vorschläge -{" "}
                 <strong>kreative Eigeninitiative</strong> ist erwünscht!
               </p>
+              {showOverrideIndicator && (
+                <div className="rounded-md border border-blue-100 bg-blue-50 p-3">
+                  <p>
+                    ⚙️ <strong>Hinweis:</strong> Das aktuelle Level wurde
+                    manuell eingestellt
+                    {moodOverride?.expiresAt ? (
+                      <span>
+                        {" "}
+                        und läuft am{" "}
+                        {dayjs(moodOverride.expiresAt).format(
+                          "DD.MM.YYYY um HH:mm"
+                        )}{" "}
+                        ab.
+                      </span>
+                    ) : (
+                      <span> und bleibt aktiv bis zur Zurücksetzung.</span>
+                    )}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

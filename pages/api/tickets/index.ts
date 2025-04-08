@@ -1,7 +1,9 @@
-// pages/api/sanctions/index.ts
+// pages/api/tickets/index.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/lib/dbConnect";
-import Sanction from "@/models/Sanction";
+import Ticket from "@/models/Ticket";
+import { sendTelegramMessage } from "@/util/sendTelegramMessage";
+import dayjs from "dayjs";
 
 export default async function handler(
   req: NextApiRequest,
@@ -14,96 +16,75 @@ export default async function handler(
   switch (method) {
     case "GET":
       try {
-        const { status, latest, limit = 50 } = req.query;
-
-        let query = {};
-        // Filtern nach Status, falls angegeben
-        if (status) {
-          // Unterstützt mehrere Status durch Komma getrennt
-          const statusList = (status as string).split(",");
-          query = { status: { $in: statusList } };
-        }
-
-        let sanctions;
-        if (latest === "true") {
-          // Nur die neueste Sanktion abholen
-          sanctions = await Sanction.find(query)
-            .sort({ createdAt: -1 })
-            .limit(1);
-        } else {
-          // Normale Suche mit Limit
-          sanctions = await Sanction.find(query)
-            .sort({ createdAt: -1 })
-            .limit(Number(limit));
-        }
-
-        res.status(200).json({ success: true, data: sanctions });
+        const { archived } = req.query;
+        const tickets = await Ticket.find({
+          archived: archived === "true",
+        }).sort({ createdAt: -1 });
+        res.status(200).json({ success: true, tickets });
       } catch (error) {
+        console.error("Error fetching tickets:", error);
         res.status(400).json({
           success: false,
           message:
-            error instanceof Error
-              ? error.message
-              : "Fehler beim Abrufen der Sanktionen",
+            error instanceof Error ? error.message : "Failed to fetch tickets",
         });
       }
       break;
 
-    case "PUT":
+    case "POST":
       try {
-        const { id, status } = req.body;
+        const { subject, description, generatorId, sanctionsFrontendId } =
+          req.body;
 
-        if (!id) {
+        // Validate required fields
+        if (!subject || !description) {
           return res.status(400).json({
             success: false,
-            message: "Sanktions-ID ist erforderlich",
+            message: "Subject and description are required",
           });
         }
 
-        // Überprüfen, ob der angegebene Status gültig ist
-        if (
-          status &&
-          !["offen", "erledigt", "eskaliert", "abgelaufen"].includes(status)
-        ) {
-          return res.status(400).json({
-            success: false,
-            message:
-              "Ungültiger Status. Erlaubt sind: offen, erledigt, eskaliert, abgelaufen",
-          });
+        // Erstelle ein neues Ticket mit allen benötigten Feldern
+        const ticketData = {
+          subject,
+          description,
+          generatorId: generatorId || null,
+          sanctionsFrontendId: sanctionsFrontendId || null,
+          // Wenn sanctionsFrontendId vorhanden ist, übertrage es auch in sanctionId für das neue Schema
+          sanctionId: sanctionsFrontendId || null,
+          archived: false,
+          messages: [], // Leeres Array für Nachrichten
+          createdAt: new Date(),
+        };
+
+        const ticket = await Ticket.create(ticketData);
+
+        // Send Telegram notification
+        try {
+          await sendTelegramMessage(
+            "admin",
+            `Ein neuer Antrag wurde eingereicht am ${dayjs()
+              .locale("de")
+              .format("DD.MM.YYYY HH:mm:ss")}`
+          );
+        } catch (telegramError) {
+          console.error("Telegram notification error:", telegramError);
+          // Continue processing even if Telegram notification fails
         }
 
-        // Sanktion finden und aktualisieren
-        const updatedSanction = await Sanction.findByIdAndUpdate(
-          id,
-          { status },
-          { new: true, runValidators: true }
-        );
-
-        if (!updatedSanction) {
-          return res.status(404).json({
-            success: false,
-            message: "Sanktion nicht gefunden",
-          });
-        }
-
-        res.status(200).json({
-          success: true,
-          data: updatedSanction,
-          message: `Sanktion erfolgreich aktualisiert auf Status: ${status}`,
-        });
+        res.status(201).json({ success: true, ticket });
       } catch (error) {
+        console.error("Error creating ticket:", error);
         res.status(400).json({
           success: false,
           message:
-            error instanceof Error
-              ? error.message
-              : "Fehler beim Aktualisieren der Sanktion",
+            error instanceof Error ? error.message : "Failed to create ticket",
         });
       }
       break;
 
     default:
-      res.setHeader("Allow", ["GET", "PUT"]);
+      res.setHeader("Allow", ["GET", "POST"]);
       res.status(405).end(`Method ${method} Not Allowed`);
   }
 }
