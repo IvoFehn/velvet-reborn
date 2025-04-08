@@ -41,7 +41,6 @@ const AdminHealthReports: React.FC = () => {
     hasMore: false,
   });
 
-  // Filter States
   const [feelingFilter, setFeelingFilter] = useState<"all" | "good" | "bad">(
     "all"
   );
@@ -50,26 +49,20 @@ const AdminHealthReports: React.FC = () => {
   const [dateFilterActive, setDateFilterActive] = useState<boolean>(false);
   const [onlyWithHealth, setOnlyWithHealth] = useState<boolean>(true);
 
-  // Observer für Infinite Scrolling
   const observerTarget = useRef<HTMLDivElement>(null);
 
-  // Format date strings für den Datepicker
   const formatDateForInput = (date: Date): string => {
     return dayjs(date).format("YYYY-MM-DD");
   };
 
-  // Initialisieren der Datepicker-Werte
   useEffect(() => {
-    // Standard: Letzte 7 Tage
     const end = new Date();
     const start = new Date();
     start.setDate(start.getDate() - 7);
-
     setEndDate(formatDateForInput(end));
     setStartDate(formatDateForInput(start));
   }, []);
 
-  // Daten-Fetching
   const fetchReports = async (
     append = false,
     beforeDate?: string
@@ -82,7 +75,6 @@ const AdminHealthReports: React.FC = () => {
     setError(null);
 
     try {
-      // Removed onlyWithHealth parameter to show all reports
       let url = `/api/mood?limit=${pagination.limit}&feeling=${feelingFilter}`;
 
       if (beforeDate) {
@@ -92,13 +84,10 @@ const AdminHealthReports: React.FC = () => {
       }
 
       const response = await fetch(url);
-
-      if (!response.ok) {
+      if (!response.ok)
         throw new Error("Fehler beim Abrufen der Gesundheitsberichte");
-      }
 
       const data = await response.json();
-
       if (data.success) {
         if (append) {
           setReports((prev) => [...prev, ...data.data]);
@@ -110,48 +99,42 @@ const AdminHealthReports: React.FC = () => {
         throw new Error(data.message || "Ein Fehler ist aufgetreten");
       }
     } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError("Ein unbekannter Fehler ist aufgetreten");
-      }
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Ein unbekannter Fehler ist aufgetreten"
+      );
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
   };
 
-  // Initialer Abruf der Daten
   useEffect(() => {
     fetchReports();
-  }, [feelingFilter]); // Re-fetch when feeling filter changes
+  }, [feelingFilter]);
 
-  // Anwenden des Datumsfilters
   const applyDateFilter = () => {
     setDateFilterActive(true);
     fetchReports();
   };
 
-  // Zurücksetzen des Datumsfilters
   const resetDateFilter = () => {
     const end = new Date();
     const start = new Date();
     start.setDate(start.getDate() - 7);
-
     setEndDate(formatDateForInput(end));
     setStartDate(formatDateForInput(start));
     setDateFilterActive(false);
     fetchReports();
   };
 
-  // Load More Handler
   const handleLoadMore = () => {
     if (pagination.hasMore && pagination.oldestDate && !loadingMore) {
       fetchReports(true, pagination.oldestDate);
     }
   };
 
-  // Infinite Scrolling mit Intersection Observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -162,18 +145,12 @@ const AdminHealthReports: React.FC = () => {
       { threshold: 0.5 }
     );
 
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
-
+    if (observerTarget.current) observer.observe(observerTarget.current);
     return () => {
-      if (observerTarget.current) {
-        observer.unobserve(observerTarget.current);
-      }
+      if (observerTarget.current) observer.unobserve(observerTarget.current);
     };
   }, [pagination.hasMore, loadingMore]);
 
-  // Formatierung des Datums
   const formatDate = (dateString: string): string => {
     return dayjs(dateString).locale("de").format("DD. MMMM YYYY, HH:mm [Uhr]");
   };
@@ -198,6 +175,12 @@ const AdminHealthReports: React.FC = () => {
       <div
         className={`h-3 w-3 rounded-full ${
           feeling === "good" ? "bg-emerald-500" : "bg-amber-500"
+        } ${isLatest ? "ring-4 ring-opacity-40" : ""} ${
+          isLatest
+            ? feeling === "good"
+              ? "ring-emerald-300"
+              : "ring-amber-300"
+            : ""
         }`}
       />
       <span
@@ -207,7 +190,8 @@ const AdminHealthReports: React.FC = () => {
       >
         {feeling === "good" ? "Gut" : "Schlecht"}
         {isLatest && (
-          <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+          <span className="ml-2 px-2 py-1 bg-blue-50 text-blue-800 text-xs rounded-full border border-blue-200 flex items-center">
+            <CheckIcon className="h-4 w-4 mr-1" />
             Aktuell
           </span>
         )}
@@ -361,9 +345,18 @@ const AdminHealthReports: React.FC = () => {
                       return (
                         <tr
                           key={report._id}
-                          className="hover:bg-gray-50 transition-colors"
+                          className={`hover:bg-gray-50 transition-colors ${
+                            isLatest
+                              ? "bg-blue-50 border-l-4 border-blue-500"
+                              : ""
+                          }`}
                         >
                           <td className="px-4 py-3 text-sm text-gray-900 font-medium whitespace-nowrap">
+                            {isLatest && (
+                              <span className="mr-2 text-blue-500 animate-pulse">
+                                ↪
+                              </span>
+                            )}
                             {formatDate(report.createdAt)}
                           </td>
                           <td className="px-4 py-3">
@@ -419,10 +412,17 @@ const AdminHealthReports: React.FC = () => {
                 return (
                   <div
                     key={report._id}
-                    className="bg-white rounded-xl shadow-sm border border-gray-200 p-4"
+                    className={`bg-white rounded-xl shadow-sm border border-gray-200 p-4 ${
+                      isLatest ? "border-l-4 border-blue-500" : ""
+                    }`}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-900 truncate">
+                        {isLatest && (
+                          <span className="mr-2 text-blue-500 animate-pulse">
+                            ↪
+                          </span>
+                        )}
                         {formatDate(report.createdAt)}
                       </span>
                       <FeelingIndicator
