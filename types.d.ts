@@ -19,6 +19,7 @@ export interface OrgasmusWithNote {
 
 export interface LochObjekt {
   additionalNote: string;
+  mouth: "Volle Bereitschaft";
   pussy: {
     title: string;
     tags: string[];
@@ -68,4 +69,42 @@ export interface VorSexObjekt {
   title: string;
   description: string;
   additionalNote: string;
+}
+
+export interface OutfitWithNote {
+  outfit: string;
+  additionalNote: string;
+}
+
+export interface GeneratorData {
+  _id?: string;
+  status: "NEW" | "ACCEPTED" | "PENDING" | "DECLINED" | "DONE" | "FAILED";
+  pose: PoseObject;
+  outfit: string | OutfitWithNote; // Unterstützt beide Formate für Kompatibilität
+  orgasmus: string | OrgasmusWithNote; // Unterstützt beide Formate für Kompatibilität
+  kondome: SingleCondomObject[];
+  toys: ToyObject;
+  regeln: SingleRule[];
+  loch: LochObjekt;
+  vorSex: VorSexObjekt[];
+  dringlichkeit: DringlichkeitObjekt;
+  ort: OrtItem | null;
+  iteratoren: VorSexObjekt[];
+  interval: Dayjs[];
+  gold: number;
+  exp: number;
+  blueBalls: boolean;
+  alreadyChangeRequested: boolean;
+  alreadyDeclineRequested: boolean;
+  createdAt?: string;
+}
+export interface GoldWeights {
+  obedience: number;
+  vibeDuringSex: number;
+  vibeAfterSex: number;
+  orgasmIntensity: number;
+  painlessness: number;
+  ballsWorshipping: number;
+  cumWorshipping: number;
+  didEverythingForHisPleasure: number;
 }

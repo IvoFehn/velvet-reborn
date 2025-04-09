@@ -142,7 +142,32 @@ export default async function handler(
 
     case "POST":
       try {
-        const generatorData: IGenerator = req.body;
+        const generatorData = { ...req.body };
+
+        // Konvertiere das outfit-Objekt in einen String, falls es ein Objekt ist
+        if (
+          typeof generatorData.outfit === "object" &&
+          generatorData.outfit !== null
+        ) {
+          // Verwende die outfit-Eigenschaft des Objekts oder einen leeren String, falls nicht vorhanden
+          generatorData.outfit = generatorData.outfit.outfit || "";
+
+          // Optional: Füge additionalNote als separates Feld hinzu, wenn das Schema es unterstützt
+          // generatorData.outfitNote = generatorData.outfit.additionalNote || '';
+        }
+
+        // Konvertiere das orgasmus-Objekt in einen String, falls es ein Objekt ist
+        if (
+          typeof generatorData.orgasmus === "object" &&
+          generatorData.orgasmus !== null
+        ) {
+          // Verwende die option-Eigenschaft des Objekts oder einen leeren String, falls nicht vorhanden
+          generatorData.orgasmus = generatorData.orgasmus.option || "";
+
+          // Optional: Füge additionalNote als separates Feld hinzu, wenn das Schema es unterstützt
+          // generatorData.orgasmusNote = generatorData.orgasmus.additionalNote || '';
+        }
+
         const newGenerator = new Generator(generatorData);
         const savedGenerator = await newGenerator.save();
 

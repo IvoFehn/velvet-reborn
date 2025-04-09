@@ -34,6 +34,7 @@ const toys: string[] = [
   "Fuchsschwanz",
   "Fingeraufsatz",
   "Vibrationsperlen",
+  "Custom (Siehe Notiz)",
 ];
 
 const areaIcons = {

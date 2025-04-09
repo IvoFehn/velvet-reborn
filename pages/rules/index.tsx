@@ -119,7 +119,7 @@ const LegalBook = () => {
       id: "section17",
       title: "Gesamtheit",
       content:
-        "Die Frau hat sich um die Gesamtheit des Sex zu kümmern. Das beinhaltet, dass sie sich um die Kontrolle und Versorgung der Kondome kümmert und immer darauf achtet, dass ausreichend Kondome vorhanden sind. Sollten diese knapp werden, dann stellt sie einen Antrag auf neue Beschaffung. Sie ist dafür verantwortlich, dass immer ausreichend Kondome vorhanden sind, immer ausreichend Gleitgel, für das Aufräumen und die Reinigung des Sex-Ortes und der Spielzuege etc. Die einzige Aufgabe des Mannes ist der Sex selbst.",
+        "Die Frau hat sich um die Gesamtheit des Sex zu kümmern. Das beinhaltet, dass sie sich um die Kontrolle und Versorgung der Kondome kümmert und immer darauf achtet, dass ausreichend Kondome vorhanden sind. Sollten diese knapp werden, dann stellt sie einen Antrag auf neue Beschaffung. Sie ist dafür verantwortlich, dass immer ausreichend Kondome vorhanden sind, immer ausreichend Gleitgel, für das Aufräumen und die Reinigung des Sex-Ortes und der Spielzeuge (Reinigung und geordnetes Wegräumen muss unmittelbar nach dem Sex passieren, damit diese immer einsetzbar sind) etc. Die einzige Aufgabe des Mannes ist der Sex selbst.",
     },
     {
       id: "section18",
@@ -191,6 +191,12 @@ const LegalBook = () => {
       title: "Anträge als erste Wahl",
       content:
         "Beschwerden, Anliegen, Wünsche o.ä. die mit Sex oder Praktiken drum herum im Zusammenhang stehen sind immer über einen Antrag zu klären und bis zu Klärung stillschweigend hinzunehmen. Es sollte niemals so-etwas mündlich geklärt werden und nur bei akuten Fällen wie starke Schmerzen etc. um Redeerlaubnis gebeten werden, alles weitere muss über das Antragsportal geklärt werden. Egal was.",
+    },
+    {
+      id: "section30",
+      title: "Beitrag zur App",
+      content:
+        "Die Frau kann dazu aufgefordert werden, Dinge zutun, die nicht direkt sexuell sind, um die App-Qualität verbessern. (Bsp.: Strafen ausdenken)",
     },
   ];
 

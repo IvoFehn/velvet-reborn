@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Box,
   Typography,
@@ -71,20 +71,37 @@ type Props = {
 
 const VorSexComponent: React.FC<Props> = ({ currentValue, setValue }) => {
   const theme = useTheme();
+  // State zum Tracken des aktiven Textfelds
+  const [activeTextFieldTitle, setActiveTextFieldTitle] = useState<
+    string | null
+  >(null);
 
   // Handler für das Umschalten der Checkboxen
   const handleCheckboxChange = (
     option: { title: string; description: string },
-    checked: boolean
+    checked: boolean,
+    event?: React.MouseEvent | React.ChangeEvent<HTMLInputElement>
   ) => {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    // Wenn ein Textfeld aktiv ist, keine Änderung vornehmen
+    if (activeTextFieldTitle) {
+      return;
+    }
+
     setValue((prev) => {
       const exists = prev.some((item) => item.title === option.title);
+
       if (checked && !exists) {
         return [...prev, { ...option, additionalNote: "" }];
       }
+
       if (!checked && exists) {
         return prev.filter((item) => item.title !== option.title);
       }
+
       return prev;
     });
   };
@@ -96,6 +113,22 @@ const VorSexComponent: React.FC<Props> = ({ currentValue, setValue }) => {
         item.title === title ? { ...item, additionalNote: note } : item
       )
     );
+  };
+
+  // Handler für Papier-Klick
+  const handlePaperClick = (option: { title: string; description: string }) => {
+    // Wenn ein Textfeld aktiv ist, keine Änderung vornehmen
+    if (activeTextFieldTitle) {
+      return;
+    }
+
+    const isChecked = currentValue.some((item) => item.title === option.title);
+    handleCheckboxChange(option, !isChecked);
+  };
+
+  // Hilfsfunktion zum Verhindern der Propagation
+  const preventPropagation = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
   };
 
   return (
@@ -125,7 +158,7 @@ const VorSexComponent: React.FC<Props> = ({ currentValue, setValue }) => {
             <Paper
               key={option.title}
               elevation={0}
-              onClick={() => handleCheckboxChange(option, !isChecked)}
+              onClick={() => handlePaperClick(option)}
               sx={{
                 p: 2,
                 borderRadius: 2,
@@ -148,22 +181,29 @@ const VorSexComponent: React.FC<Props> = ({ currentValue, setValue }) => {
               tabIndex={0}
               onKeyPress={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
-                  handleCheckboxChange(option, !isChecked);
+                  handlePaperClick(option);
                 }
               }}
             >
               <Box display="flex" alignItems="flex-start">
-                <Checkbox
-                  checked={isChecked}
-                  color="primary"
-                  onChange={(e) =>
-                    handleCheckboxChange(option, e.target.checked)
-                  }
+                <Box
+                  onClick={preventPropagation}
+                  onMouseDown={preventPropagation}
                   sx={{ mr: 2, mt: 0.5 }}
-                  inputProps={{
-                    "aria-label": `${option.title} - ${option.description}`,
-                  }}
-                />
+                >
+                  <Checkbox
+                    checked={isChecked}
+                    color="primary"
+                    onChange={(e) =>
+                      handleCheckboxChange(option, e.target.checked, e)
+                    }
+                    onClick={preventPropagation}
+                    onFocus={preventPropagation}
+                    inputProps={{
+                      "aria-label": `${option.title} - ${option.description}`,
+                    }}
+                  />
+                </Box>
 
                 <Box sx={{ flex: 1 }}>
                   <Typography
@@ -179,8 +219,9 @@ const VorSexComponent: React.FC<Props> = ({ currentValue, setValue }) => {
 
                   {isChecked && (
                     <Box
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => e.stopPropagation()}
+                      onClick={preventPropagation}
+                      onMouseDown={preventPropagation}
+                      sx={{ mt: 2 }}
                     >
                       <TextField
                         label="Zusätzliche Notiz"
@@ -188,16 +229,27 @@ const VorSexComponent: React.FC<Props> = ({ currentValue, setValue }) => {
                         onChange={(e) =>
                           handleNoteChange(option.title, e.target.value)
                         }
+                        onFocus={() => setActiveTextFieldTitle(option.title)}
+                        onBlur={() => setActiveTextFieldTitle(null)}
+                        onClick={preventPropagation}
+                        onMouseDown={preventPropagation}
+                        onKeyDown={preventPropagation}
+                        onKeyUp={preventPropagation}
                         fullWidth
                         multiline
                         rows={2}
-                        sx={{ mt: 2 }}
-                        InputProps={{
-                          onClick: (e) => e.stopPropagation(),
-                          sx: {
-                            borderRadius: 1,
+                        variant="outlined"
+                        size="small"
+                        sx={{
+                          "& .MuiInputBase-root": {
                             backgroundColor: theme.palette.background.default,
                           },
+                        }}
+                        InputProps={{
+                          onClick: preventPropagation,
+                          onMouseDown: preventPropagation,
+                          onKeyDown: preventPropagation,
+                          onKeyUp: preventPropagation,
                         }}
                       />
                     </Box>

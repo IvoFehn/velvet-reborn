@@ -90,18 +90,25 @@ const RulesComponent: React.FC<Props> = ({ currentValue, setValue }) => {
   const handleRuleToggle = (title: string) => () => {
     setValue((prev) => {
       const exists = prev.some((r) => r.title === title);
-      const rule = [
+
+      // Finde die Regel aus beiden Listen (vordefiniert und benutzerdefiniert)
+      const allRules = [
         ...predefinedRules,
         ...prev.filter(
           (r) => !predefinedRules.some((pr) => pr.title === r.title)
         ),
-      ].find((r) => r.title === title);
+      ];
+      const rule = allRules.find((r) => r.title === title);
 
       if (!rule) return prev;
 
+      // Wenn die Regel bereits existiert, behalte die zusätzliche Notiz
+      const existingRule = prev.find((r) => r.title === title);
+      const additionalNote = existingRule?.additionalNote || "";
+
       return exists
         ? prev.filter((r) => r.title !== title)
-        : [...prev, { ...rule }];
+        : [...prev, { ...rule, additionalNote }];
     });
   };
 
@@ -110,7 +117,13 @@ const RulesComponent: React.FC<Props> = ({ currentValue, setValue }) => {
     currentValue.some((r) => r.title === title);
 
   // Handler für die Änderung der additionalNote
-  const handleNoteChange = (title: string, note: string) => {
+  const handleNoteChange = (
+    title: string,
+    note: string,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    e.stopPropagation(); // Verhindert das Auslösen des onClick-Events des Papers
+
     setValue((prev) =>
       prev.map((r) => (r.title === title ? { ...r, additionalNote: note } : r))
     );
@@ -258,9 +271,9 @@ const RulesComponent: React.FC<Props> = ({ currentValue, setValue }) => {
 
                 <Checkbox
                   checked={isChecked(rule.title)}
-                  onChange={() => handleRuleToggle(rule.title)()}
+                  onChange={handleRuleToggle(rule.title)}
+                  onClick={(e) => e.stopPropagation()}
                   sx={{
-                    pointerEvents: "none",
                     color: "primary.main",
                     "&.Mui-checked": {
                       color: "primary.dark",
@@ -273,7 +286,7 @@ const RulesComponent: React.FC<Props> = ({ currentValue, setValue }) => {
               </Box>
 
               {isChecked(rule.title) && (
-                <Box onClick={(e) => e.stopPropagation()} sx={{ mt: 2 }}>
+                <Box sx={{ mt: 2 }}>
                   <TextField
                     fullWidth
                     label="Zusätzliche Notiz"
@@ -282,17 +295,23 @@ const RulesComponent: React.FC<Props> = ({ currentValue, setValue }) => {
                         ?.additionalNote || ""
                     }
                     onChange={(e) =>
-                      handleNoteChange(rule.title, e.target.value)
+                      handleNoteChange(
+                        rule.title,
+                        e.target.value,
+                        e as React.ChangeEvent<HTMLInputElement>
+                      )
                     }
                     multiline
                     rows={2}
                     variant="outlined"
                     size="small"
                     onClick={(e) => e.stopPropagation()}
+                    onFocus={(e) => e.stopPropagation()}
                     InputProps={{
                       sx: {
                         backgroundColor: "background.default",
                       },
+                      onClick: (e) => e.stopPropagation(),
                     }}
                   />
                 </Box>

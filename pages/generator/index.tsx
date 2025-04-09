@@ -27,14 +27,14 @@ import DringlichkeitComponent from "@/components/generator/DringlichkeitComponen
 import VorSexComponent from "@/components/generator/VorSexComponent";
 import OrtComponent from "@/components/generator/OrtComponent";
 import IntervalComponent from "@/components/generator/IntervalComponent";
-import { GeneratorData } from "@/types";
+import {
+  GeneratorData,
+  OutfitWithNote,
+  OrgasmusWithNote,
+  DringlichkeitObjekt,
+} from "@/types";
 import { sendTelegramMessage } from "@/util/sendTelegramMessage";
 import dayjs from "dayjs";
-
-// Neue Typdefinition für die zu sendenden Daten
-interface GeneratorDataToSend extends Omit<GeneratorData, "interval"> {
-  interval: string[];
-}
 
 const steps = [
   "Position",
@@ -57,6 +57,16 @@ const Generator: React.FC = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // State für die neuen Datenstrukturen
+  const [outfitState, setOutfitState] = useState<OutfitWithNote>({
+    outfit: "",
+    additionalNote: "",
+  });
+  const [orgasmusState, setOrgasmusState] = useState<OrgasmusWithNote>({
+    option: "",
+    additionalNote: "",
+  });
+
   // Snackbar States
   const [snackbarSuccessOpen, setSnackbarSuccessOpen] = useState(false);
   const [snackbarErrorOpen, setSnackbarErrorOpen] = useState(false);
@@ -76,8 +86,8 @@ const Generator: React.FC = () => {
       },
       additionalNote: "",
     },
-    outfit: "",
-    orgasmus: "",
+    outfit: "", // Dies wird nur für die Typkompatibilität verwendet
+    orgasmus: "", // Dies wird nur für die Typkompatibilität verwendet
     kondome: [],
     toys: { additionalNote: "", mouth: [], pussy: [], ass: [] },
     regeln: [],
@@ -88,7 +98,7 @@ const Generator: React.FC = () => {
       pussy: { title: "", tags: [] },
     },
     vorSex: [],
-    dringlichkeit: { title: "", description: " " },
+    dringlichkeit: { title: "", description: "", additionalNote: "" },
     ort: null,
     iteratoren: [],
     interval: [],
@@ -99,8 +109,23 @@ const Generator: React.FC = () => {
     alreadyDeclineRequested: false,
   });
 
+  // Aktualisiere formData wenn outfitState oder orgasmusState sich ändern
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      outfit: outfitState, // Speichere das ganze Objekt
+    }));
+  }, [outfitState]);
+
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      orgasmus: orgasmusState, // Speichere das ganze Objekt
+    }));
+  }, [orgasmusState]);
+
   // Neue sendToBackend-Funktion, die GeneratorDataToSend akzeptiert
-  const sendToBackend = async (data: GeneratorDataToSend) => {
+  const sendToBackend = async (data: any) => {
     const response = await fetch("/api/generator", {
       method: "POST",
       headers: {
@@ -135,7 +160,7 @@ const Generator: React.FC = () => {
     setIsSubmitting(true);
     try {
       // Konvertiere alle Dayjs-Objekte im interval-Array zu ISO-Strings
-      const dataToSend: GeneratorDataToSend = {
+      const dataToSend: any = {
         ...formData,
         interval: formData.interval.map((date) => date.toISOString()),
       };
@@ -178,8 +203,6 @@ const Generator: React.FC = () => {
   // Spezifische Handler mit korrekten Typen
   const handlers = {
     setPose: createUpdateHandler("pose"),
-    setOutfit: createUpdateHandler("outfit"),
-    setOrgasmus: createUpdateHandler("orgasmus"),
     setKondome: createUpdateHandler("kondome"),
     setToys: createUpdateHandler("toys"),
     setRegeln: createUpdateHandler("regeln"),
@@ -209,15 +232,15 @@ const Generator: React.FC = () => {
           case "outfit":
             return (
               <OutfitComponent
-                currentValue={formData.outfit}
-                setValue={handlers.setOutfit}
+                currentValue={outfitState}
+                setValue={setOutfitState}
               />
             );
           case "orgasmus":
             return (
               <OrgasmusComponent
-                currentValue={formData.orgasmus}
-                setValue={handlers.setOrgasmus}
+                currentValue={orgasmusState}
+                setValue={setOrgasmusState}
               />
             );
           case "kondome":
@@ -258,8 +281,12 @@ const Generator: React.FC = () => {
           case "dringlichkeit":
             return (
               <DringlichkeitComponent
-                currentValue={formData.dringlichkeit}
-                setValue={handlers.setDringlichkeit}
+                currentValue={formData.dringlichkeit as DringlichkeitObjekt}
+                setValue={
+                  handlers.setDringlichkeit as React.Dispatch<
+                    React.SetStateAction<DringlichkeitObjekt>
+                  >
+                }
               />
             );
           case "ort":
