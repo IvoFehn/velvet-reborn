@@ -18,51 +18,73 @@ interface SurveyAnswerRecord {
 
 interface SurveyProps {
   onSubmit?: (responses: Record<string, any>) => void;
+  introTitle?: string;
+  introDescription?: string;
+  introImage?: string;
 }
 
 // Importiere die Fragen aus einer externen Datei
-import surveyQuestionsData from "@/data/surveyQuestions";
+import surveyQuestions from "@/data/surveyQuestions";
 
-// Beispielfragen als Fallback, falls die externen Daten nicht geladen werden können
-const surveyQuestions: Question[] = surveyQuestionsData || [
-  {
-    id: "q1",
-    text: "Lesbisch",
-    description: "Die Frau hat geschlechtsverkehr mit einer anderen Frau.",
-    category: "Homo",
-    image: "/api/placeholder/600/400",
-  },
-  {
-    id: "q2",
-    text: "Schwul",
-    description:
-      "Die Frau ist mit geschlechtsverkehr zwischen ihrem Partner und einer gleichgeschlechtlichen Person einverstanden.",
-    category: "Homo",
-    image: "/api/placeholder/600/400",
-  },
-  {
-    id: "q3",
-    text: "Dreier FFM",
-    description:
-      "Geschlechtsverkehr zwischen einer Frau, ihrem männlichen Partner und einer weiteren Frau.",
-    category: "Gruppensex",
-    image: "/api/placeholder/600/400",
-  },
-  {
-    id: "q4",
-    text: "Dreier MMF",
-    description:
-      "Geschlechtsverkehr zwischen einer Frau, ihrem männlichen Partner und einem weiteren Mann.",
-    category: "Gruppensex",
-    image: "/api/placeholder/600/400",
-  },
-];
+// SurveyIntroduction Komponente
+const SurveyIntroduction: React.FC<{
+  title?: string;
+  description?: string;
+  image?: string;
+  onStart: () => void;
+}> = ({ title, description, image, onStart }) => {
+  return (
+    <div className="bg-gray-100 min-h-screen py-8 px-4">
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden p-6 md:p-8 text-center">
+          {image && (
+            <div className="mb-6 overflow-hidden rounded-lg shadow-md max-w-md mx-auto">
+              <img
+                src={image}
+                alt="Umfrage Einführungsbild"
+                className="w-full h-auto object-cover"
+              />
+            </div>
+          )}
 
-const PreferenceSurvey: React.FC<SurveyProps> = ({ onSubmit }) => {
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            {title || "Willkommen zu unserer Umfrage"}
+          </h1>
+
+          <div className="text-gray-600 mb-8 max-w-xl mx-auto">
+            <p className="mb-4">
+              {description ||
+                "In dieser Umfrage möchten wir deine Präferenzen zu verschiedenen Themen erfassen. Deine Antworten helfen uns, unsere Angebote besser auf deine Bedürfnisse abzustimmen."}
+            </p>
+            <p>
+              Die Umfrage besteht aus {surveyQuestions.length} Fragen und dauert
+              etwa {Math.ceil(surveyQuestions.length / 2)} Minuten.
+            </p>
+          </div>
+
+          <button
+            onClick={onStart}
+            className="py-3 px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 shadow-md mx-auto"
+          >
+            Mit der Umfrage beginnen
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PreferenceSurvey: React.FC<SurveyProps> = ({
+  onSubmit,
+  introTitle,
+  introDescription,
+  introImage,
+}) => {
   const [surveyAnswers, setSurveyAnswers] = useState<SurveyAnswerRecord[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [surveyFinished, setSurveyFinished] = useState<boolean>(false);
   const [showError, setShowError] = useState<boolean>(false);
+  const [showIntroduction, setShowIntroduction] = useState<boolean>(true);
 
   useEffect(() => {
     const initialRecords: SurveyAnswerRecord[] = surveyQuestions.map((q) => ({
@@ -72,6 +94,10 @@ const PreferenceSurvey: React.FC<SurveyProps> = ({ onSubmit }) => {
     }));
     setSurveyAnswers(initialRecords);
   }, []);
+
+  const handleStartSurvey = () => {
+    setShowIntroduction(false);
+  };
 
   const handleResponseChange = (response: "yes" | "no" | "maybe") => {
     const updatedRecords = [...surveyAnswers];
@@ -159,10 +185,22 @@ const PreferenceSurvey: React.FC<SurveyProps> = ({ onSubmit }) => {
     );
   }
 
+  // Zeige die Einführung, wenn showIntroduction true ist
+  if (showIntroduction) {
+    return (
+      <SurveyIntroduction
+        title={introTitle}
+        description={introDescription}
+        image={introImage}
+        onStart={handleStartSurvey}
+      />
+    );
+  }
+
   if (!surveyFinished) {
     const currentRecord = surveyAnswers[currentQuestionIndex];
     return (
-      <div className="bg-gray-100 min-h-screen py-8 px-4">
+      <div className="py-8 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="bg-white rounded-xl shadow-lg overflow-hidden p-6 md:p-8">
             <div className="mb-6">
