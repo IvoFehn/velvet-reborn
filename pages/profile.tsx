@@ -36,6 +36,7 @@ import {
   Profile as ProfileType,
 } from "@/types/profile";
 import { CoinBookWidget } from "@/components/coinBookWidget/CoinBookWidget";
+import Survey from "@/components/Survey/Survey";
 
 const auth = checkAuth();
 
@@ -814,6 +815,16 @@ const ProfilePage: React.FC = () => {
         }}
       >
         <CoinBookWidget />
+      </Paper>
+      <Paper
+        sx={{
+          p: { xs: 2, sm: 3 },
+          borderRadius: { xs: 2, sm: 3 },
+          bgcolor: alpha(theme.palette.background.paper, 0.9),
+          mt: 3,
+        }}
+      >
+        <Survey />
       </Paper>
 
       {/* Dialog für das Öffnen einer Lootbox */}

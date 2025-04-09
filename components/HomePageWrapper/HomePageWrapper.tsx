@@ -58,7 +58,7 @@ export default function HomePageWrapper({ children }: HomePageWrapperProps) {
     }
 
     // Prüfe, ob Nutzer Regeln akzeptiert hat
-    const hasAcceptedRules = document.cookie.includes("rulesAccepted=true");
+    const hasAcceptedRules = document.cookie.includes("acceptedRules=true");
     setShowRulesModal(!hasAcceptedRules);
   }, [router.pathname]);
 

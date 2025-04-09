@@ -89,12 +89,26 @@ export default function TicketPage() {
             const genResponse = await fetch(
               `/api/generator/${data.ticket.generatorId}`
             );
-            const genData = await genResponse.json();
-            if (genData.success) {
-              setGenerator(genData.data);
+            // Prüfen des Antwort-Status vor dem Parsen von JSON
+            if (genResponse.status === 404) {
+              console.log(
+                `Generator mit ID ${data.ticket.generatorId} nicht gefunden`
+              );
+              // Optionaler Fallback oder null-Status
+            } else if (genResponse.ok) {
+              const contentType = genResponse.headers.get("content-type");
+              if (contentType && contentType.includes("application/json")) {
+                const genData = await genResponse.json();
+                if (genData.success) {
+                  setGenerator(genData.data);
+                }
+              } else {
+                console.error("Unerwarteter Inhaltstyp:", contentType);
+              }
             }
           } catch (error) {
             console.error("Fehler beim Laden des Generators:", error);
+            // Keine Fehlermeldung an den Nutzer - stattdessen nur im Log
           }
         }
       } else {
