@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   FaCheck,
   FaGift,
@@ -25,6 +25,7 @@ const DailyRewardsWidget: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [streakBroken, setStreakBroken] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
+  const [lastCheckTime, setLastCheckTime] = useState<number>(0);
 
   const fetchProfile = async () => {
     try {
@@ -39,100 +40,105 @@ const DailyRewardsWidget: React.FC = () => {
     }
   };
 
-  // Prüft den Streak-Status und setzt ihn zurück, wenn nötig
-  const checkAndUpdateStreakStatus = async (userId: string) => {
-    try {
-      setLoading(true);
-      // Verwende den vorhandenen Endpunkt, da /api/daily-login/check-streak noch nicht existiert
-      const response = await fetch(`/api/daily-login?userId=${userId}`);
-      const data = await response.json();
+  // Moved to useCallback to prevent recreation on each render
+  const isStreakBroken = useCallback(
+    (
+      lastClaimAt: Date | null | undefined,
+      consecutiveDays: number
+    ): boolean => {
+      if (!lastClaimAt || consecutiveDays === 0) return false;
 
-      if (data.success) {
-        // Importieren Sie die isStreakBroken-Funktion aus dem Service, wenn verfügbar
-        // import { isStreakBroken, resetStreak } from "@/lib/streak-service";
+      const now = new Date();
+      const lastClaim = new Date(lastClaimAt);
+      const hoursSinceLastClaim =
+        (now.getTime() - lastClaim.getTime()) / (1000 * 60 * 60);
 
-        // Manuelle Streak-Überprüfung (bis Service importiert werden kann)
-        const isStreakBroken = (
-          lastClaimAt: Date | null | undefined,
-          consecutiveDays: number
-        ): boolean => {
-          if (!lastClaimAt || consecutiveDays === 0) return false;
+      const lastClaimDay = new Date(lastClaim);
+      lastClaimDay.setHours(0, 0, 0, 0);
 
-          const now = new Date();
-          const lastClaim = new Date(lastClaimAt);
-          const hoursSinceLastClaim =
-            (now.getTime() - lastClaim.getTime()) / (1000 * 60 * 60);
+      const yesterdayStart = new Date(now);
+      yesterdayStart.setDate(now.getDate() - 1);
+      yesterdayStart.setHours(0, 0, 0, 0);
 
-          const lastClaimDay = new Date(lastClaim);
-          lastClaimDay.setHours(0, 0, 0, 0);
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
 
-          const yesterdayStart = new Date(now);
-          yesterdayStart.setDate(now.getDate() - 1);
-          yesterdayStart.setHours(0, 0, 0, 0);
-
-          const todayStart = new Date(now);
-          todayStart.setHours(0, 0, 0, 0);
-
-          if (
-            hoursSinceLastClaim > 48 &&
-            lastClaimDay < yesterdayStart &&
-            lastClaimDay < todayStart
-          ) {
-            return true;
-          }
-
-          return false;
-        };
-
-        // Überprüfe mit Helper-Funktion
-        const streakBroken = isStreakBroken(
-          data.user.lastClaimAt,
-          data.user.consecutiveDays
-        );
-
-        if (streakBroken) {
-          setStreakBroken(true);
-          setCurrentDay(0); // Zurücksetzen auf Tag 0
-
-          // Temporäre Mock bis API implementiert ist
-          localStorage.setItem(
-            `user_${userId}_streak_reset`,
-            Date.now().toString()
-          );
-          console.log(`Streak für Benutzer ${userId} wurde zurückgesetzt`);
-
-          // Wenn die API implementiert ist, nutzen Sie:
-          // await fetch(`/api/daily-login/reset-streak`, {
-          //   method: "POST",
-          //   headers: { "Content-Type": "application/json" },
-          //   body: JSON.stringify({ userId }),
-          // });
-        } else {
-          setCurrentDay(data.user.consecutiveDays);
-          setClickable(data.clickable);
-
-          // Zeitpunkt für nächsten Reward berechnen
-          if (!data.clickable && data.user.lastClaimAt) {
-            const lastClaim = new Date(data.user.lastClaimAt);
-            const twoHoursAfterClaim = lastClaim.getTime() + 2 * 3600 * 1000;
-            const nextDay = new Date(lastClaim);
-            nextDay.setDate(lastClaim.getDate() + 1);
-            nextDay.setHours(0, 0, 0, 0);
-            setNextRewardTimestamp(
-              Math.max(twoHoursAfterClaim, nextDay.getTime())
-            );
-          }
-        }
-      } else {
-        setError(data.message || "Fehler beim Abrufen des Daily Login Status.");
+      if (
+        hoursSinceLastClaim > 48 &&
+        lastClaimDay < yesterdayStart &&
+        lastClaimDay < todayStart
+      ) {
+        return true;
       }
-    } catch (err) {
-      console.error("Error checking streak status:", err);
-      setError("Fehler beim Überprüfen des Streak-Status.");
-    } finally {
-      setLoading(false);
-    }
-  };
+
+      return false;
+    },
+    []
+  );
+
+  // Wrapped in useCallback to stabilize function reference
+  const checkAndUpdateStreakStatus = useCallback(
+    async (userId: string) => {
+      // Prevent checking too frequently (prevent rapid re-checks)
+      const now = Date.now();
+      if (now - lastCheckTime < 5000) {
+        // Only check at most once every 5 seconds
+        return;
+      }
+
+      setLastCheckTime(now);
+
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/daily-login?userId=${userId}`);
+        const data = await response.json();
+
+        if (data.success) {
+          const streakBroken = isStreakBroken(
+            data.user.lastClaimAt,
+            data.user.consecutiveDays
+          );
+
+          if (streakBroken) {
+            setStreakBroken(true);
+            setCurrentDay(0); // Zurücksetzen auf Tag 0
+
+            // Temporäre Mock bis API implementiert ist
+            localStorage.setItem(
+              `user_${userId}_streak_reset`,
+              Date.now().toString()
+            );
+            console.log(`Streak für Benutzer ${userId} wurde zurückgesetzt`);
+          } else {
+            setCurrentDay(data.user.consecutiveDays);
+            setClickable(data.clickable);
+
+            // Zeitpunkt für nächsten Reward berechnen
+            if (!data.clickable && data.user.lastClaimAt) {
+              const lastClaim = new Date(data.user.lastClaimAt);
+              const twoHoursAfterClaim = lastClaim.getTime() + 2 * 3600 * 1000;
+              const nextDay = new Date(lastClaim);
+              nextDay.setDate(lastClaim.getDate() + 1);
+              nextDay.setHours(0, 0, 0, 0);
+              setNextRewardTimestamp(
+                Math.max(twoHoursAfterClaim, nextDay.getTime())
+              );
+            }
+          }
+        } else {
+          setError(
+            data.message || "Fehler beim Abrufen des Daily Login Status."
+          );
+        }
+      } catch (err) {
+        console.error("Error checking streak status:", err);
+        setError("Fehler beim Überprüfen des Streak-Status.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [isStreakBroken, lastCheckTime]
+  );
 
   // Profil laden
   useEffect(() => {
@@ -144,22 +150,35 @@ const DailyRewardsWidget: React.FC = () => {
     if (profile?._id) {
       checkAndUpdateStreakStatus(profile._id);
     }
-  }, [profile]);
+  }, [profile, checkAndUpdateStreakStatus]);
 
-  // Timer aktualisieren
+  // Timer aktualisieren - debounced to prevent excessive updates
   useEffect(() => {
-    if (!nextRewardTimestamp) return;
+    if (!nextRewardTimestamp || !profile?._id) return;
+
     const timer = setInterval(() => {
       const diff = nextRewardTimestamp - Date.now();
       setTimeLeft(diff > 0 ? diff : 0);
 
       // Wenn der Timer abgelaufen ist, können wir den Status aktualisieren
-      if (diff <= 0 && !clickable && profile?._id) {
-        checkAndUpdateStreakStatus(profile._id);
+      // but only check occasionally to prevent loops
+      if (diff <= 0 && !clickable) {
+        const now = Date.now();
+        // Only check if we haven't checked in the last minute
+        if (now - lastCheckTime > 60000) {
+          checkAndUpdateStreakStatus(profile._id);
+        }
       }
     }, 1000);
+
     return () => clearInterval(timer);
-  }, [nextRewardTimestamp, clickable, profile]);
+  }, [
+    nextRewardTimestamp,
+    clickable,
+    profile,
+    checkAndUpdateStreakStatus,
+    lastCheckTime,
+  ]);
 
   const formatTime = (ms: number) => {
     const hours = Math.floor(ms / 3600000);
