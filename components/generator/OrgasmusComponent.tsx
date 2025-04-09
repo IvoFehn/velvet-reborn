@@ -18,9 +18,14 @@ interface OrgasmusOption {
   inputValue?: string;
 }
 
+interface OrgasmusWithNote {
+  option: string;
+  additionalNote: string;
+}
+
 type Props = {
-  currentValue: string;
-  setValue: React.Dispatch<React.SetStateAction<string>>;
+  currentValue: OrgasmusWithNote;
+  setValue: React.Dispatch<React.SetStateAction<OrgasmusWithNote>>;
 };
 
 const CustomPaper = styled(Paper)(({ theme }) => ({
@@ -64,24 +69,43 @@ const OrgasmusComponent = ({ currentValue, setValue }: Props) => {
     },
   ]);
 
+  const handleNoteChange = (note: string) => {
+    setValue({
+      ...currentValue,
+      additionalNote: note,
+    });
+  };
+
   return (
     <Box sx={{ width: 1, maxWidth: 800, mx: "auto" }}>
       <Autocomplete
         value={
-          options.find((opt) => opt.label === currentValue) ??
-          (currentValue ? { label: currentValue } : null)
+          options.find((opt) => opt.label === currentValue.option) ??
+          (currentValue.option ? { label: currentValue.option } : null)
         }
         onChange={(event, newValue) => {
           if (typeof newValue === "string") {
-            setValue(newValue);
+            setValue({
+              option: newValue,
+              additionalNote: currentValue.additionalNote,
+            });
           } else if (newValue && newValue.inputValue) {
             const newOption: OrgasmusOption = { label: newValue.inputValue };
             setOptions((prev) => [...prev, newOption]);
-            setValue(newOption.label);
+            setValue({
+              option: newValue.inputValue,
+              additionalNote: currentValue.additionalNote,
+            });
           } else if (newValue) {
-            setValue(newValue.label);
+            setValue({
+              option: newValue.label,
+              additionalNote: currentValue.additionalNote,
+            });
           } else {
-            setValue("");
+            setValue({
+              option: "",
+              additionalNote: currentValue.additionalNote,
+            });
           }
         }}
         filterOptions={(existingOptions, params) => {
@@ -164,6 +188,25 @@ const OrgasmusComponent = ({ currentValue, setValue }: Props) => {
           />
         )}
       />
+
+      {currentValue.option && (
+        <Box sx={{ mt: 3 }}>
+          <TextField
+            label="Zusätzliche Notizen zu Orgasmus-Einstellungen"
+            value={currentValue.additionalNote}
+            onChange={(e) => handleNoteChange(e.target.value)}
+            fullWidth
+            multiline
+            rows={3}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 2,
+                backgroundColor: theme.palette.background.paper,
+              },
+            }}
+          />
+        </Box>
+      )}
     </Box>
   );
 };

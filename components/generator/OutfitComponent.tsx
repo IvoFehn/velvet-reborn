@@ -16,9 +16,14 @@ interface OutfitOption {
   inputValue?: string;
 }
 
+interface OutfitWithNote {
+  outfit: string;
+  additionalNote: string;
+}
+
 type Props = {
-  currentValue: string;
-  setValue: React.Dispatch<React.SetStateAction<string>>;
+  currentValue: OutfitWithNote;
+  setValue: React.Dispatch<React.SetStateAction<OutfitWithNote>>;
 };
 
 const OutfitComponent = ({ currentValue, setValue }: Props) => {
@@ -39,20 +44,32 @@ const OutfitComponent = ({ currentValue, setValue }: Props) => {
     <Box sx={{ width: "100%", py: 1 }}>
       <Autocomplete
         value={
-          options.find((opt) => opt.label === currentValue) ??
-          (currentValue ? { label: currentValue } : null)
+          options.find((opt) => opt.label === currentValue.outfit) ??
+          (currentValue.outfit ? { label: currentValue.outfit } : null)
         }
         onChange={(event, newValue) => {
           if (typeof newValue === "string") {
-            setValue(newValue);
+            setValue({
+              outfit: newValue,
+              additionalNote: currentValue.additionalNote,
+            });
           } else if (newValue?.inputValue) {
             const newOption = { label: newValue.inputValue };
             setOptions((prev) => [...prev, newOption]);
-            setValue(newOption.label);
+            setValue({
+              outfit: newValue.inputValue,
+              additionalNote: currentValue.additionalNote,
+            });
           } else if (newValue) {
-            setValue(newValue.label);
+            setValue({
+              outfit: newValue.label,
+              additionalNote: currentValue.additionalNote,
+            });
           } else {
-            setValue("");
+            setValue({
+              outfit: "",
+              additionalNote: currentValue.additionalNote,
+            });
           }
         }}
         filterOptions={(existingOptions, params) => {
@@ -139,24 +156,48 @@ const OutfitComponent = ({ currentValue, setValue }: Props) => {
         }}
       />
 
-      {currentValue && (
-        <Paper
-          elevation={0}
-          sx={{
-            mt: 2,
-            p: 2,
-            borderRadius: 2,
-            bgcolor: "background.default",
-            border: `1px solid ${theme.palette.divider}`,
-          }}
-        >
-          <Typography variant="body2" color="text.secondary">
-            Ausgewähltes Outfit:
-            <Box component="span" color="text.primary" ml={1}>
-              {currentValue}
-            </Box>
-          </Typography>
-        </Paper>
+      {currentValue.outfit && (
+        <>
+          <Paper
+            elevation={0}
+            sx={{
+              mt: 2,
+              p: 2,
+              borderRadius: 2,
+              bgcolor: "background.default",
+              border: `1px solid ${theme.palette.divider}`,
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              Ausgewähltes Outfit:
+              <Box component="span" color="text.primary" ml={1}>
+                {currentValue.outfit}
+              </Box>
+            </Typography>
+          </Paper>
+
+          <TextField
+            fullWidth
+            label="Zusätzliche Notizen zum Outfit"
+            value={currentValue.additionalNote}
+            onChange={(e) =>
+              setValue({
+                ...currentValue,
+                additionalNote: e.target.value,
+              })
+            }
+            multiline
+            rows={3}
+            variant="outlined"
+            sx={{
+              mt: 3,
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 2,
+                backgroundColor: theme.palette.background.paper,
+              },
+            }}
+          />
+        </>
       )}
     </Box>
   );

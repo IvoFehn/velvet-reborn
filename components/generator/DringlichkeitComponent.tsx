@@ -1,6 +1,6 @@
 // src/components/DringlichkeitComponent.tsx
 
-import React from "react";
+import React, { useState } from "react";
 import {
   TextField,
   Autocomplete,
@@ -8,7 +8,14 @@ import {
   Typography,
   Paper,
   useTheme,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Stack,
 } from "@mui/material";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import { DringlichkeitObjekt } from "@/types";
 
 type Props = {
@@ -58,6 +65,28 @@ const DringlichkeitComponent: React.FC<Props> = ({
   setValue,
 }) => {
   const theme = useTheme();
+  const [openDialog, setOpenDialog] = useState(false);
+  const [newOption, setNewOption] = useState<DringlichkeitOption>({
+    title: "",
+    description: "",
+  });
+  const [customOptions, setCustomOptions] = useState<DringlichkeitOption[]>([]);
+
+  const handleAddCustomOption = () => {
+    if (newOption.title.trim() === "") return;
+
+    const option = {
+      title: newOption.title,
+      description: newOption.description || "Benutzerdefinierte Dringlichkeit",
+    };
+
+    setCustomOptions([...customOptions, option]);
+    setValue(option);
+    setNewOption({ title: "", description: "" });
+    setOpenDialog(false);
+  };
+
+  const allOptions = [...predefinedOptions, ...customOptions];
 
   return (
     <Box className="w-full" display="flex" flexDirection="column" gap={3}>
@@ -72,18 +101,30 @@ const DringlichkeitComponent: React.FC<Props> = ({
             setValue({
               title: newValue,
               description: newValue,
+              additionalNote: currentValue.additionalNote || "",
             });
           } else if (newValue && newValue.title) {
-            setValue(newValue);
+            setValue({
+              title: newValue.title,
+              description: newValue.description,
+              additionalNote: currentValue.additionalNote || "",
+            });
           } else if (typeof newValue === "object" && newValue !== null) {
             setValue({
               title: newValue.title,
-              description: newValue.title,
+              description: newValue.description || newValue.title,
+              additionalNote: currentValue.additionalNote || "",
+            });
+          } else {
+            setValue({
+              title: "",
+              description: "",
+              additionalNote: currentValue.additionalNote || "",
             });
           }
         }}
         freeSolo
-        options={predefinedOptions}
+        options={allOptions}
         getOptionLabel={(option) =>
           typeof option === "string" ? option : option.title
         }
@@ -154,6 +195,82 @@ const DringlichkeitComponent: React.FC<Props> = ({
           </Typography>
         </Paper>
       )}
+
+      <Button
+        variant="outlined"
+        color="primary"
+        startIcon={<AddCircleOutlineIcon />}
+        onClick={() => setOpenDialog(true)}
+        sx={{ alignSelf: "flex-start", mt: 1 }}
+      >
+        Benutzerdefinierte Dringlichkeit erstellen
+      </Button>
+
+      {currentValue.title && (
+        <TextField
+          fullWidth
+          label="Zusätzliche Notiz"
+          multiline
+          rows={3}
+          value={currentValue.additionalNote || ""}
+          onChange={(e) =>
+            setValue({
+              ...currentValue,
+              additionalNote: e.target.value,
+            })
+          }
+          sx={{
+            mt: 2,
+            "& .MuiOutlinedInput-root": {
+              borderRadius: 2,
+            },
+          }}
+        />
+      )}
+
+      {/* Dialog für benutzerdefinierte Option */}
+      <Dialog
+        open={openDialog}
+        onClose={() => setOpenDialog(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Benutzerdefinierte Dringlichkeit erstellen</DialogTitle>
+        <DialogContent>
+          <Stack spacing={3} sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Titel"
+              value={newOption.title}
+              onChange={(e) =>
+                setNewOption({ ...newOption, title: e.target.value })
+              }
+              variant="outlined"
+            />
+            <TextField
+              fullWidth
+              label="Beschreibung"
+              value={newOption.description}
+              onChange={(e) =>
+                setNewOption({ ...newOption, description: e.target.value })
+              }
+              multiline
+              rows={3}
+              variant="outlined"
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDialog(false)}>Abbrechen</Button>
+          <Button
+            onClick={handleAddCustomOption}
+            variant="contained"
+            disabled={!newOption.title.trim()}
+          >
+            Hinzufügen
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

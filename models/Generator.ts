@@ -14,8 +14,14 @@ export interface IGenerator extends Document {
     };
     additionalNote?: string;
   };
-  outfit?: string;
-  orgasmus?: string;
+  outfit?: {
+    outfit?: string;
+    additionalNote?: string;
+  };
+  orgasmus?: {
+    option?: string;
+    additionalNote?: string;
+  };
   kondome?: Array<{
     title?: string;
     amount?: number;
@@ -38,7 +44,7 @@ export interface IGenerator extends Document {
   regeln?: Array<{
     title?: string;
     description?: string;
-    selected?: boolean;
+    additionalNote?: string;
   }>;
   loch?: {
     additionalNote?: string;
@@ -60,6 +66,7 @@ export interface IGenerator extends Document {
   dringlichkeit?: {
     title?: string;
     description?: string;
+    additionalNote?: string;
   };
   ort?: {
     title?: string;
@@ -96,8 +103,14 @@ const GeneratorSchema = new Schema<IGenerator>(
       },
       additionalNote: { type: String, default: "" },
     },
-    outfit: { type: String },
-    orgasmus: { type: String },
+    outfit: {
+      outfit: { type: String },
+      additionalNote: { type: String, default: "" },
+    },
+    orgasmus: {
+      option: { type: String },
+      additionalNote: { type: String, default: "" },
+    },
     kondome: [
       {
         title: { type: String },
@@ -129,7 +142,7 @@ const GeneratorSchema = new Schema<IGenerator>(
       {
         title: { type: String },
         description: { type: String },
-        selected: { type: Boolean },
+        additionalNote: { type: String, default: "" },
       },
     ],
     loch: {
@@ -154,6 +167,7 @@ const GeneratorSchema = new Schema<IGenerator>(
     dringlichkeit: {
       title: { type: String },
       description: { type: String },
+      additionalNote: { type: String, default: "" },
     },
     ort: {
       title: { type: String },
