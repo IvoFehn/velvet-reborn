@@ -85,9 +85,8 @@ const WarningsList: React.FC<WarningsListProps> = ({
     }
   };
 
-  // Format date
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  // Format date - updated to accept Date objects
+  const formatDate = (date: Date) => {
     return date.toLocaleString("de-DE", {
       day: "2-digit",
       month: "2-digit",

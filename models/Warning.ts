@@ -1,12 +1,11 @@
-// models/Warning.ts
 import mongoose, { Document, Schema } from "mongoose";
 
 export interface IWarning extends Document {
   _id: string;
   message: string;
-  createdAt: string;
+  createdAt: Date;
   acknowledged: boolean;
-  acknowledgedAt?: string;
+  acknowledgedAt?: Date;
 }
 
 const WarningSchema: Schema = new Schema<IWarning>({

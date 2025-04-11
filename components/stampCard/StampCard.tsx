@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { addGold } from "@/util/addGold";
 import React, { useState, useEffect, JSX } from "react";
 import {
   FaCheck,
@@ -8,6 +9,7 @@ import {
   FaCrown,
   FaLock,
   FaClock,
+  FaCoins,
 } from "react-icons/fa";
 
 interface Profile {
@@ -27,6 +29,7 @@ interface Reward {
   label: string;
   icon: JSX.Element;
   description: string;
+  goldAmount?: number; // Added gold amount property
   special?: boolean;
 }
 
@@ -45,18 +48,49 @@ interface DailyTask {
   completed: boolean;
 }
 
-// Reward-Daten
+// Updated Reward-Daten with gold amount
 const rewards: Reward[] = [
-  { label: "Reward 1", icon: <FaGift />, description: "Täglicher Bonus" },
-  { label: "Reward 2", icon: <FaGift />, description: "Täglicher Bonus" },
-  { label: "Reward 3", icon: <FaGift />, description: "Täglicher Bonus" },
-  { label: "Reward 4", icon: <FaGift />, description: "Täglicher Bonus" },
-  { label: "Reward 5", icon: <FaGift />, description: "Täglicher Bonus" },
-  { label: "Reward 6", icon: <FaGift />, description: "Täglicher Bonus" },
+  {
+    label: "Reward 1",
+    icon: <FaGift />,
+    description: "Täglicher Bonus + 2 Gold",
+    goldAmount: 2,
+  },
+  {
+    label: "Reward 2",
+    icon: <FaGift />,
+    description: "Täglicher Bonus + 2 Gold",
+    goldAmount: 2,
+  },
+  {
+    label: "Reward 3",
+    icon: <FaGift />,
+    description: "Täglicher Bonus + 2 Gold",
+    goldAmount: 2,
+  },
+  {
+    label: "Reward 4",
+    icon: <FaGift />,
+    description: "Täglicher Bonus + 2 Gold",
+    goldAmount: 2,
+  },
+  {
+    label: "Reward 5",
+    icon: <FaGift />,
+    description: "Täglicher Bonus + 2 Gold",
+    goldAmount: 2,
+  },
+  {
+    label: "Reward 6",
+    icon: <FaGift />,
+    description: "Täglicher Bonus + 2 Gold",
+    goldAmount: 2,
+  },
   {
     label: "Premium Belohnung",
     icon: <FaCrown />,
-    description: "Lootbox!",
+    description: "Lootbox + 2 Gold!",
+    goldAmount: 2,
     special: true,
   },
 ];
@@ -70,6 +104,7 @@ const StampCard: React.FC = () => {
   const [claiming, setClaiming] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
+  const [showGoldAnimation, setShowGoldAnimation] = useState<boolean>(false); // Added for gold animation
 
   // Daily Tasks States
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -325,6 +360,23 @@ const StampCard: React.FC = () => {
       const data = await response.json();
 
       if (data.success) {
+        // Gold-Belohnung hinzufügen (2 Gold pro Tag)
+        try {
+          const goldAmount = rewards[currentDay]?.goldAmount || 2;
+          await addGold(goldAmount);
+          setShowGoldAnimation(true);
+          setTimeout(() => setShowGoldAnimation(false), 3000);
+          setSuccess(
+            `Belohnung und ${goldAmount} Gold erfolgreich beansprucht!`
+          );
+
+          // Profil neu laden, um aktualisiertes Gold anzuzeigen
+          fetchProfile();
+        } catch (goldError) {
+          console.error("Fehler beim Hinzufügen von Gold:", goldError);
+          setError("Gold-Belohnung konnte nicht hinzugefügt werden.");
+        }
+
         setCurrentDay(data.consecutiveDays);
         setClickable(false);
 
@@ -375,6 +427,26 @@ const StampCard: React.FC = () => {
 
   return (
     <div className="max-w-full w-full ">
+      {/* Gold Amount Display */}
+      {profile && (
+        <div className="flex justify-end mb-3">
+          <div className="flex items-center bg-yellow-100 text-yellow-800 px-3 py-1.5 rounded-full font-medium shadow-sm">
+            <FaCoins className="text-yellow-500 mr-2" />
+            <span>{profile.gold || 0} Gold</span>
+          </div>
+        </div>
+      )}
+
+      {/* Gold Animation */}
+      {showGoldAnimation && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="animate-bounce-fade text-4xl text-yellow-500 font-bold flex items-center gap-2 bg-yellow-100 px-6 py-4 rounded-lg shadow-lg">
+            <FaCoins className="text-yellow-500 text-3xl" />
+            +2 Gold!
+          </div>
+        </div>
+      )}
+
       {/* Streak Broken Banner */}
       {streakBroken && (
         <div className="bg-gradient-to-r from-red-100 to-red-200 border-l-4 border-red-500 rounded-md p-4 mb-6 animate-fade-in">
@@ -420,7 +492,7 @@ const StampCard: React.FC = () => {
           <span>Wöchentliches Ziel</span>
         </div>
 
-        {/* Countdown Timer Display - NEU */}
+        {/* Countdown Timer Display */}
         {!loading && nextRewardTimestamp && !isReallyClickable && (
           <div className="mt-4 flex items-center justify-center gap-2 text-indigo-600 font-medium bg-indigo-50 p-3 rounded-md">
             <FaClock />
@@ -428,11 +500,11 @@ const StampCard: React.FC = () => {
           </div>
         )}
 
-        {/* Available Now Indicator - NEU */}
+        {/* Available Now Indicator */}
         {isReallyClickable && (
           <div className="mt-4 flex items-center justify-center gap-2 text-green-600 font-semibold bg-green-50 p-3 rounded-md animate-pulse">
             <FaGift className="text-lg" />
-            <span>Deine Belohnung ist jetzt verfügbar!</span>
+            <span>Deine Belohnung (+2 Gold) ist jetzt verfügbar!</span>
           </div>
         )}
       </div>
@@ -494,6 +566,12 @@ const StampCard: React.FC = () => {
                 </div>
                 <div className="text-xs text-gray-600 mt-auto font-medium">
                   {reward.description}
+                </div>
+
+                {/* Gold Display */}
+                <div className="flex items-center mt-2 text-yellow-600 text-xs font-medium">
+                  <FaCoins className="mr-1 text-yellow-500" /> +
+                  {reward.goldAmount || 2} Gold
                 </div>
               </div>
 
@@ -575,6 +653,30 @@ const StampCard: React.FC = () => {
           <div>Loading rewards...</div>
         </div>
       )}
+
+      {/* Added animation keyframes for Gold animation */}
+      <style jsx>{`
+        @keyframes bounce-fade {
+          0%,
+          100% {
+            transform: translateY(0);
+            opacity: 0;
+          }
+          10% {
+            opacity: 1;
+          }
+          50% {
+            transform: translateY(-20px);
+            opacity: 1;
+          }
+          90% {
+            opacity: 1;
+          }
+        }
+        .animate-bounce-fade {
+          animation: bounce-fade 3s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 };

@@ -85,6 +85,21 @@ const rules: Rule[] = [
     content:
       "Die App ist möglichst früh zu überprüfen. Am besten direkt morgens nach dem aufsthen, damit der Gesundheitsstatus direkt eingetragen werden kann und der Mann bescheid weiß.",
   },
+  {
+    title: "Gedehnt",
+    content:
+      "Wenn der Mann anfordert, dass die Frau gedehnt ist, dann bedeutet das, dass sie so gedehnt ist, dass er direkt reinstecken kann ohne, dass sie dabei Schmerzen empfindet oder ihr Gesicht verzieht. Alles darunter ist nicht gedehnt.",
+  },
+  {
+    title: "Edged sein",
+    content:
+      "Edged sein bedeutet, dass die Frau kurz vorm kommen ist und nach wenigen Schlägen (5-15) kommt, wenn sie das ganze nicht zurückhält. Alles weniger als das ist nicht edged.",
+  },
+  {
+    title: "Vorgefeuchtet",
+    content:
+      "Wenn die Frau sich vorfeuchten soll, dann ist präferriert naturfeucht zu wählen, wenn das wirklich nicht möglich ist und nicht explizit erwünscht ist, dann darf sie Gleitgel benutzen. Sie hat sich selbst so feucht zu halten, dass der Mann direkt reinstecken kann ohne, dass sie dabei Schmerzen verspürt oder das Gesicht verzieht. Alles weniger als das ist nicht vorgefeuchtet.",
+  },
 ];
 
 export default rules;
