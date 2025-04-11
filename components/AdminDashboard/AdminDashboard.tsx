@@ -7,6 +7,8 @@ import AdminHealthReports from "../AdminHealthReports/AdminHealthReports";
 import SanctionDashboard from "@/components/Sanctions/SanctionDashboard";
 import MoodLevelAdmin from "@/components/MoodLevelAdmin/MoodLevelAdmin";
 import LevelThresholdSettings from "@/components/LevelThresholdSetting.tsx/LevelThresholdSetting";
+import QuickTaskForm from "../QuickTaskForm/QuickTaskForm";
+import QuickTaskReviewForm from "../QuickTaskReviewForm/QuickTaskReviewForm";
 
 // Admin-Module und ihre Links
 const adminModules = [
@@ -39,6 +41,20 @@ const adminModules = [
     link: "/add-loot",
     description: "Beutekisten und Belohnungen verwalten",
     icon: "🎁",
+  },
+  {
+    title: "Quick Tasks",
+    link: "#quick-tasks",
+    description: "Schnelle Aufgaben erstellen",
+    icon: "✅",
+    internal: true,
+  },
+  {
+    title: "Quick Task Bewertung",
+    link: "#quick-task-review",
+    description: "Schnelle Aufgaben bewerten",
+    icon: "⭐",
+    internal: true,
   },
   {
     title: "Lustsensor",
@@ -76,7 +92,9 @@ const AdminDashboard: React.FC = () => {
   const [showHealthReports, setShowHealthReports] = useState(false);
   const [showSanctionsDashboard, setShowSanctionsDashboard] = useState(false);
   const [showMoodLevelAdmin, setShowMoodLevelAdmin] = useState(false);
-  const [showLevelThresholds, setShowLevelThresholds] = useState(false); // Neuer State für Schwellenwerte
+  const [showLevelThresholds, setShowLevelThresholds] = useState(false);
+  const [showQuickTaskForm, setShowQuickTaskForm] = useState(false);
+  const [showQuickTaskReview, setShowQuickTaskReview] = useState(false);
 
   // Überprüfen der Authentifizierung
   useEffect(() => {
@@ -89,43 +107,48 @@ const AdminDashboard: React.FC = () => {
 
   // Interne Link-Handler
   const handleInternalLinkClick = (moduleId: string) => {
+    // Reset all module states
+    setShowHealthReports(false);
+    setShowSanctionsDashboard(false);
+    setShowMoodLevelAdmin(false);
+    setShowLevelThresholds(false);
+    setShowQuickTaskForm(false);
+    setShowQuickTaskReview(false);
+
+    // Set the active module based on the link
     if (moduleId === "#health-reports") {
       setShowHealthReports(true);
-      setShowSanctionsDashboard(false);
-      setShowMoodLevelAdmin(false);
-      setShowLevelThresholds(false); // Andere Module ausblenden
-      // Zur Gesundheitsberichte-Sektion scrollen
       const element = document.getElementById("health-reports-section");
       if (element) {
         element.scrollIntoView({ behavior: "smooth" });
       }
     } else if (moduleId === "#sanctions") {
       setShowSanctionsDashboard(true);
-      setShowHealthReports(false);
-      setShowMoodLevelAdmin(false);
-      setShowLevelThresholds(false); // Andere Module ausblenden
-      // Zur Sanktionen-Sektion scrollen
       const element = document.getElementById("sanctions-section");
       if (element) {
         element.scrollIntoView({ behavior: "smooth" });
       }
     } else if (moduleId === "#mood-level") {
       setShowMoodLevelAdmin(true);
-      setShowHealthReports(false);
-      setShowSanctionsDashboard(false);
-      setShowLevelThresholds(false); // Andere Module ausblenden
-      // Zur Lustlevel-Sektion scrollen
       const element = document.getElementById("mood-level-section");
       if (element) {
         element.scrollIntoView({ behavior: "smooth" });
       }
     } else if (moduleId === "#level-thresholds") {
       setShowLevelThresholds(true);
-      setShowMoodLevelAdmin(false);
-      setShowHealthReports(false);
-      setShowSanctionsDashboard(false); // Andere Module ausblenden
-      // Zur Schwellenwerte-Sektion scrollen
       const element = document.getElementById("level-thresholds-section");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    } else if (moduleId === "#quick-tasks") {
+      setShowQuickTaskForm(true);
+      const element = document.getElementById("quick-tasks-section");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    } else if (moduleId === "#quick-task-review") {
+      setShowQuickTaskReview(true);
+      const element = document.getElementById("quick-task-review-section");
       if (element) {
         element.scrollIntoView({ behavior: "smooth" });
       }
@@ -200,6 +223,32 @@ const AdminDashboard: React.FC = () => {
               ))}
             </div>
           </div>
+
+          {/* Quick Tasks Sektion */}
+          {showQuickTaskForm && (
+            <div
+              id="quick-tasks-section"
+              className="mt-10 pt-6 border-t border-gray-200"
+            >
+              <h2 className="text-lg font-medium text-gray-900 mb-4">
+                Quick Tasks erstellen
+              </h2>
+              <QuickTaskForm />
+            </div>
+          )}
+
+          {/* Quick Task Review Sektion */}
+          {showQuickTaskReview && (
+            <div
+              id="quick-task-review-section"
+              className="mt-10 pt-6 border-t border-gray-200"
+            >
+              <h2 className="text-lg font-medium text-gray-900 mb-4">
+                Quick Tasks bewerten
+              </h2>
+              <QuickTaskReviewForm />
+            </div>
+          )}
 
           {/* Lustlevel-Admin Sektion */}
           {showMoodLevelAdmin && (

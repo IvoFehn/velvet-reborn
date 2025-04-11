@@ -1,4 +1,4 @@
-// pages/api/tickets/[id]/messages.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/lib/dbConnect";
 import Ticket from "@/models/Ticket";
@@ -8,7 +8,7 @@ export default async function handler(
   res: NextApiResponse
 ) {
   const {
-    query: { id },
+    query: { id, since },
     method,
   } = req;
 
@@ -32,8 +32,22 @@ export default async function handler(
           });
         }
 
+        // In der GET-Methode
+        let messages = ticket.messages || [];
+        if (since) {
+          const sinceDate = new Date(since as string);
+          messages = messages.filter(
+            (msg: { timestamp: Date | string }) =>
+              new Date(msg.timestamp) > sinceDate
+          );
+        }
+
+        // Serialisiere die Nachrichten mit ISO-Strings
         res.status(200).json({
-          messages: ticket.messages || [],
+          messages: messages.map((msg: any) => ({
+            ...msg,
+            timestamp: msg.timestamp.toISOString(), // Konvertiere Date zu ISO-String
+          })),
           success: true,
         });
       } catch (error) {
@@ -57,7 +71,6 @@ export default async function handler(
           });
         }
 
-        // Überprüfung des Admin-Status aus dem Request Body
         if (typeof isAdmin !== "boolean") {
           return res.status(400).json({
             message: "Ungültiger Admin-Status",

@@ -1,4 +1,3 @@
-// pages/api/daily-login.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/lib/dbConnect";
 import UserDailyLogin from "@/models/UserDailyLogin";
@@ -10,7 +9,6 @@ export default async function handler(
 ) {
   await dbConnect();
 
-  // GET request to check status
   if (req.method === "GET") {
     const { userId } = req.query;
 
@@ -21,56 +19,57 @@ export default async function handler(
     }
 
     try {
-      // Find the user record
       const user = await UserDailyLogin.findOne({ userId });
       const now = dayjs();
 
       if (!user) {
-        // Create a new user record if it doesn't exist
         const newUser = new UserDailyLogin({
           userId,
           consecutiveDays: 0,
           lastVisitAt: now.toDate(),
         });
         await newUser.save();
-
         return res.status(200).json({
           success: true,
           user: newUser,
-          clickable: true, // First time user can claim immediately
+          clickable: true,
         });
       }
 
-      // Check if reward is claimable
       let clickable = false;
+      let streakBroken = false;
 
-      if (!user.lastClaimAt) {
-        // First time - can claim
-        clickable = true;
-      } else {
+      if (user.lastClaimAt) {
         const lastClaim = dayjs(user.lastClaimAt);
         const todayStart = now.startOf("day");
         const lastClaimDayStart = lastClaim.startOf("day");
 
-        // Can claim if:
-        // 1. Not already claimed today
-        // 2. At least 2 hours passed since last claim
         if (
+          !todayStart.isSame(lastClaimDayStart) &&
+          now.diff(lastClaim, "hour") > 48
+        ) {
+          // Streak ist gebrochen
+          streakBroken = true;
+          user.consecutiveDays = 0;
+          clickable = true; // Benutzer kann sofort eine neue Streak starten
+        } else if (
           !todayStart.isSame(lastClaimDayStart) &&
           now.diff(lastClaim, "hour") >= 2
         ) {
-          clickable = true;
+          clickable = true; // Normaler Claim möglich
         }
+      } else {
+        clickable = true; // Erster Claim
       }
 
-      // Update lastVisitAt timestamp
       user.lastVisitAt = now.toDate();
       await user.save();
 
       return res.status(200).json({
         success: true,
-        user: user,
-        clickable: clickable,
+        user,
+        clickable,
+        streakBroken, // Optional: Rückmeldung an Frontend
       });
     } catch (error) {
       console.error("Error checking daily login status:", error);
@@ -79,14 +78,7 @@ export default async function handler(
         message: "Serverfehler beim Überprüfen des Daily Login Status.",
       });
     }
-  }
-  // POST request to claim reward
-  else if (req.method === "POST") {
-    // Your existing POST handling logic
-    // This would be similar to your claim-lootbox.ts but for regular daily claims
-    // Include logic to increment consecutiveDays, update lastClaimAt, etc.
-
-    // Example POST implementation:
+  } else if (req.method === "POST") {
     const { userId } = req.body;
 
     if (!userId) {
@@ -96,7 +88,6 @@ export default async function handler(
     }
 
     try {
-      // Find the user record
       const user = await UserDailyLogin.findOne({ userId });
       const now = dayjs();
 
@@ -107,19 +98,14 @@ export default async function handler(
         });
       }
 
-      // Check if the user can claim
       if (user.lastClaimAt) {
         const lastClaim = dayjs(user.lastClaimAt);
-
-        // Check if already claimed today
         if (now.format("YYYY-MM-DD") === lastClaim.format("YYYY-MM-DD")) {
           return res.status(400).json({
             success: false,
             message: "Heute wurde der Bonus bereits beansprucht.",
           });
         }
-
-        // Check if 2 hours have passed
         if (now.diff(lastClaim, "hour", true) < 2) {
           return res.status(400).json({
             success: false,
@@ -129,7 +115,6 @@ export default async function handler(
         }
       }
 
-      // Update user streak
       user.consecutiveDays += 1;
       user.lastClaimAt = now.toDate();
       user.lastVisitAt = now.toDate();
@@ -139,7 +124,7 @@ export default async function handler(
         success: true,
         message: "Täglicher Bonus erfolgreich beansprucht!",
         consecutiveDays: user.consecutiveDays,
-        user: user,
+        user,
       });
     } catch (error) {
       console.error("Fehler beim Beanspruchen des täglichen Bonus:", error);

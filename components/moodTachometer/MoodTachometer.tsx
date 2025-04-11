@@ -1,26 +1,32 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import dayjs from "dayjs";
 
-// Typdefinition für den Generator (Auftrag)
+// Typ-Definition für die komplette API-Antwort
+interface ApiMoodStatusData {
+  generator: Generator | null;
+  calculatedLevel: number;
+  moodOverride: MoodOverride | null;
+  effectiveLevel: number;
+  thresholds?: any | null;
+}
+
 interface Generator {
   _id: string;
   createdAt: string;
   status: string;
   content?: string;
-  // Weitere Felder können hier ergänzt werden
 }
 
-// Typdefinition für Mood-Überschreibung
 interface MoodOverride {
   active: boolean;
   level: number;
-  expiresAt: string | null; // Zeitpunkt, wann die Überschreibung abläuft (null = nie)
+  expiresAt: string | null;
 }
 
 interface ApiResponseSuccess {
   success: true;
-  data: Generator;
-  moodOverride?: MoodOverride;
+  data: ApiMoodStatusData;
 }
 
 interface ApiResponseError {
@@ -30,83 +36,105 @@ interface ApiResponseError {
 
 type ApiResponse = ApiResponseSuccess | ApiResponseError;
 
-// Funktion zur Berechnung des Mood-Levels anhand des Erstellungsdatums
-const calculateLevel = (createdAt: string): number => {
-  const createdDate = dayjs(createdAt);
-  const now = dayjs();
-  const daysDiff = now.diff(createdDate, "day", true); // exakte Differenz in Tagen
-
-  // Schwellenwerte zur Bestimmung des Levels:
-  // Level 0: ≤ 2 Tage
-  // Level 1: > 3 Tage
-  // Level 2: > 4 Tage
-  // Level 3: > 6 Tage
-  // Level 4: > 7 Tage
-  if (daysDiff > 8) {
-    return 4;
-  } else if (daysDiff > 6) {
-    return 3;
-  } else if (daysDiff > 4) {
-    return 2;
-  } else if (daysDiff > 3) {
-    return 1;
-  } else {
-    return 0;
-  }
-};
-
 const MoodTachometer = () => {
-  const [generator, setGenerator] = useState<Generator | null>(null);
-  const [moodOverride, setMoodOverride] = useState<MoodOverride | null>(null);
+  const [moodData, setMoodData] = useState<ApiMoodStatusData | null>(null);
   const [loading, setLoading] = useState(true);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [fetchError, setFetchError] = useState(false);
   const [showExtraTips, setShowExtraTips] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
 
-  // Beim Mounten den letzten Auftrag und die Mood-Überschreibung abrufen
-  useEffect(() => {
+  // Funktion zum Abrufen des Mood-Status - kann bei Bedarf erneut aufgerufen werden
+  const fetchMoodStatus = () => {
+    setLoading(true);
+
+    console.log("Mood-Status wird abgerufen...");
     fetch("/api/mood-status")
       .then((response) => response.json())
       .then((data: ApiResponse) => {
+        console.log("Mood-Status API-Antwort:", data);
+
         if (data.success) {
-          setGenerator(data.data);
-          if (data.moodOverride) {
-            setMoodOverride(data.moodOverride);
+          setMoodData(data.data);
+          setFetchError(false);
+
+          // Detaillierte Konsolenausgabe
+          if (data.data.generator) {
+            const createdDate = dayjs(data.data.generator.createdAt);
+            const now = dayjs();
+            const daysDiff = now.diff(createdDate, "day", true);
+
+            console.log(`Generator erstellt vor ${daysDiff.toFixed(2)} Tagen`);
+            console.log(`Generator Status: ${data.data.generator.status}`);
+            console.log(
+              `Generator CreatedAt: ${createdDate.format(
+                "YYYY-MM-DD HH:mm:ss"
+              )}`
+            );
+            console.log(`Berechnetes Level: ${data.data.calculatedLevel}`);
+            console.log(`Effektives Level: ${data.data.effectiveLevel}`);
+            console.log(`Schwellenwerte:`, data.data.thresholds);
+
+            if (data.data.moodOverride) {
+              console.log(
+                `MoodOverride aktiv: ${data.data.moodOverride.active}`
+              );
+              console.log(
+                `MoodOverride Level: ${data.data.moodOverride.level}`
+              );
+              console.log(
+                `MoodOverride läuft ab: ${data.data.moodOverride.expiresAt}`
+              );
+            } else {
+              console.log(`Keine MoodOverride aktiv`);
+            }
           }
         } else {
           setFetchError(true);
+          console.error("API-Fehler:", data.message);
         }
       })
       .catch((err) => {
-        console.error("Fehler beim Abrufen:", err);
+        console.error("Fetch-Fehler:", err);
         setFetchError(true);
       })
       .finally(() => setLoading(false));
+  };
+
+  // Beim Mounten den Mood-Status abrufen
+  useEffect(() => {
+    fetchMoodStatus();
+  }, []);
+
+  // Regelmäßige Aktualisierung des Status (alle 5 Minuten)
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      fetchMoodStatus();
+    }, 5 * 60 * 1000); // 5 Minuten
+
+    return () => clearInterval(intervalId);
   }, []);
 
   if (loading) {
-    return <div>Lade Daten...</div>;
+    return <div className="p-4 text-center">Lade Daten...</div>;
   }
 
-  // Verwendung der Überschreibung, falls aktiv
-  let level = 0;
-  if (moodOverride && moodOverride.active) {
-    // Prüfen, ob die Überschreibung abgelaufen ist
-    if (
-      moodOverride.expiresAt &&
-      dayjs().isAfter(dayjs(moodOverride.expiresAt))
-    ) {
-      // Überschreibung ist abgelaufen, auf Standardberechnung zurückfallen
-      level = generator ? calculateLevel(generator.createdAt) : 2;
-    } else {
-      // Überschreibung aktiv und nicht abgelaufen
-      level = moodOverride.level;
-    }
-  } else {
-    // Falls keine Überschreibung aktiv ist, Standard-Berechnung verwenden
-    level = generator ? calculateLevel(generator.createdAt) : 2;
+  if (fetchError || !moodData) {
+    return (
+      <div className="p-4 text-center text-red-600">
+        <p>Fehler beim Laden der Daten.</p>
+        <button
+          onClick={fetchMoodStatus}
+          className="mt-2 px-3 py-1 bg-red-100 hover:bg-red-200 rounded-md text-red-800 text-sm"
+        >
+          Erneut versuchen
+        </button>
+      </div>
+    );
   }
+
+  // Effektives Level verwenden
+  const level = moodData.effectiveLevel;
 
   // Definition der verfügbaren Mood-Emojis
   const moods = [
@@ -187,10 +215,77 @@ const MoodTachometer = () => {
   ];
 
   // Überschreibungsindikator anzeigen
-  const showOverrideIndicator = moodOverride && moodOverride.active;
+  const showOverrideIndicator =
+    moodData.moodOverride && moodData.moodOverride.active;
+
+  const toggleDebug = () => {
+    setShowDebug(!showDebug);
+  };
+
+  // Berechne Tage seit dem letzten Generator
+  const daysSinceGenerator = moodData.generator
+    ? dayjs().diff(dayjs(moodData.generator.createdAt), "day", true)
+    : 0;
 
   return (
     <div className="relative w-full max-w-[380px] px-4 pt-1 font-['Segoe_UI'] text-gray-800">
+      {/* Debug-Modus Button */}
+      <div
+        className="absolute left-3 top-3 flex h-5 w-5 items-center justify-center rounded-full border border-white bg-gray-400 text-xs font-bold text-white shadow-xs hover:bg-gray-500 hover:scale-105 cursor-pointer"
+        onClick={toggleDebug}
+      >
+        D
+      </div>
+
+      {/* Detaillierte Debug-Informationen */}
+      {showDebug && (
+        <div className="mb-4 p-3 text-xs bg-gray-100 rounded-md border border-gray-300 text-gray-700 overflow-auto">
+          <div>
+            <strong>Effektives Level:</strong> {moodData.effectiveLevel}
+          </div>
+          <div>
+            <strong>Berechnetes Level:</strong> {moodData.calculatedLevel}
+          </div>
+          <div>
+            <strong>Generator erstellt:</strong>{" "}
+            {moodData.generator
+              ? dayjs(moodData.generator.createdAt).format("DD.MM.YYYY HH:mm")
+              : "Keiner"}
+          </div>
+          <div>
+            <strong>Tage seit Generator:</strong>{" "}
+            {daysSinceGenerator.toFixed(2)}
+          </div>
+          <div>
+            <strong>Generator Status:</strong> {moodData.generator?.status}
+          </div>
+          <div>
+            <strong>Generator Content:</strong> {moodData.generator?.content}
+          </div>
+          <div>
+            <strong>Override aktiv:</strong>{" "}
+            {moodData.moodOverride?.active ? "Ja" : "Nein"}
+          </div>
+
+          {moodData.thresholds && (
+            <div className="mt-2">
+              <strong>Schwellenwerte:</strong>
+              <div>Level 1: &gt; {moodData.thresholds.level1} Tage</div>
+              <div>Level 2: &gt; {moodData.thresholds.level2} Tage</div>
+              <div>Level 3: &gt; {moodData.thresholds.level3} Tage</div>
+              <div>Level 4: &gt; {moodData.thresholds.level4} Tage</div>
+            </div>
+          )}
+
+          <button
+            onClick={fetchMoodStatus}
+            className="mt-2 px-2 py-1 bg-blue-100 hover:bg-blue-200 rounded text-blue-800 text-xs"
+          >
+            Aktualisieren
+          </button>
+        </div>
+      )}
+
       {/* Info Icon */}
       <div
         className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full border border-white bg-gray-600 text-xs font-bold text-white shadow-xs hover:bg-gray-700 hover:scale-105 cursor-pointer"
@@ -201,12 +296,13 @@ const MoodTachometer = () => {
 
       {/* Überschreibungsindikator */}
       {showOverrideIndicator && (
-        <div className="absolute left-3 top-3 flex items-center justify-center rounded-md bg-orange-100 px-2 py-1 text-xs font-medium text-orange-800">
+        <div className="mt-8 mb-2 flex items-center justify-center rounded-md bg-orange-100 px-2 py-1 text-xs font-medium text-orange-800">
           <span className="mr-1">⚙️</span>
           Manuell eingestellt
-          {moodOverride.expiresAt && (
+          {moodData.moodOverride?.expiresAt && (
             <span className="ml-1">
-              (bis {dayjs(moodOverride.expiresAt).format("DD.MM. HH:mm")})
+              (bis{" "}
+              {dayjs(moodData.moodOverride.expiresAt).format("DD.MM. HH:mm")})
             </span>
           )}
         </div>
@@ -252,11 +348,11 @@ const MoodTachometer = () => {
                   <p>
                     ⚙️ <strong>Hinweis:</strong> Das aktuelle Level wurde
                     manuell eingestellt
-                    {moodOverride?.expiresAt ? (
+                    {moodData.moodOverride?.expiresAt ? (
                       <span>
                         {" "}
                         und läuft am{" "}
-                        {dayjs(moodOverride.expiresAt).format(
+                        {dayjs(moodData.moodOverride.expiresAt).format(
                           "DD.MM.YYYY um HH:mm"
                         )}{" "}
                         ab.
@@ -333,4 +429,5 @@ const MoodTachometer = () => {
     </div>
   );
 };
+
 export default MoodTachometer;

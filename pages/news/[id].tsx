@@ -34,6 +34,7 @@ import {
 import dayjs from "dayjs";
 import { motion } from "framer-motion";
 import { sendTelegramMessage } from "@/util/sendTelegramMessage";
+import QuickTaskDetail from "@/components/QuickTaskDetail/QuickTaskDetail";
 
 // Design Tokens
 const PRIMARY_COLOR = "#6366f1";
@@ -47,7 +48,7 @@ interface NewsDetail {
   title: string;
   message: string;
   createdAt: string;
-  type: "general" | "review" | "failed";
+  type: "general" | "review" | "failed" | "quickTask";
   overallRating: number;
   seen: boolean;
   obedience?: number;
@@ -65,6 +66,11 @@ interface NewsDetail {
   additionalNotes?: string;
   goldDeduction?: number;
   expDeduction?: number;
+
+  // Quick Task details (verwendet QuickTaskDetail Component)
+  description?: string;
+  url?: string;
+  status?: "NEW" | "ACCEPTED" | "DONE" | "FAILED";
 }
 
 // Mapping: Erklärungen für Bewertungen
@@ -429,6 +435,20 @@ const NewsDetailPage = () => {
 
           {/* Main Content */}
           <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {/* Wenn es sich um einen Quick Task handelt, verwende die QuickTaskDetail-Komponente */}
+            {news.type === "quickTask" && news.description && news.status && (
+              <QuickTaskDetail
+                task={{
+                  _id: news._id,
+                  title: news.title,
+                  description: news.description,
+                  url: news.url,
+                  createdAt: news.createdAt,
+                  status: news.status,
+                }}
+              />
+            )}
+
             {news.message && (
               <Box>
                 <Typography

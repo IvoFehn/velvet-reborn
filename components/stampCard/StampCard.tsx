@@ -150,23 +150,19 @@ const StampCard: React.FC = () => {
     }
   };
 
-  // Streak-Status prüfen und ggf. zurücksetzen
   const checkAndUpdateStreakStatus = async (userId: string) => {
     try {
       setLoading(true);
-      // Vorübergehend: Nutze den Standard-Endpunkt, bis die neuen Endpunkte implementiert sind
       const response = await fetch(`/api/daily-login?userId=${userId}`);
       const data = await response.json();
 
       if (data.success) {
-        // Füge hier manuelle Streak-Überprüfung hinzu
         const now = new Date();
         const lastClaim = data.user.lastClaimAt
           ? new Date(data.user.lastClaimAt)
           : null;
         let streakBroken = false;
 
-        // Wenn es einen vorherigen Claim gibt und Tage aufeinanderfolgend sind
         if (lastClaim && data.user.consecutiveDays > 0) {
           const hoursSinceLastClaim =
             (now.getTime() - lastClaim.getTime()) / (1000 * 60 * 60);
@@ -177,7 +173,6 @@ const StampCard: React.FC = () => {
           yesterdayStart.setDate(now.getDate() - 1);
           yesterdayStart.setHours(0, 0, 0, 0);
 
-          // Streak ist gebrochen, wenn mehr als 48 Stunden vergangen sind und nicht gestern
           if (hoursSinceLastClaim > 48 && lastClaimDay < yesterdayStart) {
             streakBroken = true;
           }
@@ -185,32 +180,21 @@ const StampCard: React.FC = () => {
 
         if (streakBroken) {
           setStreakBroken(true);
-          setCurrentDay(0); // Zurücksetzen auf Tag 0
-
-          // Optional: Implementiere einen API-Aufruf zum Zurücksetzen der Streak
-          // Da der Endpunkt noch nicht existiert, können wir eine Benachrichtigung anzeigen
-          console.log(
-            "Streak gebrochen - Backend-Implementierung erforderlich"
-          );
+          setCurrentDay(0);
+          setClickable(true); // Benutzer kann sofort eine neue Streak starten
           setError("Du hast deine Streak verloren! Starte heute neu.");
         } else {
           setCurrentDay(data.user.consecutiveDays);
           setClickable(data.clickable);
 
-          // Zeitpunkt für nächsten Reward berechnen
           if (!data.clickable && data.user.lastClaimAt) {
             const lastClaim = new Date(data.user.lastClaimAt);
             const twoHoursAfterClaim = lastClaim.getTime() + 2 * 3600 * 1000;
-
-            // Für Mitternachtsberechnung verwenden wir die lokale Zeitzone des Nutzers
             const nextDay = new Date();
             nextDay.setDate(nextDay.getDate() + 1);
             nextDay.setHours(0, 0, 0, 0);
-
             const nextTime = Math.max(twoHoursAfterClaim, nextDay.getTime());
             setNextRewardTimestamp(nextTime);
-
-            // Initiale Zeit setzen und formatieren
             const initialTimeLeft = nextTime - now.getTime();
             setFormattedTimeLeft(
               formatTime(initialTimeLeft > 0 ? initialTimeLeft : 0)
@@ -341,16 +325,6 @@ const StampCard: React.FC = () => {
       const data = await response.json();
 
       if (data.success) {
-        // Erfolgreiche Animation auslösen
-        setSuccess(
-          currentDay === 6
-            ? `Glückwunsch! Du hast die ${
-                lootboxes.find((lb) => lb._id === selectedLootboxId)?.type ||
-                "Lootbox"
-              } erhalten!`
-            : `Belohnung für Tag ${currentDay + 1} erfolgreich erhalten!`
-        );
-
         setCurrentDay(data.consecutiveDays);
         setClickable(false);
 

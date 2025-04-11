@@ -40,7 +40,6 @@ export default function DailyTasksWidget() {
         const res = await fetch("/api/tasks");
         if (res.ok) {
           const data = await res.json();
-          // Transformiere die Tasks, sodass wir ein "id"-Feld haben (anstatt _id)
           if (data && Array.isArray(data)) {
             const tasksWithId = data.map((task: IDailyTask) => ({
               ...task,
@@ -67,7 +66,6 @@ export default function DailyTasksWidget() {
 
   const toggleTask = async (taskId: string) => {
     try {
-      // Der Request geht an den neuen Toggle-Endpoint
       const res = await fetch(`/api/tasks/${taskId}/toggle`, {
         method: "PUT",
       });
@@ -147,7 +145,6 @@ export default function DailyTasksWidget() {
           const newTaskData = await res.json();
           if (newTaskData?.task) {
             const task = newTaskData.task;
-            // Transformation: Nutze _id als id
             const transformedTask: DailyTask = {
               ...task,
               id: task._id ? task._id.toString() : task.id,
@@ -171,10 +168,7 @@ export default function DailyTasksWidget() {
     setSelectedTaskForDescription(null);
   };
 
-  if (!isMounted) {
-    return null;
-  }
-
+  if (!isMounted) return null;
   if (isLoading) {
     return (
       <section className="col-span-full rounded-xl bg-white p-4 shadow-sm md:p-6">
@@ -182,7 +176,6 @@ export default function DailyTasksWidget() {
       </section>
     );
   }
-
   if (error) {
     return (
       <section className="col-span-full rounded-xl bg-white p-4 shadow-sm md:p-6">

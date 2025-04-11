@@ -6,7 +6,7 @@ const StarRating: React.FC<{
 }> = ({ rating, onChange }) => {
   return (
     <div className="flex items-center space-x-1">
-      {[1, 2, 3, 4, 5].map((value) => (
+      {[0, 1, 2, 3, 4, 5].map((value) => (
         <button
           key={value}
           type="button"

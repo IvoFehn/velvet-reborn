@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useRef } from "react";
 import Head from "next/head";
@@ -34,7 +35,6 @@ interface Ticket {
   archived: boolean;
   createdAt: Date;
   updatedAt?: Date;
-  messages: Message[];
 }
 
 export default function TicketPage() {
@@ -43,15 +43,16 @@ export default function TicketPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [generator, setGenerator] = useState<Generator | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [error, setError] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState<string>("");
   const [sendingMessage, setSendingMessage] = useState<boolean>(false);
   const [showAdminMenu, setShowAdminMenu] = useState<boolean>(false);
   const [countdown, setCountdown] = useState<number>(7);
   const adminMenuRef = useRef<HTMLDivElement>(null);
+  const lastMessageTimestampRef = useRef<Date | null>(null);
 
+  // Admin-Status prüfen
   useEffect(() => {
     const checkAdminStatus = () => {
       const isUserAdmin = checkAuth();
@@ -60,6 +61,7 @@ export default function TicketPage() {
     checkAdminStatus();
   }, []);
 
+  // Klick außerhalb des Admin-Menüs
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -73,6 +75,7 @@ export default function TicketPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Ticket-Details einmalig abrufen und Generator laden
   const fetchTicket = async () => {
     if (!id) return;
     try {
@@ -84,58 +87,86 @@ export default function TicketPage() {
       const data = await response.json();
       if (data.success) {
         setTicket(data.ticket);
+        // Konvertiere alle timestamps in Date-Objekte
+        const messagesWithDate = data.ticket.messages.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp), // String -> Date
+        }));
+        setMessages(messagesWithDate);
+        if (messagesWithDate.length > 0) {
+          // Setze das letzte timestamp als Date-Objekt
+          lastMessageTimestampRef.current =
+            messagesWithDate[messagesWithDate.length - 1].timestamp;
+        }
+        // Generator laden, wenn generatorId vorhanden ist
         if (data.ticket.generatorId) {
-          try {
-            const genResponse = await fetch(
-              `/api/generator/${data.ticket.generatorId}`
-            );
-            // Prüfen des Antwort-Status vor dem Parsen von JSON
-            if (genResponse.status === 404) {
-              console.log(
-                `Generator mit ID ${data.ticket.generatorId} nicht gefunden`
-              );
-              // Optionaler Fallback oder null-Status
-            } else if (genResponse.ok) {
-              const contentType = genResponse.headers.get("content-type");
-              if (contentType && contentType.includes("application/json")) {
-                const genData = await genResponse.json();
-                if (genData.success) {
-                  setGenerator(genData.data);
-                }
-              } else {
-                console.error("Unerwarteter Inhaltstyp:", contentType);
-              }
+          const genResponse = await fetch(
+            `/api/generator/${data.ticket.generatorId}`
+          );
+          if (genResponse.ok) {
+            const genData = await genResponse.json();
+            if (genData.success) {
+              setGenerator(genData.data); // Setze den Generator
             }
-          } catch (error) {
-            console.error("Fehler beim Laden des Generators:", error);
-            // Keine Fehlermeldung an den Nutzer - stattdessen nur im Log
+          } else {
+            console.error(
+              "Fehler beim Laden des Generators:",
+              genResponse.statusText
+            );
           }
         }
-      } else {
-        throw new Error(data.message || "Fehler bei der Datenverarbeitung");
       }
     } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Ein Fehler ist aufgetreten"
-      );
       console.error("Fehler beim Laden der Ticket-Details:", error);
     } finally {
       setLoading(false);
     }
   };
 
+  // Neue Nachrichten abrufen
+  const fetchNewMessages = async () => {
+    if (!id) return;
+    try {
+      const since = lastMessageTimestampRef.current?.toISOString();
+      const response = await fetch(
+        `/api/tickets/${id}/messages${since ? `?since=${since}` : ""}`
+      );
+      if (!response.ok) {
+        throw new Error("Fehler beim Abrufen neuer Nachrichten");
+      }
+      const data = await response.json();
+      if (data.success && data.messages.length > 0) {
+        const newMessagesWithDate = data.messages.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp), // String -> Date
+        }));
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          ...newMessagesWithDate,
+        ]);
+        lastMessageTimestampRef.current =
+          newMessagesWithDate[newMessagesWithDate.length - 1].timestamp;
+      }
+    } catch (error) {
+      console.error("Fehler beim Abrufen neuer Nachrichten:", error);
+    }
+  };
+
+  // Ticket beim Laden der Seite abrufen
   useEffect(() => {
     fetchTicket();
   }, [id]);
 
+  // Regelmäßiges Abrufen neuer Nachrichten
   useEffect(() => {
     const intervalId = setInterval(() => {
-      fetchTicket();
+      fetchNewMessages();
       setCountdown(7);
     }, 7000);
     return () => clearInterval(intervalId);
   }, [id]);
 
+  // Countdown-Timer
   useEffect(() => {
     const countdownInterval = setInterval(() => {
       setCountdown((prev) => (prev > 0 ? prev - 1 : 7));
@@ -143,6 +174,7 @@ export default function TicketPage() {
     return () => clearInterval(countdownInterval);
   }, []);
 
+  // Nachricht senden
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !id) return;
@@ -161,27 +193,20 @@ export default function TicketPage() {
       if (!response.ok) {
         throw new Error("Fehler beim Senden der Nachricht");
       }
-      const newMsg: Message = {
-        content: newMessage,
-        sender: isAdmin ? "Administrator" : "Benutzer",
-        timestamp: new Date(),
-        isAdmin: isAdmin,
-      };
-      setTicket((prevTicket) =>
-        prevTicket
-          ? { ...prevTicket, messages: [...prevTicket.messages, newMsg] }
-          : prevTicket
-      );
-      setNewMessage("");
-      await fetchTicket();
-      // Telegram-Nachricht senden
-      const telegramMessage = `Neue Nachricht im Ticket #${id}: "${newMessage}" von ${
-        isAdmin ? "Administrator" : "Benutzer"
-      }`;
-      await sendTelegramMessage(
-        `${isAdmin ? "user" : "admin"}`,
-        telegramMessage
-      );
+      const data = await response.json();
+      if (data.success) {
+        const newMsg = data.newMessage;
+        setMessages((prevMessages) => [...prevMessages, newMsg]);
+        lastMessageTimestampRef.current = newMsg.timestamp;
+        setNewMessage("");
+        const telegramMessage = `Neue Nachricht im Ticket #${id}: "${newMessage}" von ${
+          isAdmin ? "Administrator" : "Benutzer"
+        }`;
+        await sendTelegramMessage(
+          `${isAdmin ? "user" : "admin"}`,
+          telegramMessage
+        );
+      }
     } catch (error) {
       console.error("Fehler beim Senden der Nachricht:", error);
       alert(
@@ -192,129 +217,27 @@ export default function TicketPage() {
     }
   };
 
+  // Statusänderungen
   const handleStatusChange = async (status: "open" | "closed") => {
     if (!isAdmin || !id) return;
     try {
       const response = await fetch(`/api/tickets/${id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          archived: status === "closed",
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archived: status === "closed" }),
       });
-      if (!response.ok) {
-        throw new Error(
-          `Fehler beim ${
-            status === "open" ? "Öffnen" : "Schließen"
-          } des Tickets`
-        );
-      }
+      if (!response.ok) throw new Error("Fehler beim Statuswechsel");
       const data = await response.json();
       if (data.success) {
         setTicket(data.ticket);
         setShowAdminMenu(false);
-        // Telegram-Nachricht senden
         const telegramMessage = `Ticket #${id} wurde auf "${status}" gesetzt.`;
         await sendTelegramMessage("user", telegramMessage);
       }
     } catch (error) {
       console.error("Fehler beim Ändern des Ticket-Status:", error);
-      alert(
-        "Der Status konnte nicht geändert werden. Bitte versuchen Sie es später erneut."
-      );
+      alert("Statusänderung fehlgeschlagen.");
     }
-  };
-
-  const handleGeneratorStatusChange = async (status: string) => {
-    if (!isAdmin || !ticket?.generatorId) return;
-    try {
-      const response = await fetch(`/api/generator`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: ticket.generatorId,
-          newStatus: status,
-        }),
-      });
-      if (!response.ok) {
-        throw new Error("Fehler beim Ändern des Generator-Status");
-      }
-      const data = await response.json();
-      if (data.success) {
-        setGenerator({ ...generator, status } as Generator);
-        setShowAdminMenu(false);
-        await fetch(`/api/tickets/${id}/messages`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            content: `Der Status des Generators wurde auf "${status}" geändert.`,
-            isAdmin: true,
-          }),
-        });
-        await fetchTicket();
-        // Telegram-Nachricht senden
-        const telegramMessage = `Generator-Status für Ticket #${id} wurde auf "${status}" geändert.`;
-        await sendTelegramMessage("user", telegramMessage);
-      }
-    } catch (error) {
-      console.error("Fehler beim Ändern des Generator-Status:", error);
-      alert(
-        "Der Generator-Status konnte nicht geändert werden. Bitte versuchen Sie es später erneut."
-      );
-    }
-  };
-
-  const handleCompleteSanction = async () => {
-    if (!isAdmin || !ticket?.sanctionsFrontendId) return;
-    if (!confirm("Möchten Sie diese Sanktion als erledigt markieren?")) return;
-    try {
-      const response = await fetch(
-        `/api/sanctions/${ticket.sanctionsFrontendId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            status: "erledigt",
-          }),
-        }
-      );
-      if (!response.ok) {
-        throw new Error("Fehler beim Aktualisieren der Sanktion");
-      }
-      await fetch(`/api/tickets/${id}/messages`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          content: "Die verknüpfte Sanktion wurde als erledigt markiert.",
-          isAdmin: true,
-        }),
-      });
-      await fetchTicket();
-      alert("Die Sanktion wurde erfolgreich als erledigt markiert.");
-      // Telegram-Nachricht senden
-      const telegramMessage = `Sanktion für Ticket #${id} wurde als erledigt markiert.`;
-      await sendTelegramMessage("user", telegramMessage);
-    } catch (error) {
-      console.error("Fehler bei der Sanktionsaktualisierung:", error);
-      alert(
-        "Die Sanktion konnte nicht aktualisiert werden. Bitte versuchen Sie es später erneut."
-      );
-    }
-  };
-
-  const handleViewSanction = () => {
-    if (!ticket?.sanctionsFrontendId) return;
-    router.push(`/sanctions/${ticket.sanctionsFrontendId}`);
   };
 
   if (loading) {
@@ -355,7 +278,6 @@ export default function TicketPage() {
         />
       </Head>
 
-      {/* Header */}
       <header className="sticky top-0 bg-white border-b border-gray-200 z-30">
         <div className="container max-w-5xl px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between gap-4">
@@ -389,15 +311,13 @@ export default function TicketPage() {
                     )}
                     {isAdmin && (
                       <span className="ml-2 inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
-                        <ShieldCheckIcon className="mr-1 h-3 w-3" />
-                        Admin
+                        <ShieldCheckIcon className="mr-1 h-3 w-3" /> Admin
                       </span>
                     )}
                   </div>
                 </div>
               </div>
             </div>
-
             {isAdmin && (
               <div className="relative" ref={adminMenuRef}>
                 <button
@@ -421,7 +341,6 @@ export default function TicketPage() {
                     <circle cx="12" cy="19" r="1" />
                   </svg>
                 </button>
-
                 {showAdminMenu && (
                   <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl p-4 space-y-4 z-50">
                     <div className="space-y-2">
@@ -451,53 +370,6 @@ export default function TicketPage() {
                         </button>
                       </div>
                     </div>
-
-                    {generator && (
-                      <div className="space-y-2">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                          Generator Status
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                          {["DECLINED", "NEW", "ACCEPTED"].map((status) => (
-                            <button
-                              key={status}
-                              onClick={() =>
-                                handleGeneratorStatusChange(status)
-                              }
-                              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                                generator.status === status
-                                  ? "bg-blue-600 text-white shadow-sm"
-                                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                              }`}
-                            >
-                              {status.charAt(0) + status.slice(1).toLowerCase()}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {ticket.sanctionsFrontendId && (
-                      <div className="space-y-2">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                          Verknüpfte Sanktion
-                        </h3>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={handleCompleteSanction}
-                            className="flex-1 px-4 py-2 text-sm font-medium rounded-md bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
-                          >
-                            Als erledigt markieren
-                          </button>
-                          <button
-                            onClick={handleViewSanction}
-                            className="flex-1 px-4 py-2 text-sm font-medium rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
-                          >
-                            Anzeigen
-                          </button>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
@@ -570,8 +442,8 @@ export default function TicketPage() {
         )}
 
         <div className="space-y-4">
-          {ticket.messages?.length > 0 ? (
-            ticket.messages.map((message, index) => (
+          {messages.length > 0 ? (
+            messages.map((message, index) => (
               <div
                 key={index}
                 className={`flex ${
@@ -593,7 +465,7 @@ export default function TicketPage() {
                     >
                       {message.isAdmin ? (
                         <>
-                          <ShieldCheckIcon className="mr-1 h-4 w-4" />
+                          <ShieldCheckIcon className="mr-1 h-4 w-4" />{" "}
                           Administrator
                         </>
                       ) : (

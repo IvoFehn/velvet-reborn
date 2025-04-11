@@ -9,12 +9,12 @@ interface ThresholdFormValues {
 }
 
 const LevelThresholdSettings: React.FC = () => {
-  // Standardwerte für die Schwellenwerte
+  // Niedrigere Standardwerte für schnelleres Ansteigen des Levels
   const defaultThresholds: ThresholdFormValues = {
-    level1: 3,
-    level2: 4,
-    level3: 6,
-    level4: 8,
+    level1: 1.5, // Nach 1,5 Tagen auf Level 1
+    level2: 3, // Nach 3 Tagen auf Level 2
+    level3: 4.5, // Nach 4,5 Tagen auf Level 3
+    level4: 6, // Nach 6 Tagen auf Level 4
   };
 
   const [thresholds, setThresholds] =
@@ -107,7 +107,7 @@ const LevelThresholdSettings: React.FC = () => {
     }
   };
 
-  // Auf Standardwerte zurücksetzen
+  // Auf schnellere Standardwerte zurücksetzen
   const resetToDefaults = () => {
     setThresholds(defaultThresholds);
   };
@@ -123,7 +123,7 @@ const LevelThresholdSettings: React.FC = () => {
   return (
     <div className="bg-white shadow-md rounded-lg p-6 mt-6">
       <h3 className="text-lg font-medium text-gray-900 mb-4">
-        Level-Schwellenwerte anpassen
+        Geschwindigkeit des Lustlevel-Anstiegs anpassen
       </h3>
 
       {error && (
@@ -139,6 +139,7 @@ const LevelThresholdSettings: React.FC = () => {
           </h4>
           <p className="text-xs text-gray-500 mb-3">
             Definiere, nach wie vielen Tagen das jeweilige Level erreicht wird.
+            Kleinere Werte lassen das Level schneller ansteigen.
           </p>
 
           <div className="space-y-3">
@@ -238,6 +239,19 @@ const LevelThresholdSettings: React.FC = () => {
           </div>
         </div>
 
+        <div className="p-3 bg-blue-50 border border-blue-100 rounded-md">
+          <p className="text-sm text-blue-800">
+            <strong>Hinweis:</strong> Die voreingestellten Werte sind für
+            schnelleres Ansteigen des Levels optimiert:
+          </p>
+          <ul className="text-xs text-blue-700 mt-1 list-disc pl-5">
+            <li>Level 1 nach 1,5 Tagen (statt 3 Tagen)</li>
+            <li>Level 2 nach 3 Tagen (statt 4 Tagen)</li>
+            <li>Level 3 nach 4,5 Tagen (statt 6 Tagen)</li>
+            <li>Level 4 nach 6 Tagen (statt 8 Tagen)</li>
+          </ul>
+        </div>
+
         <div className="flex flex-wrap gap-3 mt-4">
           <button
             type="button"
@@ -279,7 +293,7 @@ const LevelThresholdSettings: React.FC = () => {
             onClick={resetToDefaults}
             className="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
-            Auf Standardwerte zurücksetzen
+            Optimierte Werte wiederherstellen
           </button>
 
           {saveSuccess && (
