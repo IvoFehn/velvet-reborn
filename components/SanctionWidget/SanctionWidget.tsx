@@ -114,36 +114,6 @@ const SanctionWidget: React.FC = () => {
     return hours > 0 ? `${hours} Std., ${minutes} Min.` : `${minutes} Minuten`;
   };
 
-  // Manuelle Eskalation einer Sanktion
-  const handleEscalateSanction = async () => {
-    if (!latestSanction) return;
-
-    try {
-      const response = await fetch("/api/sanctions/escalate", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ sanctionId: latestSanction._id }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Fehler beim Eskalieren der Sanktion");
-      }
-
-      // Sanktionsdaten aktualisieren
-      const data = await response.json();
-      if (data.success && data.data) {
-        setLatestSanction(data.data);
-      }
-    } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Ein Fehler ist aufgetreten"
-      );
-      console.error("Fehler beim Eskalieren der Sanktion:", error);
-    }
-  };
-
   // Zum Tickets-System navigieren und einen Antrag erstellen
   const handleCreateRequest = () => {
     // Navigiere zur Tickets-Seite mit extra Parameter für die Sanktion
@@ -239,15 +209,6 @@ const SanctionWidget: React.FC = () => {
                 >
                   Details
                 </Link>
-
-                {latestSanction.status !== "erledigt" && (
-                  <button
-                    onClick={handleEscalateSanction}
-                    className="rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
-                  >
-                    Eskalieren
-                  </button>
-                )}
 
                 <button
                   onClick={handleCreateRequest}
