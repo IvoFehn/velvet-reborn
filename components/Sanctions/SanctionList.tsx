@@ -26,9 +26,14 @@ import {
   CheckCircle,
   Trash2,
   AlertTriangle,
+  ArrowUpCircle,
 } from "lucide-react";
 import { ISanction } from "@/types/index";
-import { completeSanction, deleteSanction } from "@/util/sanctionUtils";
+import {
+  completeSanction,
+  deleteSanction,
+  escalateSanction,
+} from "@/util/sanctionUtils";
 import { sendTelegramMessage } from "@/util/sendTelegramMessage";
 
 interface SanctionsListProps {
@@ -85,6 +90,41 @@ const SanctionsList: React.FC<SanctionsListProps> = ({
         await sendTelegramMessage(
           "user",
           `Sanktion "${sanctionTitle}" als erledigt markiert am ${dayjs
+            .default()
+            .locale("de")
+            .format("DD.MM.YYYY HH:mm:ss")}`
+        );
+      } catch (telegramError) {
+        console.error(
+          "Fehler beim Senden der Telegram-Nachricht:",
+          telegramError
+        );
+        // Die Aktion wurde trotzdem durchgeführt, wir zeigen keinen Fehler an
+      }
+
+      onRefresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setActionLoading({ ...actionLoading, [sanctionId]: false });
+    }
+  };
+
+  // Escalate a sanction
+  const handleEscalate = async (sanctionId: string, sanctionTitle: string) => {
+    try {
+      setActionLoading({ ...actionLoading, [sanctionId]: true });
+      setError(null);
+      await escalateSanction(sanctionId);
+
+      // Telegram-Benachrichtigung senden
+      try {
+        const dayjs = await import("dayjs");
+        await import("dayjs/locale/de");
+
+        await sendTelegramMessage(
+          "user",
+          `Sanktion "${sanctionTitle}" wurde eskaliert am ${dayjs
             .default()
             .locale("de")
             .format("DD.MM.YYYY HH:mm:ss")}`
@@ -342,24 +382,69 @@ const SanctionsList: React.FC<SanctionsListProps> = ({
                 {/* Card actions */}
                 <div className="flex justify-end gap-2 pt-4 border-t">
                   {sanction.status !== "erledigt" && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        handleComplete(sanction._id.toString(), sanction.title)
-                      }
-                      disabled={actionLoading[sanction._id.toString()]}
-                      className="text-green-600 hover:bg-green-50"
-                    >
-                      {actionLoading[sanction._id.toString()] ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Erledigen
-                        </>
-                      )}
-                    </Button>
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          handleComplete(
+                            sanction._id.toString(),
+                            sanction.title
+                          )
+                        }
+                        disabled={actionLoading[sanction._id.toString()]}
+                        className="text-green-600 hover:bg-green-50"
+                      >
+                        {actionLoading[sanction._id.toString()] ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Erledigen
+                          </>
+                        )}
+                      </Button>
+
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-amber-600 hover:bg-amber-50"
+                            disabled={actionLoading[sanction._id.toString()]}
+                          >
+                            <ArrowUpCircle className="h-4 w-4 mr-2" />
+                            Escalate
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="bg-white dark:bg-gray-800">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Sanktion eskalieren?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Bei einer Eskalation wird die Menge um 50% erhöht
+                              und die Frist verlängert. Dies sollte nur bei
+                              wiederholter Nichteinhaltung erfolgen.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() =>
+                                handleEscalate(
+                                  sanction._id.toString(),
+                                  sanction.title
+                                )
+                              }
+                              className="bg-amber-600 hover:bg-amber-700"
+                            >
+                              Eskalation bestätigen
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </>
                   )}
 
                   <AlertDialog>

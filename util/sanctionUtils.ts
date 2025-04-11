@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // utils/sanctionUtils.ts
 import axios from "axios";
 import { ISanction, ISanctionTemplate } from "@/types/index";
@@ -249,4 +250,28 @@ export const deleteSanction = async (sanctionId: string): Promise<boolean> => {
     console.error("Fehler bei deleteSanction:", error);
     throw error;
   }
+};
+
+// Fügen Sie diese Funktion zu Ihrer bestehenden sanctionUtils.ts-Datei hinzu
+
+/**
+ * Eskaliert eine bestehende Sanktion
+ * @param sanctionId - Die ID der zu eskalierenden Sanktion
+ * @returns Promise<ISanction> - Die eskalierte Sanktion
+ */
+export const escalateSanction = async (sanctionId: string): Promise<any> => {
+  const response = await fetch(`/api/sanctions/escalate`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ sanctionId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Fehler beim Eskalieren der Sanktion");
+  }
+
+  return response.json();
 };

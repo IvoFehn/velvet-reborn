@@ -9,6 +9,8 @@ import MoodLevelAdmin from "@/components/MoodLevelAdmin/MoodLevelAdmin";
 import LevelThresholdSettings from "@/components/LevelThresholdSetting.tsx/LevelThresholdSetting";
 import QuickTaskForm from "../QuickTaskForm/QuickTaskForm";
 import QuickTaskReviewForm from "../QuickTaskReviewForm/QuickTaskReviewForm";
+import CreateWarningComponent from "../CreateWarningComponent/CreateWarningComponent";
+import WarningsList from "../WarningsList/WarningsList";
 
 // Admin-Module und ihre Links
 const adminModules = [
@@ -78,6 +80,13 @@ const adminModules = [
     internal: true,
   },
   {
+    title: "Verwarnungen",
+    link: "#warnings",
+    description: "Verwarnungen aussprechen und verwalten",
+    icon: "🚨",
+    internal: true,
+  },
+  {
     title: "Gesundheitsberichte",
     link: "#health-reports",
     description: "Gesundheitsberichte der Benutzer einsehen",
@@ -95,6 +104,8 @@ const AdminDashboard: React.FC = () => {
   const [showLevelThresholds, setShowLevelThresholds] = useState(false);
   const [showQuickTaskForm, setShowQuickTaskForm] = useState(false);
   const [showQuickTaskReview, setShowQuickTaskReview] = useState(false);
+  const [showWarnings, setShowWarnings] = useState(false);
+  const [warningsKey, setWarningsKey] = useState(0);
 
   // Überprüfen der Authentifizierung
   useEffect(() => {
@@ -105,6 +116,12 @@ const AdminDashboard: React.FC = () => {
     }
   }, [router]);
 
+  // Callback für erfolgreiches Erstellen einer Verwarnung
+  const handleWarningCreated = () => {
+    // Aktualisiere den Key für die Warnungsliste, um sie neu zu laden
+    setWarningsKey((prev) => prev + 1);
+  };
+
   // Interne Link-Handler
   const handleInternalLinkClick = (moduleId: string) => {
     // Reset all module states
@@ -114,6 +131,7 @@ const AdminDashboard: React.FC = () => {
     setShowLevelThresholds(false);
     setShowQuickTaskForm(false);
     setShowQuickTaskReview(false);
+    setShowWarnings(false);
 
     // Set the active module based on the link
     if (moduleId === "#health-reports") {
@@ -149,6 +167,12 @@ const AdminDashboard: React.FC = () => {
     } else if (moduleId === "#quick-task-review") {
       setShowQuickTaskReview(true);
       const element = document.getElementById("quick-task-review-section");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    } else if (moduleId === "#warnings") {
+      setShowWarnings(true);
+      const element = document.getElementById("warnings-section");
       if (element) {
         element.scrollIntoView({ behavior: "smooth" });
       }
@@ -286,6 +310,29 @@ const AdminDashboard: React.FC = () => {
                 Sanktionen-Verwaltung
               </h2>
               <SanctionDashboard />
+            </div>
+          )}
+
+          {/* Verwarnungen Sektion */}
+          {showWarnings && (
+            <div
+              id="warnings-section"
+              className="mt-10 pt-6 border-t border-gray-200"
+            >
+              <h2 className="text-lg font-medium text-gray-900 mb-4">
+                Verwarnungen-Verwaltung
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="md:col-span-1">
+                  <CreateWarningComponent onSuccess={handleWarningCreated} />
+                </div>
+                <div className="md:col-span-2">
+                  <div className="bg-white rounded-lg shadow p-6">
+                    {/* Key-Prop zum gezielten Neuladen nach Erstellung einer Warnung */}
+                    <WarningsList key={warningsKey} />
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
