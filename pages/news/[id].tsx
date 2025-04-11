@@ -11,7 +11,6 @@ import {
   CircularProgress,
   Grid,
   Divider,
-  Paper,
   Button,
   Dialog,
   DialogTitle,
@@ -19,30 +18,37 @@ import {
   DialogActions,
   IconButton,
   Snackbar,
-  Alert,
+  Alert, // Keep for Snackbar, maybe reconsider for inline failed state
+  Stack,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
   alpha,
+  useTheme,
+  Paper, // Use sparingly for specific sections if needed
 } from "@mui/material";
 import {
-  CheckCircle,
-  Cancel,
-  Notes,
-  Favorite,
-  Star,
-  Info,
-  Visibility,
+  CheckCircleOutline, // Use outlined icons for a lighter feel
+  HighlightOff, // Use outlined icons
+  NotesOutlined,
+  StarBorder, // Use outlined icons
+  InfoOutlined,
+  VisibilityOutlined,
+  AccessTime,
+  ArrowBack,
+  CelebrationOutlined,
+  EditNoteOutlined,
+  ReportProblemOutlined,
+  LabelImportantOutlined, // For status
+  WarningAmberOutlined, // For deductions
 } from "@mui/icons-material";
 import dayjs from "dayjs";
 import { motion } from "framer-motion";
 import { sendTelegramMessage } from "@/util/sendTelegramMessage";
 import QuickTaskDetail from "@/components/QuickTaskDetail/QuickTaskDetail";
 
-// Design Tokens
-const PRIMARY_COLOR = "#6366f1";
-const SUCCESS_COLOR = "#22c55e";
-const ERROR_COLOR = "#ef4444";
-const BACKGROUND_GRADIENT = "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)";
-
-// Vollständige Typdefinition für News
+// --- Interface and Mappings (Keep as is) ---
 interface NewsDetail {
   _id: string;
   title: string;
@@ -66,14 +72,11 @@ interface NewsDetail {
   additionalNotes?: string;
   goldDeduction?: number;
   expDeduction?: number;
-
-  // Quick Task details (verwendet QuickTaskDetail Component)
-  description?: string;
-  url?: string;
-  status?: "NEW" | "ACCEPTED" | "DONE" | "FAILED";
+  description?: string; // Quick Task
+  url?: string; // Quick Task
+  status?: "NEW" | "ACCEPTED" | "DONE" | "FAILED"; // Quick Task
 }
 
-// Mapping: Erklärungen für Bewertungen
 const ratingExplanations: Record<string, string> = {
   obedience:
     "Diese Bewertung misst, wie gehorsam der Partner war. Eine hohe Bewertung zeigt, dass er aufmerksam und folgsam war.",
@@ -90,11 +93,10 @@ const ratingExplanations: Record<string, string> = {
     "Sperma ist für dich weißes Gold. Die Bewertung misst, wie sehr du gezeigt hast, dass du Sperma liebst.",
   didEverythingForHisPleasure:
     "Diese Bewertung misst, inwiefern der Partner alles für sein Vergnügen getan hat.",
-  didSquirt: "Diese Bewertung zeigt an, ob Squirting stattgefunden hat.",
-  wasAnal: "Diese Bewertung zeigt an, ob der Sex anal beinhaltete.",
+  didSquirt: "Zeigt an, ob Squirting stattgefunden hat.",
+  wasAnal: "Zeigt an, ob der Sex anal beinhaltete.",
 };
 
-// Mapping: Titel für die Modale
 const ratingTitles: Record<string, string> = {
   obedience: "Gehorsam",
   vibeDuringSex: "Stimmung (während)",
@@ -107,44 +109,57 @@ const ratingTitles: Record<string, string> = {
   didSquirt: "Squirting",
   wasAnal: "Anal",
 };
+// --- End Interface and Mappings ---
 
-// Erstelle ein motion-fähiges Paper-Element
-const StyledPaper = motion(Paper);
+// Animation Variants for Staggering
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1, // Stagger animation of children
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.4,
+    },
+  },
+};
 
 const NewsDetailPage = () => {
   const router = useRouter();
   const { id } = router.query;
   const { width, height } = useWindowSize();
+  const theme = useTheme();
 
+  // --- State Variables (Keep as is) ---
   const [news, setNews] = useState<NewsDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  // State für Modal und Snackbar
   const [openModal, setOpenModal] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
     "success"
   );
+  // --- End State Variables ---
 
-  const handleOpenModal = (rating: string) => {
-    setOpenModal(rating);
-  };
-
-  const handleCloseModal = () => {
-    setOpenModal(null);
-  };
-
-  // Funktion, um News als gesehen zu markieren (PATCH-Request)
+  // --- Handlers (Keep as is) ---
+  const handleOpenModal = (rating: string) => setOpenModal(rating);
+  const handleCloseModal = () => setOpenModal(null);
   const handleMarkAsSeen = async () => {
     if (!news) return;
     try {
       const response = await fetch(`/api/news?id=${news._id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ seen: true }),
       });
       const result = await response.json();
@@ -155,288 +170,266 @@ const NewsDetailPage = () => {
         setSnackbarOpen(true);
         sendTelegramMessage(
           "admin",
-          `Der Nutzer hat eine News als gesehen markiert. ${window.location.href}`
+          `Nutzer hat News ID ${news._id} als gesehen markiert.`
         );
       } else {
-        setSnackbarMessage(
-          result.message || "Fehler beim Aktualisieren des Gesehen-Status."
-        );
+        setSnackbarMessage(result.message || "Fehler beim Aktualisieren.");
         setSnackbarSeverity("error");
         setSnackbarOpen(true);
       }
     } catch (err) {
       console.error("Mark as seen error:", err);
-      setSnackbarMessage("Fehler beim Aktualisieren des Gesehen-Status.");
+      setSnackbarMessage("Netzwerkfehler beim Aktualisieren.");
       setSnackbarSeverity("error");
       setSnackbarOpen(true);
     }
   };
+  // --- End Handlers ---
 
+  // --- useEffect for Fetching Data (Keep as is) ---
   useEffect(() => {
-    if (!router.isReady) return;
-    if (!id) return;
+    if (!router.isReady || !id) return;
+    let isMounted = true; // Prevent state update on unmounted component
 
     const fetchNews = async () => {
+      setLoading(true);
+      setError("");
       try {
         const response = await fetch(`/api/news?id=${id}`);
         const result = await response.json();
-        if (!result.success) {
-          setError(result.message || "Fehler beim Laden der News");
+        if (!isMounted) return; // Exit if component unmounted
+
+        if (!response.ok || !result.success) {
+          setError(result.message || `Fehler ${response.status} beim Laden.`);
+          setNews(null);
         } else {
           setNews(result.data);
         }
       } catch (err) {
+        if (!isMounted) return;
         console.error("Fetch-Error:", err);
-        setError("Fehler beim Abrufen der News");
+        setError("Netzwerkfehler beim Abrufen der News.");
+        setNews(null);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchNews();
-  }, [router.isReady, id]);
 
-  // Hilfsfunktion, um das Overall Rating bei Reviews oder Failed zu berechnen
-  const computeOverallRating = (news: NewsDetail): number => {
+    return () => {
+      isMounted = false; // Cleanup function
+    };
+  }, [router.isReady, id]);
+  // --- End useEffect ---
+
+  // --- Rating Calculation (Keep as is) ---
+  const computeOverallRating = (newsItem: NewsDetail): number => {
     const ratings: number[] = [];
-    if (typeof news.obedience === "number") ratings.push(news.obedience);
-    if (typeof news.vibeDuringSex === "number")
-      ratings.push(news.vibeDuringSex);
-    if (typeof news.vibeAfterSex === "number") ratings.push(news.vibeAfterSex);
-    if (typeof news.orgasmIntensity === "number")
-      ratings.push(news.orgasmIntensity);
-    if (typeof news.painlessness === "number") ratings.push(news.painlessness);
-    if (typeof news.ballsWorshipping === "number")
-      ratings.push(news.ballsWorshipping);
-    if (typeof news.cumWorshipping === "number")
-      ratings.push(news.cumWorshipping);
-    if (typeof news.didEverythingForHisPleasure === "number")
-      ratings.push(news.didEverythingForHisPleasure);
+    if (typeof newsItem.obedience === "number")
+      ratings.push(newsItem.obedience);
+    if (typeof newsItem.vibeDuringSex === "number")
+      ratings.push(newsItem.vibeDuringSex);
+    if (typeof newsItem.vibeAfterSex === "number")
+      ratings.push(newsItem.vibeAfterSex);
+    if (typeof newsItem.orgasmIntensity === "number")
+      ratings.push(newsItem.orgasmIntensity);
+    if (typeof newsItem.painlessness === "number")
+      ratings.push(newsItem.painlessness);
+    if (typeof newsItem.ballsWorshipping === "number")
+      ratings.push(newsItem.ballsWorshipping);
+    if (typeof newsItem.cumWorshipping === "number")
+      ratings.push(newsItem.cumWorshipping);
+    if (typeof newsItem.didEverythingForHisPleasure === "number")
+      ratings.push(newsItem.didEverythingForHisPleasure);
     if (ratings.length === 0) return 0;
     return ratings.reduce((sum, r) => sum + r, 0) / ratings.length;
   };
 
   const displayedOverallRating =
-    news?.type === "review" || news?.type === "failed"
+    news && (news.type === "review" || news.type === "failed")
       ? computeOverallRating(news)
       : news?.overallRating || 0;
+  // --- End Rating Calculation ---
 
+  // --- Loading / Error / No Data States (Simplified) ---
   if (loading) {
     return (
-      <Container maxWidth="sm" sx={{ mt: 4, textAlign: "center" }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "80vh",
+        }}
+      >
         <CircularProgress />
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Lade News…
-        </Typography>
-      </Container>
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <Container maxWidth="sm" sx={{ mt: 4, textAlign: "center" }}>
-        <Typography variant="h6" color="error">
+      <Container maxWidth="sm" sx={{ mt: 4, textAlign: "center", py: 5 }}>
+        <Alert severity="error" sx={{ mb: 3, justifyContent: "center" }}>
           {error}
-        </Typography>
+        </Alert>
         <Button
-          variant="contained"
-          color="primary"
+          variant="outlined"
+          startIcon={<ArrowBack />}
           onClick={() => router.push("/")}
-          sx={{
-            mt: 2,
-            transition: "transform 0.3s ease",
-            "&:hover": { transform: "scale(1.05)" },
-          }}
         >
-          Zurück zur Übersicht
+          Zurück
         </Button>
       </Container>
     );
   }
 
-  if (!news) return null;
+  if (!news) {
+    return (
+      <Container maxWidth="sm" sx={{ mt: 4, textAlign: "center", py: 5 }}>
+        <Alert severity="warning" sx={{ mb: 3, justifyContent: "center" }}>
+          Keine Daten gefunden.
+        </Alert>
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBack />}
+          onClick={() => router.push("/")}
+        >
+          Zurück
+        </Button>
+      </Container>
+    );
+  }
+  // --- End Loading / Error / No Data States ---
 
+  // --- Determine Status Chip ---
+  let statusChip = null;
+  if (news.type === "failed") {
+    statusChip = (
+      <Chip
+        icon={<ReportProblemOutlined />}
+        label="Fehlgeschlagen"
+        color="error"
+        size="small"
+      />
+    );
+  } else if (!news.seen) {
+    statusChip = (
+      <Chip
+        icon={<LabelImportantOutlined />}
+        label="Neu"
+        color="info"
+        size="small"
+      />
+    );
+  }
+  // --- End Determine Status Chip ---
+
+  // --- Main Render ---
   return (
     <>
-      {/* Confetti-Effekt bei hohem Overall Rating */}
-      {displayedOverallRating > 4 && (
-        <div
+      {/* Confetti Effect */}
+      {displayedOverallRating > 4.5 && (
+        <Confetti
+          width={width}
+          height={height}
+          recycle={false}
+          numberOfPieces={200}
+          tweenDuration={10000}
           style={{
             position: "fixed",
             top: 0,
             left: 0,
-            width: width,
-            height: height,
-            pointerEvents: "none",
-            zIndex: 9999,
+            width: "100%",
+            height: "100%",
+            zIndex: 1301,
           }}
-        >
-          <Confetti width={width} height={height} numberOfPieces={50} />
-        </div>
+        />
       )}
 
       <Container
-        maxWidth="md"
+        maxWidth="lg" // Wider container
         sx={{
-          py: { xs: 2, md: 4 },
-          background: BACKGROUND_GRADIENT,
-          minHeight: "100vh",
+          py: { xs: 3, md: 6 }, // More vertical padding
+          bgcolor: "transparent", // Let page background show through or set globally
         }}
       >
-        <StyledPaper
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          sx={{
-            p: { xs: 2, sm: 3 },
-            borderRadius: 4,
-            boxShadow: "0 8px 32px rgba(0,0,0,0.05)",
-            border: "1px solid rgba(255,255,255,0.3)",
-            backdropFilter: "blur(10px)",
-          }}
+        {/* Use framer-motion on the main Stack for staggered animation */}
+        <Stack
+          component={motion.div} // Make Stack motion-aware
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          spacing={{ xs: 4, md: 5 }} // Responsive spacing between sections
         >
-          {/* Header Section */}
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 2,
-              mb: 4,
-              position: "relative",
-            }}
-          >
-            <Chip
-              label={dayjs(news.createdAt).format("DD.MM.YYYY - HH:mm")}
-              size="small"
-              sx={{
-                alignSelf: "flex-start",
-                bgcolor: alpha(PRIMARY_COLOR, 0.1),
-                color: PRIMARY_COLOR,
-                fontWeight: 600,
-              }}
-            />
+          {/* --- Header Section --- */}
+          <Stack component={motion.div} variants={itemVariants} spacing={1.5}>
+            {/* Top row: Date and Status */}
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              spacing={2}
+            >
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+              >
+                <AccessTime sx={{ fontSize: "1rem" }} />
+                {dayjs(news.createdAt).format("DD. MMMM YYYY, HH:mm")}
+              </Typography>
+              {statusChip}
+            </Stack>
 
+            {/* Title */}
             <Typography
-              variant="h3"
+              variant="h2" // More prominent title
+              component="h1"
+              fontWeight={700} // Bolder
               sx={{
-                fontSize: { xs: "2rem", sm: "2.5rem" },
-                fontWeight: 800,
-                background: `linear-gradient(45deg, ${PRIMARY_COLOR}, ${alpha(
-                  PRIMARY_COLOR,
-                  0.7
-                )})`,
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                lineHeight: 1.2,
+                fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" }, // Larger Font
+                lineHeight: 1.15,
+                color: "text.primary", // Default text color for title
               }}
             >
               {news.title}
             </Typography>
 
-            <Box sx={{ display: "flex", gap: 1.5, alignItems: "center" }}>
-              <Rating
-                value={displayedOverallRating}
-                readOnly
-                precision={0.5}
-                size="medium"
-                sx={{
-                  "& .MuiRating-icon": { color: PRIMARY_COLOR },
-                }}
-              />
-              <Chip
-                label={`${displayedOverallRating.toFixed(1)}/5`}
-                size="small"
-                variant="outlined"
-                sx={{ fontWeight: 700 }}
-              />
-              {!news.seen && (
-                <Chip
-                  label="Neu"
-                  color="error"
-                  size="small"
-                  sx={{ fontWeight: 700, ml: 1 }}
+            {/* Overall Rating (if applicable) */}
+            {(news.type === "review" ||
+              news.type === "failed" ||
+              news.overallRating > 0) && (
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}
+              >
+                <Rating
+                  value={displayedOverallRating}
+                  readOnly
+                  precision={0.5}
+                  size="medium"
+                  sx={{ color: theme.palette.warning.main }}
                 />
-              )}
-            </Box>
-          </Box>
-
-          {/* Failed Banner */}
-          {news.type === "failed" && (
-            <Paper
-              sx={{
-                p: 2,
-                mb: 4,
-                background: `linear-gradient(135deg, ${alpha(
-                  ERROR_COLOR,
-                  0.1
-                )}, ${alpha(ERROR_COLOR, 0.05)})`,
-                borderLeft: `4px solid ${ERROR_COLOR}`,
-                borderRadius: 2,
-              }}
-            >
-              <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-                <Cancel sx={{ color: ERROR_COLOR, fontSize: 32 }} />
-                <Box>
-                  <Typography variant="h6" fontWeight={700}>
-                    Auftrag nicht bestanden
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Bitte um dringende Verbesserungen
-                  </Typography>
-                </Box>
+                <Typography
+                  variant="body2"
+                  fontWeight="medium"
+                  color="text.secondary"
+                >
+                  ({displayedOverallRating.toFixed(1)})
+                </Typography>
               </Box>
+            )}
+          </Stack>
+          {/* --- End Header Section --- */}
 
-              <Grid container spacing={2} sx={{ mt: 2 }}>
-                <Grid item xs={6}>
-                  <Box
-                    sx={{
-                      p: 1.5,
-                      bgcolor: alpha(ERROR_COLOR, 0.08),
-                      borderRadius: 2,
-                      textAlign: "center",
-                    }}
-                  >
-                    <Typography variant="overline" color="error">
-                      Gold Abzug
-                    </Typography>
-                    <Typography
-                      variant="h5"
-                      color="error"
-                      sx={{ fontWeight: 800 }}
-                    >
-                      -{news.goldDeduction || 0}
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={6}>
-                  <Box
-                    sx={{
-                      p: 1.5,
-                      bgcolor: alpha(ERROR_COLOR, 0.08),
-                      borderRadius: 2,
-                      textAlign: "center",
-                    }}
-                  >
-                    <Typography variant="overline" color="error">
-                      EXP Abzug
-                    </Typography>
-                    <Typography
-                      variant="h5"
-                      color="error"
-                      sx={{ fontWeight: 800 }}
-                    >
-                      -{news.expDeduction || 0}
-                    </Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-            </Paper>
-          )}
+          <Divider component={motion.div} variants={itemVariants} />
 
-          {/* Main Content */}
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {/* Wenn es sich um einen Quick Task handelt, verwende die QuickTaskDetail-Komponente */}
-            {news.type === "quickTask" && news.description && news.status && (
+          {/* --- Main Content Area (Message or QuickTask) --- */}
+          {news.type === "quickTask" && news.description && news.status ? (
+            <Box component={motion.div} variants={itemVariants}>
               <QuickTaskDetail
                 task={{
                   _id: news._id,
@@ -447,304 +440,380 @@ const NewsDetailPage = () => {
                   status: news.status,
                 }}
               />
-            )}
-
-            {news.message && (
-              <Box>
-                <Typography
-                  variant="h6"
-                  gutterBottom
-                  sx={{
-                    fontWeight: 700,
-                    display: "flex",
-                    gap: 1,
-                    mb: 2,
-                  }}
-                >
-                  <Notes sx={{ color: PRIMARY_COLOR }} />
-                  Hauptnachricht
-                </Typography>
+            </Box>
+          ) : news.message ? (
+            <Box component={motion.div} variants={itemVariants}>
+              <Typography
+                variant="h5"
+                component="h2"
+                fontWeight="600"
+                gutterBottom
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  color: "text.secondary",
+                }}
+              >
+                <NotesOutlined />
+                Nachricht
+              </Typography>
+              {/* Use Paper for slight visual separation of the main message */}
+              <Paper
+                elevation={0}
+                variant="outlined"
+                sx={{
+                  p: { xs: 2, md: 3 },
+                  bgcolor: alpha(theme.palette.grey[500], 0.04),
+                }}
+              >
                 <Typography
                   variant="body1"
                   sx={{
-                    lineHeight: 1.7,
-                    color: "text.secondary",
+                    lineHeight: 1.8,
                     whiteSpace: "pre-wrap",
+                    color: "text.primary",
+                    fontSize: "1.1rem",
                   }}
                 >
                   {news.message}
                 </Typography>
-              </Box>
-            )}
+              </Paper>
+            </Box>
+          ) : null}
+          {/* --- End Main Content Area --- */}
 
-            {news.type === "review" && (
-              <>
-                {/* Boolean Ratings */}
-                <Grid container spacing={2}>
-                  {typeof news.didSquirt !== "undefined" && (
-                    <Grid item xs={6}>
-                      <Paper
-                        sx={{
-                          p: 2,
-                          height: "100%",
-                          borderRadius: 2,
-                          border: `1px solid ${alpha("#000", 0.1)}`,
-                        }}
-                      >
-                        <Box
+          {/* --- Review/Failed Specific Details --- */}
+          {(news.type === "review" || news.type === "failed") && (
+            <Grid
+              container
+              spacing={{ xs: 4, md: 5 }}
+              component={motion.div}
+              variants={itemVariants}
+            >
+              {/* Left Column (Ratings, Bools, Deductions) - Takes more space on medium+ screens */}
+              <Grid item xs={12} md={7}>
+                <Stack spacing={4}>
+                  {/* Deductions (if applicable) */}
+                  {news.type === "failed" &&
+                    (news.goldDeduction || news.expDeduction) && (
+                      <Box>
+                        <Typography
+                          variant="h6"
+                          component="h3"
+                          fontWeight="600"
+                          gutterBottom
                           sx={{
                             display: "flex",
                             alignItems: "center",
-                            gap: 1.5,
+                            gap: 1,
+                            color: "error.main",
                           }}
                         >
-                          {news.didSquirt ? (
-                            <CheckCircle sx={{ color: SUCCESS_COLOR }} />
-                          ) : (
-                            <Cancel sx={{ color: ERROR_COLOR }} />
-                          )}
-                          <Box>
-                            <Typography fontWeight={600}>Squirting</Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {news.didSquirt
-                                ? "Erfolgreich"
-                                : "Nicht erreicht"}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Paper>
-                    </Grid>
-                  )}
-                  {typeof news.wasAnal !== "undefined" && (
-                    <Grid item xs={6}>
-                      <Paper
-                        sx={{
-                          p: 2,
-                          height: "100%",
-                          borderRadius: 2,
-                          border: `1px solid ${alpha("#000", 0.1)}`,
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1.5,
-                          }}
-                        >
-                          {news.wasAnal ? (
-                            <CheckCircle sx={{ color: SUCCESS_COLOR }} />
-                          ) : (
-                            <Cancel sx={{ color: ERROR_COLOR }} />
-                          )}
-                          <Box>
-                            <Typography fontWeight={600}>Anal</Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {news.wasAnal ? "Ja" : "Nein"}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Paper>
-                    </Grid>
-                  )}
-                </Grid>
-
-                {/* Detail Ratings */}
-                <Box>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      fontWeight: 700,
-                      display: "flex",
-                      gap: 1,
-                      mb: 2,
-                    }}
-                  >
-                    <Star sx={{ color: PRIMARY_COLOR }} />
-                    Detailbewertungen
-                  </Typography>
-                  <Grid container spacing={2}>
-                    {[
-                      "obedience",
-                      "vibeDuringSex",
-                      "vibeAfterSex",
-                      "orgasmIntensity",
-                      "painlessness",
-                      "ballsWorshipping",
-                      "cumWorshipping",
-                      "didEverythingForHisPleasure",
-                    ].map((ratingKey) => (
-                      <Grid item xs={12} sm={6} key={ratingKey}>
+                          <WarningAmberOutlined />
+                          Abzüge
+                        </Typography>
                         <Paper
+                          variant="outlined"
                           sx={{
+                            borderColor: "error.light",
+                            bgcolor: alpha(theme.palette.error.main, 0.05),
                             p: 2,
-                            borderRadius: 2,
-                            "&:hover": {
-                              boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                            },
                           }}
                         >
-                          <Box
-                            sx={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                            }}
-                          >
-                            <Box>
-                              <Typography fontWeight={600}>
-                                {ratingTitles[ratingKey]}
-                              </Typography>
-                              <Rating
-                                value={
-                                  (news[
-                                    ratingKey as keyof NewsDetail
-                                  ] as number) || 0
-                                }
-                                readOnly
-                                size="small"
-                              />
-                            </Box>
-                            <IconButton
-                              onClick={() => handleOpenModal(ratingKey)}
-                              size="small"
-                            >
-                              <Info fontSize="small" />
-                            </IconButton>
-                          </Box>
+                          <Stack direction="row" spacing={3}>
+                            {news.goldDeduction && (
+                              <Box>
+                                <Typography variant="overline" display="block">
+                                  Gold
+                                </Typography>
+                                <Typography
+                                  variant="h5"
+                                  fontWeight="bold"
+                                  color="error.dark"
+                                >
+                                  -{news.goldDeduction}
+                                </Typography>
+                              </Box>
+                            )}
+                            {news.expDeduction && (
+                              <Box>
+                                <Typography variant="overline" display="block">
+                                  EXP
+                                </Typography>
+                                <Typography
+                                  variant="h5"
+                                  fontWeight="bold"
+                                  color="error.dark"
+                                >
+                                  -{news.expDeduction}
+                                </Typography>
+                              </Box>
+                            )}
+                          </Stack>
                         </Paper>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Box>
+                      </Box>
+                    )}
 
-                {news.bestMoment && (
+                  {/* Boolean Results */}
+                  {(typeof news.didSquirt !== "undefined" ||
+                    typeof news.wasAnal !== "undefined") && (
+                    <Box>
+                      <Typography
+                        variant="overline"
+                        component="h3"
+                        fontWeight="600"
+                        gutterBottom
+                        color="text.secondary"
+                      >
+                        Spezifische Ergebnisse
+                      </Typography>
+                      <List dense disablePadding>
+                        {typeof news.didSquirt !== "undefined" && (
+                          <ListItem disableGutters>
+                            <ListItemIcon sx={{ minWidth: 32 }}>
+                              {news.didSquirt ? (
+                                <CheckCircleOutline color="success" />
+                              ) : (
+                                <HighlightOff color="error" />
+                              )}
+                            </ListItemIcon>
+                            <ListItemText primary="Squirting" />
+                          </ListItem>
+                        )}
+                        {typeof news.wasAnal !== "undefined" && (
+                          <ListItem disableGutters>
+                            <ListItemIcon sx={{ minWidth: 32 }}>
+                              {news.wasAnal ? (
+                                <CheckCircleOutline color="success" />
+                              ) : (
+                                <HighlightOff color="error" />
+                              )}
+                            </ListItemIcon>
+                            <ListItemText primary="Analverkehr" />
+                          </ListItem>
+                        )}
+                      </List>
+                    </Box>
+                  )}
+
+                  {/* Detailed Ratings */}
                   <Box>
                     <Typography
-                      variant="h6"
-                      sx={{
-                        fontWeight: 700,
-                        display: "flex",
-                        gap: 1,
-                        mb: 2,
-                      }}
+                      variant="overline"
+                      component="h3"
+                      fontWeight="600"
+                      gutterBottom
+                      color="text.secondary"
+                      sx={{ display: "flex", alignItems: "center", gap: 1 }}
                     >
-                      <Favorite sx={{ color: PRIMARY_COLOR }} />
-                      Bester Moment
+                      <StarBorder sx={{ fontSize: "1.1rem" }} />
+                      Detailbewertungen
                     </Typography>
-                    <Typography
-                      variant="body1"
-                      sx={{
-                        p: 2,
-                        bgcolor: alpha(SUCCESS_COLOR, 0.05),
-                        borderRadius: 2,
-                        color: "text.secondary",
-                        borderLeft: `3px solid ${SUCCESS_COLOR}`,
-                      }}
-                    >
-                      {news.bestMoment}
-                    </Typography>
+                    <Grid container spacing={2}>
+                      {[
+                        "obedience",
+                        "vibeDuringSex",
+                        "vibeAfterSex",
+                        "orgasmIntensity",
+                        "painlessness",
+                        "ballsWorshipping",
+                        "cumWorshipping",
+                        "didEverythingForHisPleasure",
+                      ]
+                        .filter(
+                          (key) =>
+                            typeof news[key as keyof NewsDetail] === "number"
+                        )
+                        .map((ratingKey) => (
+                          <Grid item xs={12} sm={6} key={ratingKey}>
+                            <Stack
+                              direction="row"
+                              justifyContent="space-between"
+                              alignItems="center"
+                            >
+                              <Typography variant="body2" fontWeight={500}>
+                                {ratingTitles[ratingKey]}
+                              </Typography>
+                              <Box
+                                sx={{ display: "flex", alignItems: "center" }}
+                              >
+                                <Rating
+                                  value={
+                                    (news[
+                                      ratingKey as keyof NewsDetail
+                                    ] as number) || 0
+                                  }
+                                  readOnly
+                                  size="small"
+                                  precision={0.5}
+                                  sx={{ mr: 0.5 }}
+                                />
+                                <IconButton
+                                  edge="end"
+                                  onClick={() => handleOpenModal(ratingKey)}
+                                  size="small"
+                                  sx={{ p: 0.2 }}
+                                >
+                                  <InfoOutlined sx={{ fontSize: "1rem" }} />
+                                </IconButton>
+                              </Box>
+                            </Stack>
+                          </Grid>
+                        ))}
+                    </Grid>
                   </Box>
-                )}
-              </>
-            )}
+                </Stack>
+              </Grid>
 
-            {news.additionalNotes && (
-              <Box>
-                <Divider sx={{ my: 4 }} />
-                <Typography variant="h6" fontWeight={700}>
-                  Zusätzliche Anmerkungen
-                </Typography>
-                <Typography
-                  variant="body1"
-                  color="text.secondary"
-                  sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6, mt: 1 }}
-                >
-                  {news.additionalNotes}
-                </Typography>
-              </Box>
-            )}
+              {/* Right Column (Textual Notes) - Takes less space on medium+ */}
+              <Grid item xs={12} md={5}>
+                <Stack spacing={4}>
+                  {/* Best Moment */}
+                  {news.bestMoment && (
+                    <Box>
+                      <Typography
+                        variant="overline"
+                        component="h3"
+                        fontWeight="600"
+                        gutterBottom
+                        color="text.secondary"
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <CelebrationOutlined
+                          sx={{ fontSize: "1.1rem", color: "success.main" }}
+                        />
+                        Positivster Moment
+                      </Typography>
+                      <Box
+                        sx={{
+                          borderLeft: `3px solid ${theme.palette.success.main}`,
+                          pl: 2,
+                          bgcolor: alpha(theme.palette.success.main, 0.05),
+                          py: 1,
+                        }}
+                      >
+                        <Typography
+                          variant="body1"
+                          sx={{ fontStyle: "italic", color: "text.secondary" }}
+                        >
+                          &ldquo;{news.bestMoment}&ldquo;
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
 
-            {/* Action Buttons */}
-            <Box
-              sx={{
-                display: "flex",
-                gap: 2,
-                flexDirection: { xs: "column", sm: "row" },
-                pt: 4,
-              }}
+                  {/* Additional Notes */}
+                  {news.additionalNotes && (
+                    <Box>
+                      <Typography
+                        variant="overline"
+                        component="h3"
+                        fontWeight="600"
+                        gutterBottom
+                        color="text.secondary"
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <EditNoteOutlined sx={{ fontSize: "1.1rem" }} />
+                        Zusätzliche Anmerkungen
+                      </Typography>
+                      <Typography
+                        variant="body1"
+                        color="text.secondary"
+                        sx={{ whiteSpace: "pre-wrap", lineHeight: 1.7 }}
+                      >
+                        {news.additionalNotes}
+                      </Typography>
+                    </Box>
+                  )}
+                </Stack>
+              </Grid>
+            </Grid>
+          )}
+          {/* --- End Review/Failed Specific Details --- */}
+
+          {/* --- Action Buttons --- */}
+          <Box component={motion.div} variants={itemVariants} sx={{ pt: 3 }}>
+            <Divider sx={{ mb: 3 }} />
+            <Stack
+              direction={{ xs: "column-reverse", sm: "row" }} // Reverse column on mobile so "Mark Seen" is lower
+              spacing={2}
+              justifyContent="flex-end"
             >
               <Button
-                variant="contained"
-                fullWidth
-                onClick={handleMarkAsSeen}
-                disabled={news.seen}
-                startIcon={<Visibility />}
-                sx={{
-                  py: 1.5,
-                  fontWeight: 700,
-                  background: `linear-gradient(45deg, ${PRIMARY_COLOR}, ${alpha(
-                    PRIMARY_COLOR,
-                    0.7
-                  )})`,
-                  "&:disabled": { background: "grey.200" },
-                }}
+                variant="text" // Less prominent back button
+                size="large"
+                onClick={() => router.push("/")}
+                startIcon={<ArrowBack />}
+                sx={{ color: "text.secondary" }}
               >
-                {news.seen ? "Bereits gesehen" : "Als gesehen markieren"}
+                Übersicht
               </Button>
               <Button
-                variant="outlined"
-                fullWidth
-                onClick={() => router.push("/")}
-                sx={{
-                  py: 1.5,
-                  fontWeight: 700,
-                  borderColor: "divider",
-                }}
+                variant="contained"
+                size="large" // Make primary action larger
+                onClick={handleMarkAsSeen}
+                disabled={news.seen}
+                startIcon={<VisibilityOutlined />}
+                color="primary"
+                sx={{ fontWeight: "bold" }}
               >
-                Zurück zur Übersicht
+                {news.seen ? "Gesehen" : "Als Gesehen Markieren"}
               </Button>
-            </Box>
+            </Stack>
           </Box>
-        </StyledPaper>
-
-        {/* Dialog für Erklärungen */}
-        <Dialog open={openModal !== null} onClose={handleCloseModal}>
-          <DialogTitle>{openModal ? ratingTitles[openModal] : ""}</DialogTitle>
-          <DialogContent>
-            <Typography>
-              {openModal ? ratingExplanations[openModal] : ""}
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseModal} color="primary">
-              Schließen
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Snackbar */}
-        <Snackbar
-          open={snackbarOpen}
-          autoHideDuration={6000}
-          onClose={() => setSnackbarOpen(false)}
-          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-        >
-          <Alert
-            onClose={() => setSnackbarOpen(false)}
-            severity={snackbarSeverity}
-            sx={{ width: "100%" }}
-          >
-            {snackbarMessage}
-          </Alert>
-        </Snackbar>
+          {/* --- End Action Buttons --- */}
+        </Stack>{" "}
+        {/* End Main Animated Stack */}
       </Container>
+
+      {/* --- Dialog and Snackbar (Keep as is, maybe update Dialog style slightly) --- */}
+      <Dialog
+        open={openModal !== null}
+        onClose={handleCloseModal}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <InfoOutlined sx={{ color: "primary.main" }} />
+            <Typography variant="h6">
+              {openModal ? ratingTitles[openModal] : ""}
+            </Typography>
+          </Stack>
+        </DialogTitle>
+        <DialogContent dividers>
+          {" "}
+          {/* Add dividers for better separation */}
+          <Typography>
+            {openModal ? ratingExplanations[openModal] : ""}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={handleCloseModal} variant="outlined">
+            {" "}
+            {/* Outlined close button */}
+            Schließen
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={5000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setSnackbarOpen(false)}
+          severity={snackbarSeverity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
+      {/* --- End Dialog and Snackbar --- */}
     </>
   );
 };
