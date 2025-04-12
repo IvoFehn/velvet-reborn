@@ -148,20 +148,21 @@ export default async function handler(
     let baseDateForCalc = null;
     let baseSource = "standard";
 
-    // Wenn sowohl Generator als auch MoodBaseDate vorhanden sind, das ältere Datum verwenden
+    // Wenn sowohl Generator als auch MoodBaseDate vorhanden sind, das NEUERE Datum verwenden
+    // HIER IST DIE ÄNDERUNG - Wir verwenden das NEUERE Datum statt des älteren
     if (generatorDate && moodBaseDateValue) {
       const genDate = dayjs(generatorDate);
       const moodDate = dayjs(moodBaseDateValue);
 
-      // Das ältere Datum verwenden (je älter, desto höher das Level)
-      if (genDate.isBefore(moodDate)) {
+      // Das NEUERE Datum verwenden
+      if (genDate.isAfter(moodDate)) {
         baseDateForCalc = generatorDate;
         baseSource = "generator";
-        console.log("Verwende Generator-Datum für Berechnung (ist älter)");
+        console.log("Verwende Generator-Datum für Berechnung (ist neuer)");
       } else {
         baseDateForCalc = moodBaseDateValue;
         baseSource = "moodBaseDate";
-        console.log("Verwende MoodBaseDate für Berechnung (ist älter)");
+        console.log("Verwende MoodBaseDate für Berechnung (ist neuer)");
       }
     }
     // Nur Generator vorhanden
