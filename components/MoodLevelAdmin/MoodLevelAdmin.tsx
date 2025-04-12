@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
 import dayjs from "dayjs";
 import { LeanLevelThresholds } from "@/models/LevelThresholds";
+import { sendTelegramMessage } from "@/util/sendTelegramMessage";
+
+// Import the sendTelegramMessage function
+// Note: Make sure this function is available in your environment
 
 // Typdefinition für den Generator (Auftrag)
 interface Generator {
@@ -73,6 +77,22 @@ const MoodLevelAdmin: React.FC = () => {
     }
   }, [moodStatus]);
 
+  // Funktion zum Senden von Telegram-Benachrichtigungen bei hohem Level
+  const sendTelegramAlertIfNeeded = (level: number) => {
+    // Nur bei Level 3 (entspricht 4) oder 4 (entspricht 5) senden
+    if (level === 3) {
+      sendTelegramMessage(
+        "user",
+        "🚨 Der Algorithmus hat das Lustlevel 4 errechnet. Das ist zu hoch. Du solltest ihn ab jetzt sehr häufig mit einen Reizen spielen, kreativ werden und die Tipps nutzen, um das ganze schnellstmöglich zu senken. 🚨"
+      );
+    } else if (level === 4) {
+      sendTelegramMessage(
+        "user",
+        "🚨🚨🚨 Der Algorithmus hat das Lustlevel 5 errechnet. Das ist VIEL zu hoch. Setze alle Reize ein, werde Kreativ und nutze die Tipps, um das Level schnellstmöglich zu senken. 🚨🚨🚨"
+      );
+    }
+  };
+
   // Aktuellen Status laden
   const fetchMoodStatus = async () => {
     setLoading(true);
@@ -103,6 +123,9 @@ const MoodLevelAdmin: React.FC = () => {
     setError(null);
 
     try {
+      // Telegram-Benachrichtigung senden, wenn Level hoch ist
+      sendTelegramAlertIfNeeded(manualLevel);
+
       // Basisdatum für das gewählte Level anpassen
       const response = await fetch("/api/mood-override", {
         method: "POST",
@@ -288,6 +311,12 @@ const MoodLevelAdmin: React.FC = () => {
               automatisch steigt. Wenn ein neuer Auftrag abgeschlossen wird und
               sein Datum neuer ist, wird dieser für die Berechnung verwendet.
             </p>
+            {(manualLevel === 3 || manualLevel === 4) && (
+              <p className="text-xs text-red-600 mt-1 font-medium">
+                ⚠️ Bei diesem hohen Level wird eine Benachrichtigung an die
+                Nutzerin gesendet!
+              </p>
+            )}
           </div>
         </div>
 

@@ -42,7 +42,6 @@ const MoodTachometer = () => {
   const [fetchError, setFetchError] = useState(false);
   const [showExtraTips, setShowExtraTips] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
 
   // Funktion zum Abrufen des Mood-Status - kann bei Bedarf erneut aufgerufen werden
   const fetchMoodStatus = () => {
@@ -218,74 +217,8 @@ const MoodTachometer = () => {
   const showOverrideIndicator =
     moodData.moodOverride && moodData.moodOverride.active;
 
-  const toggleDebug = () => {
-    setShowDebug(!showDebug);
-  };
-
-  // Berechne Tage seit dem letzten Generator
-  const daysSinceGenerator = moodData.generator
-    ? dayjs().diff(dayjs(moodData.generator.createdAt), "day", true)
-    : 0;
-
   return (
     <div className="relative w-full max-w-[380px] px-4 pt-1 font-['Segoe_UI'] text-gray-800">
-      {/* Debug-Modus Button */}
-      <div
-        className="absolute left-3 top-3 flex h-5 w-5 items-center justify-center rounded-full border border-white bg-gray-400 text-xs font-bold text-white shadow-xs hover:bg-gray-500 hover:scale-105 cursor-pointer"
-        onClick={toggleDebug}
-      >
-        D
-      </div>
-
-      {/* Detaillierte Debug-Informationen */}
-      {showDebug && (
-        <div className="mb-4 p-3 text-xs bg-gray-100 rounded-md border border-gray-300 text-gray-700 overflow-auto">
-          <div>
-            <strong>Effektives Level:</strong> {moodData.effectiveLevel}
-          </div>
-          <div>
-            <strong>Berechnetes Level:</strong> {moodData.calculatedLevel}
-          </div>
-          <div>
-            <strong>Generator erstellt:</strong>{" "}
-            {moodData.generator
-              ? dayjs(moodData.generator.createdAt).format("DD.MM.YYYY HH:mm")
-              : "Keiner"}
-          </div>
-          <div>
-            <strong>Tage seit Generator:</strong>{" "}
-            {daysSinceGenerator.toFixed(2)}
-          </div>
-          <div>
-            <strong>Generator Status:</strong> {moodData.generator?.status}
-          </div>
-          <div>
-            <strong>Generator Content:</strong> {moodData.generator?.content}
-          </div>
-          <div>
-            <strong>Override aktiv:</strong>{" "}
-            {moodData.moodOverride?.active ? "Ja" : "Nein"}
-          </div>
-
-          {moodData.thresholds && (
-            <div className="mt-2">
-              <strong>Schwellenwerte:</strong>
-              <div>Level 1: &gt; {moodData.thresholds.level1} Tage</div>
-              <div>Level 2: &gt; {moodData.thresholds.level2} Tage</div>
-              <div>Level 3: &gt; {moodData.thresholds.level3} Tage</div>
-              <div>Level 4: &gt; {moodData.thresholds.level4} Tage</div>
-            </div>
-          )}
-
-          <button
-            onClick={fetchMoodStatus}
-            className="mt-2 px-2 py-1 bg-blue-100 hover:bg-blue-200 rounded text-blue-800 text-xs"
-          >
-            Aktualisieren
-          </button>
-        </div>
-      )}
-
       {/* Info Icon */}
       <div
         className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full border border-white bg-gray-600 text-xs font-bold text-white shadow-xs hover:bg-gray-700 hover:scale-105 cursor-pointer"

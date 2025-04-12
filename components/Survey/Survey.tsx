@@ -34,7 +34,7 @@ const SurveyIntroduction: React.FC<{
   onStart: () => void;
 }> = ({ title, description, image, onStart }) => {
   return (
-    <div className="bg-gray-100 min-h-screen py-8 px-4">
+    <div className="bg-gray-100  py-8 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-xl shadow-lg overflow-hidden p-6 md:p-8 text-center">
           {image && (
@@ -54,11 +54,22 @@ const SurveyIntroduction: React.FC<{
           <div className="text-gray-600 mb-8 max-w-xl mx-auto">
             <p className="mb-4">
               {description ||
-                "In dieser Umfrage möchten wir deine Präferenzen zu verschiedenen Themen erfassen. Deine Antworten helfen uns, unsere Angebote besser auf deine Bedürfnisse abzustimmen."}
+                `
+Diese kurze Umfrage soll dabei helfen, ein besseres Verständnis dafür zu bekommen, 
+wie engagiert du die App nutzen möchtest – rein hypothetisch, falls der Mann spontan 
+die Idee hätte, dies umzusetzen. Sie betrifft auch deine persönlichen Grenzen, wobei 
+er sich in bestimmten Fällen, falls er es für notwendig hält, dazu berechtigt sieht, 
+diese zu überschreiten, was du in den Regeln zugestimmt hast. Bitte nimm dir einen 
+Moment Zeit und beantworte die folgenden Fragen ehrlich. Alle drei Monate wird die 
+Umfrage erneut gestellt, um mögliche Veränderungen deiner Präferenzen zu erkennen. 
+Wichtig hierbei ist, dass du nur die Dinge verneinst, die du dir unter keinen Umständen 
+vorstellen kannst. 
+`}
+              ;
             </p>
             <p>
               Die Umfrage besteht aus {surveyQuestions.length} Fragen und dauert
-              etwa {Math.ceil(surveyQuestions.length / 2)} Minuten.
+              etwa {Math.ceil(surveyQuestions.length / 4)} Minuten.
             </p>
           </div>
 
