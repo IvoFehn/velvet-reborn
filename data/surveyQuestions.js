@@ -411,10 +411,18 @@ const surveyQuestions = [
     id: "q25",
     text: "Female-Gloryhole / Sexbox",
     description:
-      "Die Frau befindet sich in einer Box oder einem Käfig bei dem sie nicht herausgucken und fixiert ist. Sie wird vom Mann der sich außerhalb befindet penetriert. Häufig aber nicht immer beinhaltet diese Praktik auch fremde Männer.",
+      "Die Frau befindet sich in einer Box oder einem Käfig bei dem sie nicht herausgucken und fixiert ist. Sie wird vom Mann der sich außerhalb befindet penetriert. Gelegentlich aber nicht immer beinhaltet diese Praktik auch fremde Männer.",
     category: "Bondage",
     image:
       "https://preview.redd.it/playbox-ii-is-here-v0-po07qwdk7kgc1.jpeg?width=640&crop=smart&auto=webp&s=f051a0352a50a5e51774b6e400b83a234f15b52d",
+  },
+  {
+    id: "q99",
+    text: "Female-Gloryhole ",
+    description:
+      "Die Frau befindet sich in einer Box oder einem Käfig bei dem sie nicht herausgucken und fixiert ist. Sie wird vom Mann der sich außerhalb befindet penetriert. Gelegentlich aber nicht immer beinhaltet diese Praktik auch fremde Männer.",
+    category: "Bondage",
+    image: "https://i0.wp.com/i.redd.it/at2nfhb6r0o91.jpg?ssl=1",
   },
   {
     id: "q25",
