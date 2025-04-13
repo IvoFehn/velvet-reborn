@@ -189,7 +189,7 @@ const surveyQuestions = [
   {
     id: "q1",
     text: "Gangbang",
-    desciption:
+    description:
       "Ein Gangbang ist eine sexuelle Handlung, bei der eine Person mit mehreren anderen Personen hintereinander und/oder gleichzeitig Geschlechtsverkehr hat.",
     category: "Herrenüberschuss",
     image:

@@ -295,12 +295,9 @@ export default function HomePage() {
                       href={`/quicktask/${task._id}`}
                       className="group block transition-all"
                     >
-                      <div className="flex items-center justify-between rounded-lg p-3 hover:bg-gray-50 border-l-4 border-yellow-400">
+                      <div className="flex items-center justify-between rounded-lg p-3 hover:bg-gray-50">
                         <div className="min-w-0 pr-2">
                           <p className="truncate text-sm font-medium text-gray-800 md:text-base">
-                            <span className="text-yellow-600 font-semibold mr-1">
-                              Quick Task:
-                            </span>{" "}
                             {task.title}
                           </p>
                           <div className="mt-1">
@@ -312,7 +309,7 @@ export default function HomePage() {
                             </p>
                           </div>
                         </div>
-                        <span className="inline-flex h-8 items-center rounded-full bg-yellow-100 px-3 text-sm font-medium text-yellow-800">
+                        <span className="inline-flex h-8 items-center rounded-full bg-gray-100 px-3 text-sm font-medium text-gray-600">
                           {task.status === "NEW" ? "Neu" : "Angenommen"}
                         </span>
                       </div>

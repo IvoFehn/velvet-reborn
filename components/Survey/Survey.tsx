@@ -5,15 +5,26 @@ import React, { useState, useEffect } from "react";
 interface Question {
   id: string;
   text: string;
-  description?: string; // Beschreibung der Frage
+  description?: string;
   category: string;
-  image?: string; // Bildpfad oder URL für die Frage
+  image?: string;
 }
 
 interface SurveyAnswerRecord {
   question: Question;
   response: "yes" | "no" | "maybe" | "";
   reason: string;
+}
+
+interface APIAnswer {
+  questionId: string;
+  response: "yes" | "no" | "maybe";
+  reason: string;
+}
+
+interface SurveyStatus {
+  canRetake: boolean;
+  average: number | null;
 }
 
 interface SurveyProps {
@@ -32,9 +43,10 @@ const SurveyIntroduction: React.FC<{
   description?: string;
   image?: string;
   onStart: () => void;
-}> = ({ title, description, image, onStart }) => {
+  averageScore?: number | null;
+}> = ({ title, description, image, onStart, averageScore }) => {
   return (
-    <div className="bg-gray-100  py-8 px-4">
+    <div className="bg-gray-100 py-8 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-xl shadow-lg overflow-hidden p-6 md:p-8 text-center">
           {image && (
@@ -64,13 +76,34 @@ Moment Zeit und beantworte die folgenden Fragen ehrlich. Alle drei Monate wird d
 Umfrage erneut gestellt, um mögliche Veränderungen deiner Präferenzen zu erkennen. 
 Wichtig hierbei ist, dass du nur die Dinge verneinst, die du dir unter keinen Umständen 
 vorstellen kannst. 
+
+Antworte bitte komplett ehrlich. 
 `}
-              ;
             </p>
             <p>
               Die Umfrage besteht aus {surveyQuestions.length} Fragen und dauert
               etwa {Math.ceil(surveyQuestions.length / 4)} Minuten.
             </p>
+
+            {averageScore !== null && (
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="font-medium">
+                  Dein Durchschnittswert aus der letzten Umfrage:
+                </p>
+                <div className="mt-2 flex items-center justify-center">
+                  <div className="relative w-full max-w-xs h-6 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="absolute top-0 left-0 h-full bg-blue-600 transition-all duration-1000 ease-out"
+                      style={{ width: `${averageScore || 0}%` }}
+                    ></div>
+                    <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white mix-blend-difference">
+                      {averageScore !== null ? averageScore?.toFixed(1) : "0.0"}
+                      %
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <button
@@ -79,6 +112,74 @@ vorstellen kannst.
           >
             Mit der Umfrage beginnen
           </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// SurveyLockedMessage Komponente
+const SurveyLockedMessage: React.FC<{
+  averageScore: number | null;
+}> = ({ averageScore }) => {
+  // Berechne das Datum, an dem die Umfrage wieder verfügbar sein wird
+  const getNextAvailableDate = () => {
+    const now = new Date();
+    now.setMonth(now.getMonth() + 3);
+    return now.toLocaleDateString("de-DE");
+  };
+
+  return (
+    <div className="bg-gray-100 py-8 px-4">
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden p-6 md:p-8 text-center">
+          <div className="mb-6 text-amber-600">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-16 w-16 mx-auto"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 15v2m0 0v2m0-2h2m-2 0H9m3-4V7a3 3 0 00-3-3H7a3 3 0 00-3 3v4h14V7a3 3 0 00-3-3h-1a3 3 0 00-3 3z"
+              />
+            </svg>
+          </div>
+
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            Umfrage noch nicht verfügbar
+          </h1>
+
+          <div className="text-gray-600 mb-8 max-w-xl mx-auto">
+            <p className="mb-4">
+              Du hast die Umfrage bereits in den letzten drei Monaten
+              ausgefüllt. Die nächste Umfrage wird ab dem{" "}
+              <strong>{getNextAvailableDate()}</strong> verfügbar sein.
+            </p>
+
+            {averageScore !== null && (
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="font-medium">
+                  Dein Durchschnittswert aus der letzten Umfrage:
+                </p>
+                <div className="mt-2 flex items-center justify-center">
+                  <div className="relative w-full max-w-xs h-6 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="absolute top-0 left-0 h-full bg-blue-600 transition-all duration-1000 ease-out"
+                      style={{ width: `${averageScore}%` }}
+                    ></div>
+                    <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white mix-blend-difference">
+                      {averageScore.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -96,6 +197,33 @@ const PreferenceSurvey: React.FC<SurveyProps> = ({
   const [surveyFinished, setSurveyFinished] = useState<boolean>(false);
   const [showError, setShowError] = useState<boolean>(false);
   const [showIntroduction, setShowIntroduction] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [canTakeSurvey, setCanTakeSurvey] = useState<boolean>(false);
+  const [averageScore, setAverageScore] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Beim ersten Laden prüfen, ob der Benutzer die Umfrage ausfüllen darf
+  useEffect(() => {
+    const checkSurveyStatus = async () => {
+      try {
+        const response = await fetch("/api/survey/status");
+        if (!response.ok) {
+          throw new Error("Fehler beim Abrufen des Survey-Status");
+        }
+
+        const data: SurveyStatus = await response.json();
+        setCanTakeSurvey(data.canRetake);
+        setAverageScore(data.average);
+      } catch (error) {
+        console.error("Fehler beim Überprüfen des Survey-Status:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkSurveyStatus();
+  }, []);
 
   useEffect(() => {
     const initialRecords: SurveyAnswerRecord[] = surveyQuestions.map((q) => ({
@@ -115,7 +243,6 @@ const PreferenceSurvey: React.FC<SurveyProps> = ({
     updatedRecords[currentQuestionIndex] = {
       ...updatedRecords[currentQuestionIndex],
       response,
-      // Wenn eine neue Antwort gewählt wird und diese nicht "maybe" ist, setze den Grund zurück
       reason:
         response !== "maybe" ? "" : updatedRecords[currentQuestionIndex].reason,
     };
@@ -136,13 +263,11 @@ const PreferenceSurvey: React.FC<SurveyProps> = ({
   const handleNextQuestion = () => {
     const currentRecord = surveyAnswers[currentQuestionIndex];
 
-    // Überprüfen, ob eine Antwort gewählt wurde
     if (!currentRecord.response) {
       setShowError(true);
       return;
     }
 
-    // Überprüfen, ob bei "maybe" eine Begründung gegeben wurde
     if (currentRecord.response === "maybe" && !currentRecord.reason.trim()) {
       setShowError(true);
       return;
@@ -151,7 +276,6 @@ const PreferenceSurvey: React.FC<SurveyProps> = ({
     if (currentQuestionIndex < surveyAnswers.length - 1) {
       setCurrentQuestionIndex((prev) => prev + 1);
     } else {
-      // Letzte Frage: Zusammenfassung anzeigen
       setSurveyFinished(true);
     }
   };
@@ -163,16 +287,61 @@ const PreferenceSurvey: React.FC<SurveyProps> = ({
     }
   };
 
-  const handleSubmitSurvey = () => {
-    const responses: Record<string, any> = {};
-    surveyAnswers.forEach((record) => {
-      responses[record.question.id] = {
-        response: record.response,
-        reason: record.reason,
-      };
-    });
-    if (onSubmit) onSubmit(responses);
-    alert("Umfrage erfolgreich abgeschickt!");
+  const handleSubmitSurvey = async () => {
+    // Formatiere die Antworten für die API
+    const apiAnswers: APIAnswer[] = surveyAnswers.map((record) => ({
+      questionId: record.question.id,
+      response: record.response as "yes" | "no" | "maybe", // Type casting, da wir bereits validiert haben
+      reason: record.reason,
+    }));
+
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const response = await fetch("/api/survey", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ answers: apiAnswers }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Fehler beim Speichern der Umfrage");
+      }
+
+      const data = await response.json();
+
+      // Optional: Callback für externe Komponenten
+      if (onSubmit) {
+        const formattedResponses: Record<string, any> = {};
+        surveyAnswers.forEach((record) => {
+          formattedResponses[record.question.id] = {
+            response: record.response,
+            reason: record.reason,
+          };
+        });
+        onSubmit(formattedResponses);
+      }
+
+      // Zeige Erfolgsmeldung
+      alert(
+        "Umfrage erfolgreich abgeschickt! Dein Durchschnittswert: " +
+          data.averageScore.toFixed(1) +
+          "%"
+      );
+
+      // Aktualisiere den Status, damit der Benutzer nicht sofort eine neue Umfrage starten kann
+      setCanTakeSurvey(false);
+      setAverageScore(data.averageScore);
+    } catch (error) {
+      console.error("Fehler beim Absenden der Umfrage:", error);
+      setSubmitError((error as Error).message || "Ein Fehler ist aufgetreten.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const getResponseColor = (response: string) => {
@@ -187,6 +356,20 @@ const PreferenceSurvey: React.FC<SurveyProps> = ({
         return "bg-gray-200 hover:bg-gray-300 ring-gray-400";
     }
   };
+
+  // Zeige Ladeindikator während der Status überprüft wird
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Zeige eine Nachricht, wenn der Benutzer die Umfrage noch nicht ausfüllen darf
+  if (!canTakeSurvey) {
+    return <SurveyLockedMessage averageScore={averageScore} />;
+  }
 
   if (surveyAnswers.length === 0) {
     return (
@@ -204,6 +387,7 @@ const PreferenceSurvey: React.FC<SurveyProps> = ({
         description={introDescription}
         image={introImage}
         onStart={handleStartSurvey}
+        averageScore={averageScore}
       />
     );
   }
@@ -411,12 +595,50 @@ const PreferenceSurvey: React.FC<SurveyProps> = ({
             ))}
           </div>
 
+          {submitError && (
+            <div className="mb-6 p-4 bg-red-50 text-red-700 border border-red-200 rounded-lg">
+              <p className="font-medium">Fehler:</p>
+              <p>{submitError}</p>
+            </div>
+          )}
+
           <div className="flex justify-center">
             <button
               onClick={handleSubmitSurvey}
-              className="py-3 px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 shadow-md"
+              disabled={submitting}
+              className={`py-3 px-8 ${
+                submitting
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+              } text-white rounded-lg transition-colors duration-200 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 shadow-md`}
             >
-              Umfrage abschicken
+              {submitting ? (
+                <span className="flex items-center">
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Wird gesendet...
+                </span>
+              ) : (
+                "Umfrage abschicken"
+              )}
             </button>
           </div>
         </div>

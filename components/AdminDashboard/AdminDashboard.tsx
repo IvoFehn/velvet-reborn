@@ -11,6 +11,7 @@ import QuickTaskForm from "../QuickTaskForm/QuickTaskForm";
 import QuickTaskReviewForm from "../QuickTaskReviewForm/QuickTaskReviewForm";
 import CreateWarningComponent from "../CreateWarningComponent/CreateWarningComponent";
 import WarningsList from "../WarningsList/WarningsList";
+import SurveyDashboard from "../Survey/SurveyDashboardComponent";
 
 // Admin-Module und ihre Links
 const adminModules = [
@@ -93,6 +94,13 @@ const adminModules = [
     icon: "🩺",
     internal: true,
   },
+  {
+    title: "Umfragen",
+    link: "#surveys",
+    description: "Umfrageergebnisse ansehen und analysieren",
+    icon: "📊",
+    internal: true,
+  },
 ];
 
 const AdminDashboard: React.FC = () => {
@@ -105,6 +113,7 @@ const AdminDashboard: React.FC = () => {
   const [showQuickTaskForm, setShowQuickTaskForm] = useState(false);
   const [showQuickTaskReview, setShowQuickTaskReview] = useState(false);
   const [showWarnings, setShowWarnings] = useState(false);
+  const [showSurveys, setShowSurveys] = useState(false); // New state for surveys
   const [warningsKey, setWarningsKey] = useState(0);
 
   // Überprüfen der Authentifizierung
@@ -132,6 +141,7 @@ const AdminDashboard: React.FC = () => {
     setShowQuickTaskForm(false);
     setShowQuickTaskReview(false);
     setShowWarnings(false);
+    setShowSurveys(false); // Reset surveys state
 
     // Set the active module based on the link
     if (moduleId === "#health-reports") {
@@ -173,6 +183,12 @@ const AdminDashboard: React.FC = () => {
     } else if (moduleId === "#warnings") {
       setShowWarnings(true);
       const element = document.getElementById("warnings-section");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    } else if (moduleId === "#surveys") {
+      setShowSurveys(true);
+      const element = document.getElementById("surveys-section");
       if (element) {
         element.scrollIntoView({ behavior: "smooth" });
       }
@@ -333,6 +349,19 @@ const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Umfragen Sektion */}
+          {showSurveys && (
+            <div
+              id="surveys-section"
+              className="mt-10 pt-6 border-t border-gray-200"
+            >
+              <h2 className="text-lg font-medium text-gray-900 mb-4">
+                Umfrageergebnisse
+              </h2>
+              <SurveyDashboard />
             </div>
           )}
 
