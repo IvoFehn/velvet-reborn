@@ -4,7 +4,14 @@ export interface Rule {
   content: string;
 }
 
+// @/data/rules.ts
+export interface Rule {
+  title: string;
+  content: string;
+}
+
 const rules: Rule[] = [
+  // Originale Regeln aus dem Input:
   {
     title: "Streitfall",
     content:
@@ -99,6 +106,73 @@ const rules: Rule[] = [
     title: "Vorgefeuchtet",
     content:
       "Wenn die Frau sich vorfeuchten soll, dann ist präferriert naturfeucht zu wählen, wenn das wirklich nicht möglich ist und nicht explizit erwünscht ist, dann darf sie Gleitgel benutzen. Sie hat sich selbst so feucht zu halten, dass der Mann direkt reinstecken kann ohne, dass sie dabei Schmerzen verspürt oder das Gesicht verzieht. Alles weniger als das ist nicht vorgefeuchtet.",
+  },
+
+  // Erweiterungen, welche in den sections thematisch vorkommen, in rules aber fehlen:
+  {
+    title: "Perspektive & Haltung",
+    content:
+      "Die Regeln gelten immer, unabhängig davon, ob ein Auftrag ausgeführt wird oder nicht. Die Frau handelt stets aus der Perspektive des Mannes und trifft Entscheidungen so, dass sie dessen Wünsche bestmöglich entspricht.",
+  },
+  {
+    title: "Körperliche Interaktion und Bereitstellung",
+    content:
+      "Wenn der Mann die Frau anfassen möchte, bleibt diese stehen, bis er fertig ist, und stellt sich in der Position auf, von der sie glaubt, dass sie dem Mann am besten gefällt – beispielsweise durch Beine spreizen und nach vorn beugen. Sie muss alle nutzbaren Löcher zur Verfügung stellen und, falls ein Loch aufgrund gesundheitlicher Gründe nicht nutzbar ist, eine attraktive Alternative anbieten.",
+  },
+  {
+    title: "Regelvertrautheit und Änderungsmanagement",
+    content:
+      "Die Frau ist verpflichtet, sich selbstständig über den aktuellen Regelstand zu informieren und etwaige Änderungen über das Ticket-System zu klären. Regeländerungen des Mannes gelten als stillschweigend hingenommen.",
+  },
+  {
+    title: "App-Nutzung und Informationspflicht",
+    content:
+      "Die Frau muss die App regelmäßig prüfen – idealerweise täglich, mindestens jedoch wöchentlich – um stets über Aufträge, Änderungen, Events und die aktuelle Gesundheitsanzeige informiert zu sein.",
+  },
+  {
+    title: "Live-Aufträge und Honorierung",
+    content:
+      "Der Mann kann jederzeit live, auch mündlich, einen Auftrag vergeben – die Frau hat im Zweifelsfall nachzufragen, ob es sich um einen Auftrag handelt. Für Live-Aufträge kann sie pauschal 20 Gold fordern, wobei der Anspruch innerhalb von 24 Stunden geltend gemacht werden muss.",
+  },
+  {
+    title: "Daily Tasks und Konsequenzen",
+    content:
+      "Die Frau ist verpflichtet, tägliche Aufgaben (Daily Tasks) gewissenhaft zu erledigen. Werden Aufgaben nicht oder unzureichend umgesetzt, können sie als fehlgeschlagen markiert und mit Straf- oder Haushaltsaufgaben sanktioniert werden.",
+  },
+  {
+    title: "Feedback und Bewertungsverfahren",
+    content:
+      "Bewertungen zu Aufträgen sollen innerhalb von 24 Stunden erfolgen. Versäumt der Mann dies, kann die Frau einen Antrag auf Erinnerung stellen. Beschwerden dürfen erst frühestens eine Stunde nach Abschluss eines Auftrags erhoben werden und nicht den laufenden Sex stören.",
+  },
+  {
+    title: "Gesundheitsanzeige und Krankheitsmeldung",
+    content:
+      "Die Gesundheitsangabe der Frau muss stets wahrheitsgetreu erfolgen und bei jeder Änderung (z. B. Krankheit) umgehend aktualisiert werden. Falschaussagen werden streng sanktioniert – auch im Streitfall hat die Frau dennoch den Anweisungen des Mannes Folge zu leisten, wobei negative Emotionen vom Ablauf des Sex getrennt zu betrachten sind.",
+  },
+  {
+    title: "Masturbationsverbot und Lustkontrolle",
+    content:
+      "Die Frau ist verpflichtet, den Mann stets über ihr sexuelles Verlangen zu informieren. Eigenständige Masturbation ist verboten – bei gesteigertem Verlangen ist ein formaler Antrag zu stellen. Zudem muss sie darauf achten, dass ihr Lustlevel nicht übermäßig ansteigt; Missachtung kann zu Sanktionen führen.",
+  },
+  {
+    title: "Gesamtheit des Sex und Verantwortlichkeit für Zubehör",
+    content:
+      "Die Frau trägt die organisatorische Verantwortung rund um den Sex – dazu gehört das Bereitstellen und regelmäßige Nachfüllen von Kondomen, Gleitgel sowie die Reinigung und Pflege des Einsatzortes und der Spielutensilien. Der Mann ist ausschließlich für den Sex selbst verantwortlich.",
+  },
+  {
+    title: "Sprechverbot und Handzeichenregelung",
+    content:
+      "Während eines Auftrags darf die Frau nicht von sich aus sprechen. Möchte sie etwas mitteilen, erfolgt zunächst ein Handzeichen – eine verbale Äußerung ist erst nach ausdrücklicher Erlaubnis des Mannes gestattet.",
+  },
+  {
+    title: "Bestellanträge und Einlösung von Items",
+    content:
+      "Anträge für Bestellungen (z. B. für Dessous, Kondome oder Gleitgel) sind über das Antragsportal einzureichen und müssen stets einen Link zum gewünschten Produkt enthalten. Gekaufte Items werden vom Mann einzulösen – nach Einlösung gelten diese als verbraucht, ohne Anspruch auf Rückerstattung.",
+  },
+  {
+    title: "Erweiterte Warteregel",
+    content:
+      "Nach vollständiger Vorbereitung ist die Frau verpflichtet, auf den Mann zu warten und ihre Position nicht zu verlassen. Erst nach Abschluss des Auftrags – sofern nichts anderes vereinbart wurde – darf sie ihre Position aufgeben.",
   },
 ];
 
