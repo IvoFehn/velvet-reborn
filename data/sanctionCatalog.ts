@@ -8,7 +8,7 @@ const sanctionCatalog: Record<1 | 2 | 3 | 4 | 5, ISanctionTemplate[]> = {
     {
       title: "Kurze Hausarbeit",
       description: "Eine kurze Hausarbeit als leichte Sanktion",
-      task: "Staub wischen im Wohnzimmer",
+      task: "Hausarbeit deiner Wahl",
       amount: 10,
       unit: "Minuten",
       category: "Hausarbeit",
@@ -16,7 +16,7 @@ const sanctionCatalog: Record<1 | 2 | 3 | 4 | 5, ISanctionTemplate[]> = {
     },
     {
       title: "Analtraining - leicht",
-      description: "Analplug tragen für 4 Stunden",
+      description: "Analplug am Stück tragen für 4 Stunden",
       task: "Analplug für 4 Stunden tragen",
       amount: 4,
       unit: "Stunden",
@@ -34,7 +34,7 @@ const sanctionCatalog: Record<1 | 2 | 3 | 4 | 5, ISanctionTemplate[]> = {
     },
     {
       title: "Sanftes Kraulen",
-      description: "Zärtliches Kraulen für 5 Minuten",
+      description: "Kraulen für 5 Minuten",
       task: "5 Minuten lang sanftes Kraulen",
       amount: 5,
       unit: "Minuten",
@@ -46,7 +46,7 @@ const sanctionCatalog: Record<1 | 2 | 3 | 4 | 5, ISanctionTemplate[]> = {
     {
       title: "Mittlere Hausarbeit",
       description: "Eine mittlere Hausarbeit als Sanktion",
-      task: "Bad putzen (Waschbecken und Toilette)",
+      task: "Hausarbeit deiner Wahl",
       amount: 20,
       unit: "Minuten",
       category: "Hausarbeit",
@@ -84,7 +84,7 @@ const sanctionCatalog: Record<1 | 2 | 3 | 4 | 5, ISanctionTemplate[]> = {
     {
       title: "Größere Hausarbeit",
       description: "Eine größere Hausarbeit als Sanktion",
-      task: "Komplettes Bad reinigen inkl. Dusche/Badewanne",
+      task: "Hausarbeit deiner Wahl",
       amount: 40,
       unit: "Minuten",
       category: "Hausarbeit",
@@ -131,7 +131,7 @@ const sanctionCatalog: Record<1 | 2 | 3 | 4 | 5, ISanctionTemplate[]> = {
     {
       title: "Umfangreiche Hausarbeit",
       description: "Eine umfangreiche Hausarbeit als Sanktion",
-      task: "Staubsaugen und Wischen der gesamten Wohnung",
+      task: "Hausarbeit deiner Wahl",
       amount: 60,
       unit: "Minuten",
       category: "Hausarbeit",
@@ -178,7 +178,7 @@ const sanctionCatalog: Record<1 | 2 | 3 | 4 | 5, ISanctionTemplate[]> = {
     {
       title: "Maximale Hausarbeit",
       description: "Eine maximale Hausarbeit als schwere Sanktion",
-      task: "Komplette Grundreinigung der Wohnung (alle Räume)",
+      task: "Hausarbeit deiner Wahl",
       amount: 120,
       unit: "Minuten",
       category: "Hausarbeit",

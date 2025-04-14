@@ -174,6 +174,11 @@ const rules: Rule[] = [
     content:
       "Nach vollständiger Vorbereitung ist die Frau verpflichtet, auf den Mann zu warten und ihre Position nicht zu verlassen. Erst nach Abschluss des Auftrags – sofern nichts anderes vereinbart wurde – darf sie ihre Position aufgeben.",
   },
+  {
+    title: "Antwortzeit",
+    content:
+      "Die Frau hat auf Tickets oder Anträge schnellstmöglich zu antworten. Ihr wird für eine Antwort im Ticket eine Frist gesetzt, welche einzuhalten ist.",
+  },
 ];
 
 export default rules;

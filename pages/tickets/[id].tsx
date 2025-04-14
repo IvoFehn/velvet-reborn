@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import dayjs from "dayjs";
 import "dayjs/locale/de";
-import { ShieldCheckIcon } from "@heroicons/react/24/outline";
+import { ShieldCheckIcon, ClockIcon } from "@heroicons/react/24/outline";
 import { checkAuth } from "@/components/navigation/NavBar";
 import { sendTelegramMessage } from "@/util/sendTelegramMessage";
 
@@ -35,6 +35,9 @@ interface Ticket {
   archived: boolean;
   createdAt: Date;
   updatedAt?: Date;
+  responseDeadline?: Date | null;
+  responseHours?: number;
+  lastAdminMessage?: Date | null;
 }
 
 export default function TicketPage() {
@@ -49,6 +52,11 @@ export default function TicketPage() {
   const [sendingMessage, setSendingMessage] = useState<boolean>(false);
   const [showAdminMenu, setShowAdminMenu] = useState<boolean>(false);
   const [countdown, setCountdown] = useState<number>(7);
+  const [responseDeadline, setResponseDeadline] = useState<Date | null>(null);
+  const [remainingTime, setRemainingTime] = useState<string>("");
+  const [customResponseHours, setCustomResponseHours] = useState<number>(6);
+  const [showResponseHoursInput, setShowResponseHoursInput] =
+    useState<boolean>(false);
   const adminMenuRef = useRef<HTMLDivElement>(null);
   const lastMessageTimestampRef = useRef<Date | null>(null);
 
@@ -75,6 +83,66 @@ export default function TicketPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Format remaining time for the deadline
+  const formatRemainingTime = (deadline: Date) => {
+    try {
+      const now = new Date();
+
+      // If deadline has passed, return "Abgelaufen"
+      if (now > deadline) {
+        return "Abgelaufen";
+      }
+
+      let diffMs = deadline.getTime() - now.getTime();
+      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      diffMs -= days * 1000 * 60 * 60 * 24;
+
+      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+      diffMs -= hours * 1000 * 60 * 60;
+
+      const minutes = Math.floor(diffMs / (1000 * 60));
+
+      // Format the remaining time
+      let timeString = "";
+      if (days > 0) {
+        timeString += `${days}d `;
+      }
+
+      timeString += `${hours}h ${minutes}m`;
+      return timeString;
+    } catch (error) {
+      console.error("Error in formatRemainingTime:", error);
+      return "Fehler";
+    }
+  };
+
+  // Calculate and update the remaining time
+  useEffect(() => {
+    if (!responseDeadline || ticket?.archived) {
+      setRemainingTime("");
+      return;
+    }
+
+    // Initial calculation
+    const initialTime = formatRemainingTime(responseDeadline);
+    setRemainingTime(initialTime);
+
+    // Update every minute
+    const timerId = setInterval(() => {
+      if (responseDeadline) {
+        const formattedTime = formatRemainingTime(responseDeadline);
+        setRemainingTime(formattedTime);
+
+        // Check if deadline has passed
+        if (formattedTime === "Abgelaufen") {
+          fetchNewMessages(); // Fetch messages to check if the ticket has been closed
+        }
+      }
+    }, 60000); // Update every minute
+
+    return () => clearInterval(timerId);
+  }, [responseDeadline, ticket?.archived]);
+
   // Ticket-Details einmalig abrufen und Generator laden
   const fetchTicket = async () => {
     if (!id) return;
@@ -87,6 +155,19 @@ export default function TicketPage() {
       const data = await response.json();
       if (data.success) {
         setTicket(data.ticket);
+
+        // Set response deadline if available
+        if (data.ticket.responseDeadline) {
+          setResponseDeadline(new Date(data.ticket.responseDeadline));
+        } else {
+          setResponseDeadline(null);
+        }
+
+        // Set response hours if available
+        if (data.ticket.responseHours) {
+          setCustomResponseHours(data.ticket.responseHours);
+        }
+
         // Konvertiere alle timestamps in Date-Objekte
         const messagesWithDate = data.ticket.messages.map((msg: any) => ({
           ...msg,
@@ -98,6 +179,17 @@ export default function TicketPage() {
           lastMessageTimestampRef.current =
             messagesWithDate[messagesWithDate.length - 1].timestamp;
         }
+
+        // If the ticket was closed due to a deadline expiration, update the UI
+        if (data.deadlineExpired && !data.ticket.archived) {
+          setTicket((prevTicket) => ({
+            ...prevTicket!,
+            archived: true,
+            responseDeadline: null,
+          }));
+          setResponseDeadline(null);
+        }
+
         // Generator laden, wenn generatorId vorhanden ist
         if (data.ticket.generatorId) {
           const genResponse = await fetch(
@@ -135,15 +227,56 @@ export default function TicketPage() {
         throw new Error("Fehler beim Abrufen neuer Nachrichten");
       }
       const data = await response.json();
+
+      // Update deadline information
+      if (data.responseDeadline) {
+        setResponseDeadline(new Date(data.responseDeadline));
+      } else {
+        setResponseDeadline(null);
+      }
+
+      // Update response hours if available
+      if (data.responseHours) {
+        setCustomResponseHours(data.responseHours);
+      }
+
+      // Check if deadline has expired
+      if (data.deadlineExpired && ticket) {
+        setTicket({
+          ...ticket,
+          archived: true,
+          responseDeadline: null,
+        });
+        setResponseDeadline(null);
+      }
+
       if (data.success && data.messages.length > 0) {
         const newMessagesWithDate = data.messages.map((msg: any) => ({
           ...msg,
           timestamp: new Date(msg.timestamp), // String -> Date
         }));
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          ...newMessagesWithDate,
-        ]);
+
+        setMessages((prevMessages) => {
+          // Check if any of the new messages have a system message about deadline expiration
+          const hasDeadlineExpired = newMessagesWithDate.some(
+            (msg: any) =>
+              msg.sender === "SYSTEM" &&
+              msg.content.includes("Frist überschritten")
+          );
+
+          // If there's a deadline expiration message, update ticket status
+          if (hasDeadlineExpired && ticket) {
+            setTicket({
+              ...ticket,
+              archived: true,
+              responseDeadline: null,
+            });
+            setResponseDeadline(null);
+          }
+
+          return [...prevMessages, ...newMessagesWithDate];
+        });
+
         lastMessageTimestampRef.current =
           newMessagesWithDate[newMessagesWithDate.length - 1].timestamp;
       }
@@ -154,11 +287,18 @@ export default function TicketPage() {
 
   // Ticket beim Laden der Seite abrufen
   useEffect(() => {
-    fetchTicket();
+    if (id) {
+      fetchTicket();
+    }
   }, [id]);
 
   // Regelmäßiges Abrufen neuer Nachrichten
   useEffect(() => {
+    if (!id) return;
+
+    // Initial fetch
+    fetchNewMessages();
+
     const intervalId = setInterval(() => {
       fetchNewMessages();
       setCountdown(7);
@@ -188,17 +328,52 @@ export default function TicketPage() {
         body: JSON.stringify({
           content: newMessage,
           isAdmin: isAdmin,
+          responseHours: isAdmin ? customResponseHours : undefined,
         }),
       });
+
       if (!response.ok) {
+        const data = await response.json();
+
+        // Check if error is due to deadline expiration
+        if (data.deadlineExpired) {
+          if (ticket) {
+            setTicket({
+              ...ticket,
+              archived: true,
+              responseDeadline: null,
+            });
+            setResponseDeadline(null);
+          }
+
+          alert(
+            "Das Ticket wurde aufgrund von Fristüberschreitung geschlossen und Ihre Nachricht konnte nicht gesendet werden."
+          );
+          fetchTicket(); // Refresh to get latest state including system messages
+          return;
+        }
+
         throw new Error("Fehler beim Senden der Nachricht");
       }
+
       const data = await response.json();
       if (data.success) {
-        const newMsg = data.newMessage;
+        const newMsg = {
+          ...data.newMessage,
+          timestamp: new Date(data.newMessage.timestamp),
+        };
+
         setMessages((prevMessages) => [...prevMessages, newMsg]);
         lastMessageTimestampRef.current = newMsg.timestamp;
         setNewMessage("");
+
+        // Update deadline information
+        if (data.responseDeadline) {
+          setResponseDeadline(new Date(data.responseDeadline));
+        } else {
+          setResponseDeadline(null);
+        }
+
         const telegramMessage = `Neue Nachricht im Ticket #${id}: "${newMessage}" von ${
           isAdmin ? "Administrator" : "Benutzer"
         }`;
@@ -217,6 +392,54 @@ export default function TicketPage() {
     }
   };
 
+  // Update response hours
+  const handleUpdateResponseHours = async () => {
+    if (!isAdmin || !id) return;
+
+    try {
+      const response = await fetch(`/api/tickets/${id}/messages`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ responseHours: customResponseHours }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+
+        if (data.deadlineExpired) {
+          if (ticket) {
+            setTicket({
+              ...ticket,
+              archived: true,
+              responseDeadline: null,
+            });
+            setResponseDeadline(null);
+          }
+
+          alert(
+            "Das Ticket wurde aufgrund von Fristüberschreitung geschlossen."
+          );
+          fetchTicket();
+          return;
+        }
+
+        throw new Error("Fehler beim Aktualisieren der Antwortfrist");
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        if (data.responseDeadline) {
+          setResponseDeadline(new Date(data.responseDeadline));
+        }
+        setShowResponseHoursInput(false);
+        setShowAdminMenu(false);
+      }
+    } catch (error) {
+      console.error("Fehler beim Aktualisieren der Antwortfrist:", error);
+      alert("Aktualisierung der Antwortfrist fehlgeschlagen.");
+    }
+  };
+
   // Statusänderungen
   const handleStatusChange = async (status: "open" | "closed") => {
     if (!isAdmin || !id) return;
@@ -230,6 +453,10 @@ export default function TicketPage() {
       const data = await response.json();
       if (data.success) {
         setTicket(data.ticket);
+        // If ticket is closed, remove the deadline
+        if (status === "closed") {
+          setResponseDeadline(null);
+        }
         setShowAdminMenu(false);
         const telegramMessage = `Ticket #${id} wurde auf "${status}" gesetzt.`;
         await sendTelegramMessage("user", telegramMessage);
@@ -267,6 +494,9 @@ export default function TicketPage() {
       </div>
     );
   }
+
+  // Determine if user needs to respond (only when ticket is open, not archived)
+  const userNeedsToRespond = !isAdmin && responseDeadline && !ticket.archived;
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -312,6 +542,21 @@ export default function TicketPage() {
                     {isAdmin && (
                       <span className="ml-2 inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
                         <ShieldCheckIcon className="mr-1 h-3 w-3" /> Admin
+                      </span>
+                    )}
+
+                    {/* Deadline indicator */}
+                    {responseDeadline && !ticket.archived && (
+                      <span
+                        className={`ml-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          userNeedsToRespond
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-blue-100 text-blue-800"
+                        }`}
+                      >
+                        <ClockIcon className="mr-1 h-3 w-3" />
+                        {userNeedsToRespond ? "Antwortfrist: " : "Frist: "}
+                        {remainingTime}
                       </span>
                     )}
                   </div>
@@ -370,6 +615,58 @@ export default function TicketPage() {
                         </button>
                       </div>
                     </div>
+
+                    {/* Response hours settings for admin */}
+                    {isAdmin && (
+                      <div className="border-t border-gray-200 pt-3">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                          Antwortfrist festlegen
+                        </h3>
+                        {showResponseHoursInput ? (
+                          <div className="space-y-3">
+                            <div className="flex items-center">
+                              <input
+                                type="number"
+                                min="1"
+                                max="72"
+                                value={customResponseHours}
+                                onChange={(e) =>
+                                  setCustomResponseHours(Number(e.target.value))
+                                }
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+                                placeholder="Stunden"
+                              />
+                              <span className="mx-2 text-gray-500">
+                                Stunden
+                              </span>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={handleUpdateResponseHours}
+                                className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-md"
+                              >
+                                Bestätigen
+                              </button>
+                              <button
+                                onClick={() => setShowResponseHoursInput(false)}
+                                className="flex-1 px-3 py-2 bg-gray-100 text-gray-600 rounded-md"
+                              >
+                                Abbrechen
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setShowResponseHoursInput(true)}
+                            className="w-full px-4 py-2 text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-md transition-colors"
+                            disabled={ticket.archived}
+                          >
+                            Antwortfrist ändern (aktuell: {customResponseHours}{" "}
+                            Stunden)
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -437,6 +734,14 @@ export default function TicketPage() {
             <div className="text-xs text-gray-500 mt-3">
               Erstellt am{" "}
               {dayjs(ticket.createdAt).format("DD. MMMM YYYY, HH:mm")} Uhr
+              {/* Deadline information in the ticket description */}
+              {responseDeadline && !ticket.archived && userNeedsToRespond && (
+                <span className="ml-3 inline-flex items-center text-yellow-600">
+                  <ClockIcon className="mr-1 h-4 w-4" />
+                  Bitte antworten Sie bis{" "}
+                  {dayjs(responseDeadline).format("DD.MM.YYYY HH:mm")} Uhr
+                </span>
+              )}
             </div>
           </div>
         )}
@@ -452,7 +757,9 @@ export default function TicketPage() {
               >
                 <div
                   className={`max-w-[85%] lg:max-w-[70%] p-4 rounded-2xl ${
-                    message.isAdmin
+                    message.sender === "SYSTEM"
+                      ? "bg-gray-100 text-gray-700 text-center mx-auto border border-gray-300 italic"
+                      : message.isAdmin
                       ? "bg-purple-600 text-white"
                       : "bg-white border border-gray-200"
                   }`}
@@ -460,10 +767,16 @@ export default function TicketPage() {
                   <div className="flex items-center justify-between gap-3 mb-2">
                     <span
                       className={`text-sm font-medium flex items-center ${
-                        message.isAdmin ? "text-purple-100" : "text-gray-700"
+                        message.sender === "SYSTEM"
+                          ? "text-gray-600"
+                          : message.isAdmin
+                          ? "text-purple-100"
+                          : "text-gray-700"
                       }`}
                     >
-                      {message.isAdmin ? (
+                      {message.sender === "SYSTEM" ? (
+                        "System"
+                      ) : message.isAdmin ? (
                         <>
                           <ShieldCheckIcon className="mr-1 h-4 w-4" />{" "}
                           Administrator
@@ -474,7 +787,11 @@ export default function TicketPage() {
                     </span>
                     <span
                       className={`text-xs ${
-                        message.isAdmin ? "text-purple-200" : "text-gray-500"
+                        message.sender === "SYSTEM"
+                          ? "text-gray-500"
+                          : message.isAdmin
+                          ? "text-purple-200"
+                          : "text-gray-500"
                       }`}
                     >
                       {dayjs(message.timestamp).format("DD.MM.YYYY HH:mm")}
@@ -495,6 +812,16 @@ export default function TicketPage() {
 
         <div className="text-center py-2 text-gray-500">
           Neue Nachrichten werden in {countdown} Sekunden geladen
+          {/* Show deadline info here as well for better visibility */}
+          {responseDeadline && !ticket.archived && userNeedsToRespond && (
+            <div className="mt-2 flex items-center justify-center text-yellow-600">
+              <ClockIcon className="mr-1 h-4 w-4" />
+              <span className="font-medium">
+                Antwortfrist: {remainingTime} (bis{" "}
+                {dayjs(responseDeadline).format("DD.MM.YYYY HH:mm")} Uhr)
+              </span>
+            </div>
+          )}
         </div>
       </main>
 
@@ -529,6 +856,25 @@ export default function TicketPage() {
                 Senden
               </button>
             </div>
+
+            {/* Show response hours for admin in input form for better control */}
+            {isAdmin && !ticket.archived && (
+              <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                <span>Antwortfrist:</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="72"
+                  value={customResponseHours}
+                  onChange={(e) =>
+                    setCustomResponseHours(Number(e.target.value))
+                  }
+                  className="w-16 px-2 py-1 border border-gray-300 rounded-md text-sm"
+                  aria-label="Antwortfrist in Stunden"
+                />
+                <span>Stunden</span>
+              </div>
+            )}
           </form>
         </div>
       )}
