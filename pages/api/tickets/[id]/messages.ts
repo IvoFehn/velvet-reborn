@@ -96,13 +96,21 @@ export default async function handler(
 
         // Get messages with filter by date if 'since' parameter exists
         let messages = ticket.messages || [];
+        // Sort messages by timestamp to ensure consistent order
+        messages = messages.sort(
+          (a: { timestamp: Date }, b: { timestamp: Date }) =>
+            a.timestamp.getTime() - b.timestamp.getTime()
+        );
         if (since) {
           const sinceDate = new Date(since as string);
-          messages = messages.filter(
-            (msg: { timestamp: Date | string }) =>
-              new Date(msg.timestamp) > sinceDate
-          );
+          messages = messages.filter((msg: any) => msg.timestamp > sinceDate);
         }
+
+        // Debugging log
+        console.log(
+          `GET /api/tickets/${id}/messages - Filtered messages:`,
+          messages.length
+        );
 
         // Return serialized messages with ISO string timestamps
         res.status(200).json({

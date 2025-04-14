@@ -13,6 +13,7 @@ import { sendTelegramMessage } from "@/util/sendTelegramMessage";
 dayjs.locale("de");
 
 interface Message {
+  _id: string;
   content: string;
   sender: string;
   timestamp: Date;
@@ -38,6 +39,7 @@ interface Ticket {
   responseDeadline?: Date | null;
   responseHours?: number;
   lastAdminMessage?: Date | null;
+  messages: Message[];
 }
 
 export default function TicketPage() {
@@ -57,6 +59,7 @@ export default function TicketPage() {
   const [customResponseHours, setCustomResponseHours] = useState<number>(6);
   const [showResponseHoursInput, setShowResponseHoursInput] =
     useState<boolean>(false);
+  const [isTicketLoaded, setIsTicketLoaded] = useState<boolean>(false);
   const adminMenuRef = useRef<HTMLDivElement>(null);
   const lastMessageTimestampRef = useRef<Date | null>(null);
 
@@ -212,6 +215,7 @@ export default function TicketPage() {
       console.error("Fehler beim Laden der Ticket-Details:", error);
     } finally {
       setLoading(false);
+      setIsTicketLoaded(true); // Signal that ticket is loaded
     }
   };
 
@@ -256,9 +260,18 @@ export default function TicketPage() {
           timestamp: new Date(msg.timestamp), // String -> Date
         }));
 
+        // Debugging log
+        console.log("New messages fetched:", newMessagesWithDate);
+
         setMessages((prevMessages) => {
+          // Prevent duplicates by checking _id
+          const existingIds = new Set(prevMessages.map((msg) => msg._id));
+          const uniqueNewMessages = newMessagesWithDate.filter(
+            (msg: any) => !existingIds.has(msg._id)
+          );
+
           // Check if any of the new messages have a system message about deadline expiration
-          const hasDeadlineExpired = newMessagesWithDate.some(
+          const hasDeadlineExpired = uniqueNewMessages.some(
             (msg: any) =>
               msg.sender === "SYSTEM" &&
               msg.content.includes("Frist überschritten")
@@ -274,11 +287,14 @@ export default function TicketPage() {
             setResponseDeadline(null);
           }
 
-          return [...prevMessages, ...newMessagesWithDate];
+          const updatedMessages = [...prevMessages, ...uniqueNewMessages];
+          return updatedMessages;
         });
 
-        lastMessageTimestampRef.current =
-          newMessagesWithDate[newMessagesWithDate.length - 1].timestamp;
+        if (newMessagesWithDate.length > 0) {
+          lastMessageTimestampRef.current =
+            newMessagesWithDate[newMessagesWithDate.length - 1].timestamp;
+        }
       }
     } catch (error) {
       console.error("Fehler beim Abrufen neuer Nachrichten:", error);
@@ -294,7 +310,7 @@ export default function TicketPage() {
 
   // Regelmäßiges Abrufen neuer Nachrichten
   useEffect(() => {
-    if (!id) return;
+    if (!id || !isTicketLoaded) return;
 
     // Initial fetch
     fetchNewMessages();
@@ -304,7 +320,7 @@ export default function TicketPage() {
       setCountdown(7);
     }, 7000);
     return () => clearInterval(intervalId);
-  }, [id]);
+  }, [id, isTicketLoaded]);
 
   // Countdown-Timer
   useEffect(() => {
@@ -363,7 +379,13 @@ export default function TicketPage() {
           timestamp: new Date(data.newMessage.timestamp),
         };
 
-        setMessages((prevMessages) => [...prevMessages, newMsg]);
+        setMessages((prevMessages) => {
+          const existingIds = new Set(prevMessages.map((msg) => msg._id));
+          if (!existingIds.has(newMsg._id)) {
+            return [...prevMessages, newMsg];
+          }
+          return prevMessages;
+        });
         lastMessageTimestampRef.current = newMsg.timestamp;
         setNewMessage("");
 
@@ -748,9 +770,9 @@ export default function TicketPage() {
 
         <div className="space-y-4">
           {messages.length > 0 ? (
-            messages.map((message, index) => (
+            messages.map((message) => (
               <div
-                key={index}
+                key={message._id}
                 className={`flex ${
                   message.isAdmin ? "justify-end" : "justify-start"
                 }`}
