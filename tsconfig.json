@@ -20,6 +20,6 @@
     },
     "forceConsistentCasingInFileNames": false
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "pages/generator"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "pages/generator", "components/WarningsList"],
   "exclude": ["node_modules"]
 }

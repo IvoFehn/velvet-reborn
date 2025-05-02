@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   BellIcon,
   DocumentTextIcon,
@@ -31,8 +31,16 @@ interface QuickTaskData {
   status: "NEW" | "ACCEPTED" | "DONE" | "FAILED";
 }
 
+export type CombinedItem = {
+  _id: string;
+  title: string;
+  createdAt?: string;
+  status?: "NEW" | "ACCEPTED" | "DONE" | "FAILED" | "PENDING" | "DECLINED";
+  blueBalls?: boolean;
+  type: "generator" | "quickTask";
+};
+
 export default function HomePage() {
-  // States für Generatoren und News
   const [currentGenerators, setCurrentGenerators] = useState<GeneratorData[]>(
     []
   );
@@ -43,98 +51,95 @@ export default function HomePage() {
   const [newsLoading, setNewsLoading] = useState(true);
   const [newsError, setNewsError] = useState<string | null>(null);
 
-  // States für Quick Tasks - ohne error state
   const [quickTasks, setQuickTasks] = useState<QuickTaskData[]>([]);
   const [loadingQuickTasks, setLoadingQuickTasks] = useState(true);
 
-  // Fetching der Generatoren
+  // Kombiniere Generatoren und Quick Tasks und sortiere nach Datum
+  const combinedItems: CombinedItem[] = useMemo(() => {
+    const gens: CombinedItem[] = currentGenerators.map((g) => ({
+      _id: g._id ?? "",
+      title: g.dringlichkeit?.title || "Unbekannter Kunde",
+      createdAt: g.createdAt,
+      status: g.status,
+      blueBalls: g.blueBalls,
+      type: "generator",
+    }));
+
+    const tasks: CombinedItem[] = quickTasks.map((t) => ({
+      _id: t._id,
+      title: t.title,
+      createdAt: t.createdAt,
+      status: t.status,
+      type: "quickTask",
+    }));
+
+    return [...gens, ...tasks].sort(
+      (a, b) =>
+        new Date(b.createdAt || 0).getTime() -
+        new Date(a.createdAt || 0).getTime()
+    );
+  }, [currentGenerators, quickTasks]);
+
+  // Fetch Generatoren
   useEffect(() => {
-    const fetchGenerators = async () => {
+    (async () => {
       try {
-        const response = await fetch(
+        const res = await fetch(
           "/api/generator?exclude_status=DONE&exclude_status=DECLINED"
         );
-        if (!response.ok)
-          throw new Error("Fehler beim Abrufen der Generatoren");
-        const data = await response.json();
-        if (data.success) {
-          setCurrentGenerators(data.data);
-        } else {
-          throw new Error(data.message || "Fehler bei der Datenverarbeitung");
-        }
-      } catch (error) {
-        setErrorGenerators(
-          error instanceof Error ? error.message : "Ein Fehler ist aufgetreten"
-        );
+        if (!res.ok) throw new Error("Fehler beim Abrufen der Generatoren");
+        const json = await res.json();
+        if (json.success) setCurrentGenerators(json.data);
+        else
+          throw new Error(json.message || "Fehler bei der Datenverarbeitung");
+      } catch (e) {
+        setErrorGenerators(e instanceof Error ? e.message : String(e));
       } finally {
         setLoadingGenerators(false);
       }
-    };
-    fetchGenerators();
+    })();
   }, []);
 
-  // Fetching der News-Nachrichten
+  // Fetch News
   useEffect(() => {
-    const fetchNewsMessages = async () => {
+    (async () => {
       try {
-        // Mehrere Typen per komma-separierter Liste abfragen:
-        const response = await fetch("/api/news?limit=20&type=review,failed");
-        if (!response.ok) {
-          throw new Error("Fehler beim Abrufen der Nachrichten");
-        }
-        const data = await response.json();
-        if (data.success) {
-          setNewsMessages(data.data);
-        } else {
-          throw new Error(data.message || "Fehler bei der Datenverarbeitung");
-        }
-      } catch (error) {
-        setNewsError(
-          error instanceof Error ? error.message : "Ein Fehler ist aufgetreten"
-        );
+        const res = await fetch("/api/news?limit=20&type=review,failed");
+        if (!res.ok) throw new Error("Fehler beim Abrufen der Nachrichten");
+        const json = await res.json();
+        if (json.success) setNewsMessages(json.data);
+        else
+          throw new Error(json.message || "Fehler bei der Datenverarbeitung");
+      } catch (e) {
+        setNewsError(e instanceof Error ? e.message : String(e));
       } finally {
         setNewsLoading(false);
       }
-    };
-    fetchNewsMessages();
+    })();
   }, []);
 
-  // Fetching der Quick Tasks mit verbesserter Fehlerbehandlung
+  // Fetch Quick Tasks
   useEffect(() => {
-    const fetchQuickTasks = async () => {
+    (async () => {
       try {
-        const response = await fetch(
-          "/api/quicktasks?status=NEW&status=ACCEPTED"
-        );
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setQuickTasks(data.data);
-          } else {
-            // Fehler leise behandeln, keine Fehlermeldung anzeigen
-            console.warn("Konnte Quick Tasks nicht laden:", data.message);
-            setQuickTasks([]);
-          }
-        } else {
-          // Fehler leise behandeln, keine Fehlermeldung anzeigen
-          console.warn("Fehler beim Abrufen der Quick Tasks");
-          setQuickTasks([]);
-        }
-      } catch (error) {
-        // Fehler leise behandeln, keine Fehlermeldung anzeigen
-        console.warn("Fehler beim Verarbeiten der Quick Tasks:", error);
+        const res = await fetch("/api/quicktasks?status=NEW&status=ACCEPTED");
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success) setQuickTasks(json.data);
+          else setQuickTasks([]);
+        } else setQuickTasks([]);
+      } catch {
         setQuickTasks([]);
       } finally {
         setLoadingQuickTasks(false);
       }
-    };
-    fetchQuickTasks();
+    })();
   }, []);
 
   return (
     <div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {/* Lustlevel-Karte */}
+        {/* Lust-o-meter */}
         <section className="col-span-full rounded-xl bg-white p-4 shadow-sm md:p-6">
           <div className="mb-4 flex items-center">
             <HeartIcon className="mr-2 h-5 w-5 text-red-500 md:h-6 md:w-6" />
@@ -148,7 +153,6 @@ export default function HomePage() {
         <DailyRewardsWidget />
         <DailyTasksWidget />
 
-        {/* Sanktions-Widget */}
         <SanctionWidget />
 
         {/* News Section */}
@@ -158,13 +162,10 @@ export default function HomePage() {
               <BellIcon className="mr-2 h-5 w-5 text-blue-500 md:h-6 md:w-6" />
               News
             </h2>
-            <div className="flex gap-2">
-              <span className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-600">
-                {newsLoading ? "..." : `${newsMessages.length} Nachrichten`}
-              </span>
-            </div>
+            <span className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-600">
+              {newsLoading ? "..." : `${newsMessages.length} Nachrichten`}
+            </span>
           </div>
-
           {newsError ? (
             <p className="py-4 text-center text-red-500">{newsError}</p>
           ) : (
@@ -222,15 +223,12 @@ export default function HomePage() {
               <DocumentTextIcon className="mr-2 h-5 w-5 text-green-500 md:h-6 md:w-6" />
               Aktive Aufträge
             </h2>
-            <div className="flex gap-2">
-              <span className="rounded-full bg-green-100 px-3 py-1 text-sm text-green-800">
-                {loadingGenerators || loadingQuickTasks
-                  ? "..."
-                  : `${currentGenerators.length + quickTasks.length} Offen`}
-              </span>
-            </div>
+            <span className="rounded-full bg-green-100 px-3 py-1 text-sm text-green-800">
+              {loadingGenerators || loadingQuickTasks
+                ? "..."
+                : combinedItems.length}
+            </span>
           </div>
-
           <div className="max-h-96 space-y-2 overflow-y-auto">
             {loadingGenerators || loadingQuickTasks ? (
               [...Array(3)].map((_, i) => (
@@ -241,33 +239,31 @@ export default function HomePage() {
               ))
             ) : errorGenerators ? (
               <p className="py-4 text-center text-red-500">{errorGenerators}</p>
-            ) : currentGenerators.length === 0 && quickTasks.length === 0 ? (
+            ) : combinedItems.length === 0 ? (
               <p className="py-4 text-center text-gray-500">
                 Keine aktiven Aufträge
               </p>
             ) : (
-              <>
-                {/* Generators */}
-                {currentGenerators.map((generator) => (
+              combinedItems.map((item) =>
+                item.type === "generator" ? (
                   <Link
-                    key={generator._id}
-                    href={`/generator/${generator._id}`}
+                    key={item._id}
+                    href={`/generator/${item._id}`}
                     className="group block transition-all"
                   >
                     <div className="flex items-center justify-between rounded-lg p-3 hover:bg-gray-50">
                       <div className="min-w-0 pr-2">
                         <p className="truncate text-sm font-medium text-gray-800 md:text-base">
-                          {generator.dringlichkeit?.title ||
-                            "Unbekannter Kunde"}
+                          {item.title}
                         </p>
                         <div className="mt-1 space-y-1">
                           <p className="text-xs text-gray-500 md:text-sm">
                             Erstellt:{" "}
-                            {dayjs(generator.createdAt || new Date()).format(
+                            {dayjs(item.createdAt || new Date()).format(
                               "DD MMM YYYY"
                             )}
                           </p>
-                          {generator.blueBalls && (
+                          {item.blueBalls && (
                             <div className="flex items-center gap-1.5">
                               <span className="relative flex h-2 w-2">
                                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
@@ -281,45 +277,40 @@ export default function HomePage() {
                         </div>
                       </div>
                       <span className="inline-flex h-8 items-center rounded-full bg-gray-100 px-3 text-sm font-medium text-gray-600">
-                        {generator.status}
+                        {item.status}
                       </span>
                     </div>
                   </Link>
-                ))}
-
-                {/* Quick Tasks */}
-                {quickTasks.length > 0 &&
-                  quickTasks.map((task) => (
-                    <Link
-                      key={task._id}
-                      href={`/quicktask/${task._id}`}
-                      className="group block transition-all"
-                    >
-                      <div className="flex items-center justify-between rounded-lg p-3 hover:bg-gray-50">
-                        <div className="min-w-0 pr-2">
-                          <p className="truncate text-sm font-medium text-gray-800 md:text-base">
-                            {task.title}
-                          </p>
-                          <div className="mt-1">
-                            <p className="text-xs text-gray-500 md:text-sm">
-                              Erstellt:{" "}
-                              {dayjs(task.createdAt || new Date()).format(
-                                "DD MMM YYYY"
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="inline-flex h-8 items-center rounded-full bg-gray-100 px-3 text-sm font-medium text-gray-600">
-                          {task.status === "NEW" ? "Neu" : "Angenommen"}
-                        </span>
+                ) : (
+                  <Link
+                    key={item._id}
+                    href={`/quicktask/${item._id}`}
+                    className="group block transition-all"
+                  >
+                    <div className="flex items-center justify-between rounded-lg p-3 hover:bg-gray-50">
+                      <div className="min-w-0 pr-2">
+                        <p className="truncate text-sm font-medium text-gray-800 md:text-base">
+                          {item.title}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500 md:text-sm">
+                          Erstellt:{" "}
+                          {dayjs(item.createdAt || new Date()).format(
+                            "DD MMM YYYY"
+                          )}
+                        </p>
                       </div>
-                    </Link>
-                  ))}
-              </>
+                      <span className="inline-flex h-8 items-center rounded-full bg-gray-100 px-3 text-sm font-medium text-gray-600">
+                        {item.status === "NEW" ? "Neu" : "Angenommen"}
+                      </span>
+                    </div>
+                  </Link>
+                )
+              )
             )}
           </div>
         </section>
 
+        {/* Wie fühlst du dich heute? */}
         <section className="col-span-full rounded-xl bg-white p-4 shadow-sm md:p-6">
           <div className="mb-4 flex items-center">
             <ShieldCheckIcon className="mr-2 h-5 w-5 text-red-500 md:h-6 md:w-6" />
