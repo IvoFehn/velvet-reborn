@@ -9,6 +9,7 @@ interface CustomSanctionRequest extends NextApiRequest {
     template: ISanctionTemplate;
     severity: number;
     deadlineDays?: number;
+    reason?: string;
   };
 }
 
@@ -26,7 +27,7 @@ export default async function handler(
   try {
     await dbConnect();
 
-    const { template, severity, deadlineDays = 2 } = req.body;
+    const { template, severity, deadlineDays = 2, reason } = req.body;
 
     // Überprüfen der erforderlichen Felder
     if (!template || !severity) {
@@ -34,6 +35,14 @@ export default async function handler(
         success: false,
         message:
           "Bitte geben Sie eine Sanktionsvorlage und einen Schweregrad an",
+      });
+    }
+
+    // Zusätzliche Validierung: Template muss mindestens einen Titel und Kategorie haben
+    if (!template.title || !template.category) {
+      return res.status(400).json({
+        success: false,
+        message: "Ungültige Sanktionsvorlage übergeben",
       });
     }
 
@@ -59,7 +68,15 @@ export default async function handler(
       status: "offen",
       createdAt: now,
       escalationCount: 0,
+      ...(reason ? { reason } : {}),
     });
+
+    console.log(
+      "[SpecificSanction] Erstellt:",
+      template.title,
+      "Level:",
+      severity
+    );
 
     // In der Datenbank speichern
     await newSanction.save();

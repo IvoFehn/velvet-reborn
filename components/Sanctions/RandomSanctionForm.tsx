@@ -20,6 +20,7 @@ const RandomSanctionForm: React.FC<RandomSanctionFormProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [reason, setReason] = useState<string>("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +30,7 @@ const RandomSanctionForm: React.FC<RandomSanctionFormProps> = ({
       setError(null);
       setSuccess(null);
 
-      const newSanction = await giveSanction(severity, deadlineDays);
+      const newSanction = await giveSanction(severity, deadlineDays, reason);
 
       // Telegram-Benachrichtigung senden
       try {
@@ -52,7 +53,8 @@ const RandomSanctionForm: React.FC<RandomSanctionFormProps> = ({
       }
 
       setSuccess(
-        `Sanktion "${newSanction.title}" (Schweregrad ${severity}) erfolgreich erstellt!`
+        `Sanktion "${newSanction.title}" (Schweregrad ${severity}) erfolgreich erstellt!` +
+          (newSanction.reason ? `\nBegründung: ${newSanction.reason}` : "")
       );
 
       // Elternkomponente benachrichtigen
@@ -153,6 +155,24 @@ const RandomSanctionForm: React.FC<RandomSanctionFormProps> = ({
               Tage
             </span>
           </div>
+        </div>
+
+        {/* Begründung */}
+        <div className="space-y-2">
+          <Label
+            htmlFor="reason"
+            className="block font-medium text-gray-700 dark:text-gray-300"
+          >
+            Begründung (optional)
+          </Label>
+          <Input
+            id="reason"
+            type="text"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="flex-1"
+            placeholder="Optional: Warum wird die Sanktion vergeben?"
+          />
         </div>
 
         {/* Information Box */}

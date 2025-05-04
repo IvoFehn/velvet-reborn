@@ -8,16 +8,19 @@ import sanctionCatalog from "../data/sanctionCatalog";
  * Gibt eine zufällige Sanktion basierend auf dem Schweregrad aus
  * @param level Schweregrad der Sanktion (1-5)
  * @param deadlineDays Anzahl der Tage bis zur Fälligkeit
+ * @param reason Optionaler Grund für die Sanktion
  * @returns Die erstellte Sanktion
  */
 export const giveSanction = async (
   level: number = 3,
-  deadlineDays: number = 2
+  deadlineDays: number = 2,
+  reason?: string
 ): Promise<ISanction> => {
   try {
     const response = await axios.post("/api/sanctions/random", {
       severity: level,
       deadlineDays,
+      reason,
     });
 
     if (!response.data.success) {
@@ -38,13 +41,15 @@ export const giveSanction = async (
  * @param templateIndex Index der Sanktionsvorlage im Array für den jeweiligen Schweregrad
  * @param level Schweregrad der Sanktion (1-5)
  * @param deadlineDays Anzahl der Tage bis zur Fälligkeit
+ * @param reason Optionaler Grund für die Sanktion
  * @returns Die erstellte Sanktion
  */
 export const giveSpecificSanction = async (
   templateIndex: number,
   level: number,
   deadlineDays: number = 2,
-  customAmount?: number
+  customAmount?: number,
+  reason?: string
 ): Promise<ISanction> => {
   try {
     // Typ-Assertion, da wir sichergehen müssen, dass der level ein gültiger Schlüssel ist
@@ -57,10 +62,23 @@ export const giveSpecificSanction = async (
     }
 
     // Sanktionsvorlage abrufen
+    if (
+      !Number.isInteger(templateIndex) ||
+      templateIndex < 0 ||
+      templateIndex >= templates.length
+    ) {
+      throw new Error(
+        `Ungültiger Sanktions-Index für Level ${level}: ${templateIndex}`
+      );
+    }
     const template = { ...templates[templateIndex] };
 
-    // Optional: Benutzerdefinierte Menge setzen
-    if (customAmount) {
+    // Optional: Benutzerdefinierte Menge setzen (nur wenn gültig)
+    if (
+      typeof customAmount === "number" &&
+      !isNaN(customAmount) &&
+      customAmount > 0
+    ) {
       template.amount = customAmount;
     }
 
@@ -69,6 +87,7 @@ export const giveSpecificSanction = async (
       template,
       severity: level,
       deadlineDays,
+      reason,
     });
 
     if (!response.data.success) {

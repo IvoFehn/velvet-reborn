@@ -218,7 +218,7 @@ const MoodTachometer = () => {
     moodData.moodOverride && moodData.moodOverride.active;
 
   return (
-    <div className="relative w-full max-w-[380px] px-4 pt-1 font-['Segoe_UI'] text-gray-800">
+    <div className="relative w-full px-4 pt-1 font-['Segoe_UI'] text-gray-800">
       {/* Info Icon */}
       <div
         className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full border border-white bg-gray-600 text-xs font-bold text-white shadow-xs hover:bg-gray-700 hover:scale-105 cursor-pointer"

@@ -166,6 +166,14 @@ const SanctionWidget: React.FC = () => {
                 {latestSanction.description}
               </p>
 
+              {/* Begründung anzeigen, falls vorhanden */}
+              {latestSanction.reason && (
+                <div className="mb-3 text-sm text-blue-800 bg-blue-50 rounded px-2 py-1">
+                  <span className="font-medium">Begründung:</span>{" "}
+                  {latestSanction.reason}
+                </div>
+              )}
+
               <div className="mb-2 grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <span className="font-medium text-gray-700">Aufgabe:</span>{" "}

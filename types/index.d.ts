@@ -16,6 +16,7 @@ export interface ISanctionBase {
   escalationFactor: number;
   escalationCount: number;
   category: "Hausarbeit" | "Lernen" | "Sport" | "Soziales" | "Sonstiges";
+  reason?: string; // Begründung (optional)
 }
 
 // Interface für Mongoose-Dokument mit erweiterten MongoDB-Eigenschaften

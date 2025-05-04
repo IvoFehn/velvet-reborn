@@ -32,7 +32,7 @@ const SanctionSchema = new mongoose.Schema({
   unit: {
     type: String,
     required: [true, "Bitte geben Sie eine Einheit an"],
-    enum: ["Minuten", "Stunden", "Tage", "Mal"],
+    enum: ["Minuten", "Stunden", "Tage", "Mal", "Schläge", "Stunden/Tag"],
     default: "Minuten",
   },
   status: {
@@ -59,8 +59,24 @@ const SanctionSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ["Hausarbeit", "Lernen", "Sport", "Soziales", "Sonstiges"],
+    enum: [
+      "Hausarbeit",
+      "Lernen",
+      "Sport",
+      "Soziales",
+      "Sonstiges",
+      "Erotik",
+      "Anal",
+      "Spanking",
+      "Kraulen",
+      "Alleine einkaufen",
+    ],
     default: "Sonstiges",
+  },
+  reason: {
+    type: String,
+    required: false,
+    trim: true,
   },
 });
 

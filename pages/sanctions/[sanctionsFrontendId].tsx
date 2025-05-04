@@ -27,6 +27,7 @@ interface Sanction {
   escalationFactor: number;
   escalationCount: number;
   category: string;
+  reason?: string;
 }
 
 const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -232,6 +233,12 @@ export default function SanctionDetailPage() {
                       <p className="mt-2 text-gray-600">
                         {sanction.description}
                       </p>
+                    )}
+                    {sanction.reason && (
+                      <div className="mt-2 text-blue-800 bg-blue-50 rounded px-2 py-1 text-sm">
+                        <span className="font-medium">Begründung:</span>{" "}
+                        {sanction.reason}
+                      </div>
                     )}
                   </div>
 

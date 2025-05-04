@@ -137,10 +137,10 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="min-h-screen w-full overflow-x-hidden bg-gray-50 px-2 sm:px-4 md:px-8">
+      <div className="mx-auto grid max-w-4xl gap-4 grid-cols-1">
         {/* Lust-o-meter */}
-        <section className="col-span-full rounded-xl bg-white p-4 shadow-sm md:p-6">
+        <section className="rounded-xl bg-white p-4 shadow-sm md:p-6 w-full">
           <div className="mb-4 flex items-center">
             <HeartIcon className="mr-2 h-5 w-5 text-red-500 md:h-6 md:w-6" />
             <h2 className="text-lg font-semibold text-gray-700 md:text-xl">
@@ -150,13 +150,18 @@ export default function HomePage() {
           <MoodTachometer />
         </section>
 
-        <DailyRewardsWidget />
-        <DailyTasksWidget />
-
-        <SanctionWidget />
+        <div className="w-full">
+          <DailyRewardsWidget />
+        </div>
+        <div className="w-full">
+          <DailyTasksWidget />
+        </div>
+        <div className="w-full">
+          <SanctionWidget />
+        </div>
 
         {/* News Section */}
-        <section className="col-span-full rounded-xl bg-white p-4 shadow-sm md:p-6">
+        <section className="rounded-xl bg-white p-4 shadow-sm md:p-6 w-full">
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="flex items-center text-lg font-semibold text-gray-700 md:text-xl">
               <BellIcon className="mr-2 h-5 w-5 text-blue-500 md:h-6 md:w-6" />
@@ -169,7 +174,7 @@ export default function HomePage() {
           {newsError ? (
             <p className="py-4 text-center text-red-500">{newsError}</p>
           ) : (
-            <div className="max-h-96 space-y-2 overflow-y-auto">
+            <div className="max-h-96 space-y-2 overflow-y-auto w-full">
               {newsLoading ? (
                 [...Array(3)].map((_, i) => (
                   <div
@@ -217,7 +222,7 @@ export default function HomePage() {
         </section>
 
         {/* Aktive Aufträge Section */}
-        <section className="rounded-xl bg-white p-4 shadow-sm md:p-6">
+        <section className="rounded-xl bg-white p-4 shadow-sm md:p-6 w-full">
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="flex items-center text-lg font-semibold text-gray-700 md:text-xl">
               <DocumentTextIcon className="mr-2 h-5 w-5 text-green-500 md:h-6 md:w-6" />
@@ -229,7 +234,7 @@ export default function HomePage() {
                 : combinedItems.length}
             </span>
           </div>
-          <div className="max-h-96 space-y-2 overflow-y-auto">
+          <div className="max-h-96 space-y-2 overflow-y-auto w-full">
             {loadingGenerators || loadingQuickTasks ? (
               [...Array(3)].map((_, i) => (
                 <div
@@ -311,7 +316,7 @@ export default function HomePage() {
         </section>
 
         {/* Wie fühlst du dich heute? */}
-        <section className="col-span-full rounded-xl bg-white p-4 shadow-sm md:p-6">
+        <section className="rounded-xl bg-white p-4 shadow-sm md:p-6 w-full">
           <div className="mb-4 flex items-center">
             <ShieldCheckIcon className="mr-2 h-5 w-5 text-red-500 md:h-6 md:w-6" />
             <h2 className="text-lg font-semibold text-gray-700 md:text-xl">

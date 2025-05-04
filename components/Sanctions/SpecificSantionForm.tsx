@@ -55,22 +55,24 @@ const SpecificSanctionForm: React.FC<SpecificSanctionFormProps> = ({
   const [customAmount, setCustomAmount] = useState<number | undefined>(
     undefined
   );
+  const [reason, setReason] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Lade alle Sanktionsvorlagen
+  // Lade alle Sanktionsvorlagen für das gewählte Level
   useEffect(() => {
     try {
-      const allTemplates = getSanctionTemplates();
-      setTemplates(allTemplates);
+      // Nur Templates für das gewählte Level laden
+      const levelTemplates = getSanctionTemplates(selectedLevel);
+      setTemplates(levelTemplates);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, []);
+  }, [selectedLevel]);
 
   // Gefilterte Templates basierend auf dem ausgewählten Level
-  const filteredTemplates = templates.filter((t) => t.level === selectedLevel);
+  const filteredTemplates = templates; // Da jetzt nur noch die für das Level geladen werden
 
   // Setze den ausgewählten Template, wenn sich der Index ändert
   useEffect(() => {
@@ -80,8 +82,10 @@ const SpecificSanctionForm: React.FC<SpecificSanctionFormProps> = ({
       );
       if (template) {
         setSelectedTemplate(template.template);
-        // Setze die Custom Amount auf den Standard der Vorlage
         setCustomAmount(template.template.amount);
+      } else {
+        setSelectedTemplate(null);
+        setCustomAmount(undefined);
       }
     } else {
       setSelectedTemplate(null);
@@ -108,16 +112,26 @@ const SpecificSanctionForm: React.FC<SpecificSanctionFormProps> = ({
       return;
     }
 
+    // Zusätzliche Validierung: Existiert die Vorlage wirklich?
+    const templateObj = filteredTemplates.find(
+      (t) => t.index === selectedTemplateIndex
+    );
+    if (!templateObj) {
+      setError("Ungültige Sanktionsvorlage ausgewählt");
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
       setSuccess(null);
 
       const newSanction = await giveSpecificSanction(
-        selectedTemplateIndex,
+        templateObj.index,
         selectedLevel,
         deadlineDays,
-        customAmount
+        customAmount,
+        reason
       );
 
       // Telegram-Benachrichtigung senden
@@ -290,6 +304,21 @@ const SpecificSanctionForm: React.FC<SpecificSanctionFormProps> = ({
                 value={deadlineDays}
                 onChange={(e) => setDeadlineDays(parseInt(e.target.value))}
                 className="mt-1"
+              />
+            </div>
+
+            {/* Begründung (optional) */}
+            <div>
+              <Label htmlFor="reason" className="text-sm font-medium">
+                Begründung (optional)
+              </Label>
+              <Input
+                id="reason"
+                type="text"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="mt-1"
+                placeholder="Optional: Warum wird die Sanktion vergeben?"
               />
             </div>
 

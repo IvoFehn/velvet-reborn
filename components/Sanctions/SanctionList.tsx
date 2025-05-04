@@ -377,6 +377,16 @@ const SanctionsList: React.FC<SanctionsListProps> = ({
                     <span className="text-sm text-gray-500">Fälligkeit</span>
                     <TimeRemaining deadline={sanction.deadline} />
                   </div>
+
+                  {/* Begründung anzeigen, falls vorhanden */}
+                  {sanction.reason && (
+                    <div className="flex items-start gap-2 mt-2">
+                      <span className="text-sm text-gray-500">Begründung:</span>
+                      <span className="text-sm text-gray-800 dark:text-gray-200">
+                        {sanction.reason}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Card actions */}

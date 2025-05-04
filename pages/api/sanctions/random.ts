@@ -2,13 +2,14 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import Sanction from "../../../models/Sanction";
 import sanctionCatalog from "../../../data/sanctionCatalog";
-import { IApiResponse, ISanction } from "@/types/index";
+import { IApiResponse, ISanction, ISanctionTemplate } from "@/types/index";
 import dbConnect from "../../../lib/dbConnect";
 
 interface RandomSanctionRequest extends NextApiRequest {
   body: {
     severity: number;
     deadlineDays?: number;
+    reason?: string;
   };
 }
 
@@ -26,7 +27,7 @@ export default async function handler(
   try {
     await dbConnect();
 
-    const { severity, deadlineDays = 2 } = req.body;
+    const { severity, deadlineDays = 2, reason } = req.body;
 
     // Überprüfen der erforderlichen Felder
     if (!severity) {
@@ -55,9 +56,23 @@ export default async function handler(
       });
     }
 
-    // Zufällige Sanktion auswählen
-    const randomIndex = Math.floor(Math.random() * availableSanctions.length);
-    const sanctionTemplate = availableSanctions[randomIndex];
+    // Fisher-Yates Shuffle für echte Randomisierung
+    function shuffle(array: ISanctionTemplate[]): ISanctionTemplate[] {
+      let currentIndex = array.length,
+        randomIndex;
+      while (currentIndex !== 0) {
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex--;
+        [array[currentIndex], array[randomIndex]] = [
+          array[randomIndex],
+          array[currentIndex],
+        ];
+      }
+      return array;
+    }
+    const shuffledSanctions = shuffle([...availableSanctions]);
+    const sanctionTemplate = shuffledSanctions[0];
+    console.log("[RandomSanction] Auswahl:", sanctionTemplate.title);
 
     // Deadline berechnen (Standard: 2 Tage ab jetzt)
     const now = new Date();
@@ -72,6 +87,7 @@ export default async function handler(
       deadline,
       status: "offen",
       createdAt: now,
+      ...(reason ? { reason } : {}),
     });
 
     // In der Datenbank speichern
