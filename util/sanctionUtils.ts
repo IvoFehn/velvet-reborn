@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // utils/sanctionUtils.ts
-import axios from "axios";
+import { sanctionsApi } from "@/lib/api";
 import { ISanction, ISanctionTemplate } from "@/types/index";
 import sanctionCatalog from "../data/sanctionCatalog";
 
@@ -17,19 +17,19 @@ export const giveSanction = async (
   reason?: string
 ): Promise<ISanction> => {
   try {
-    const response = await axios.post("/api/sanctions/random", {
+    const response = await sanctionsApi.createRandom({
       severity: level,
       deadlineDays,
       reason,
     });
 
-    if (!response.data.success) {
+    if (!response.success || !response.data) {
       throw new Error(
-        response.data.message || "Fehler bei der Erstellung der Sanktion"
+        response.error || response.message || "Fehler bei der Erstellung der Sanktion"
       );
     }
 
-    return response.data.data;
+    return response.data;
   } catch (error) {
     console.error("Fehler bei giveSanction:", error);
     throw error;
@@ -83,21 +83,21 @@ export const giveSpecificSanction = async (
     }
 
     // Sanktion erstellen über die API
-    const response = await axios.post("/api/sanctions/custom", {
+    const response = await sanctionsApi.createCustom({
       template,
       severity: level,
       deadlineDays,
       reason,
     });
 
-    if (!response.data.success) {
+    if (!response.success || !response.data) {
       throw new Error(
-        response.data.message ||
+        response.error || response.message ||
           "Fehler bei der Erstellung der spezifischen Sanktion"
       );
     }
 
-    return response.data.data;
+    return response.data;
   } catch (error) {
     console.error("Fehler bei giveSpecificSanction:", error);
     throw error;
@@ -158,21 +158,16 @@ export const getSanctions = async (
   status?: "offen" | "erledigt" | "abgelaufen" | "eskaliert" | "alle"
 ): Promise<ISanction[]> => {
   try {
-    // API-Pfad mit optionalem Statusfilter
-    let url = "/api/sanctions";
-    if (status && status !== "alle") {
-      url += `?status=${status}`;
-    }
+    const filters = status && status !== "alle" ? { status } : undefined;
+    const response = await sanctionsApi.list(filters);
 
-    const response = await axios.get(url);
-
-    if (!response.data.success) {
+    if (!response.success || !response.data) {
       throw new Error(
-        response.data.message || "Fehler beim Abrufen der Sanktionen"
+        response.error || response.message || "Fehler beim Abrufen der Sanktionen"
       );
     }
 
-    return response.data.data;
+    return response.data;
   } catch (error) {
     console.error("Fehler bei getSanctions:", error);
     throw error;
@@ -188,16 +183,16 @@ export const completeSanction = async (
   sanctionId: string
 ): Promise<ISanction> => {
   try {
-    const response = await axios.put("/api/sanctions/complete", { sanctionId });
+    const response = await sanctionsApi.complete(sanctionId);
 
-    if (!response.data.success) {
+    if (!response.success || !response.data) {
       throw new Error(
-        response.data.message ||
+        response.error || response.message ||
           "Fehler beim Markieren der Sanktion als erledigt"
       );
     }
 
-    return response.data.data;
+    return response.data;
   } catch (error) {
     console.error("Fehler bei completeSanction:", error);
     throw error;
@@ -210,16 +205,16 @@ export const completeSanction = async (
  */
 export const completeAllSanctions = async (): Promise<number> => {
   try {
-    const response = await axios.put("/api/sanctions/complete-all");
+    const response = await sanctionsApi.completeAll();
 
-    if (!response.data.success) {
+    if (!response.success) {
       throw new Error(
-        response.data.message ||
+        response.error || response.message ||
           "Fehler beim Markieren aller Sanktionen als erledigt"
       );
     }
 
-    return response.data.count;
+    return response.count || 0;
   } catch (error) {
     console.error("Fehler bei completeAllSanctions:", error);
     throw error;
@@ -232,17 +227,15 @@ export const completeAllSanctions = async (): Promise<number> => {
  */
 export const escalateExpiredSanctions = async (): Promise<number> => {
   try {
-    const response = await axios.post("/api/sanctions/check", {
-      checkAll: true,
-    });
+    const response = await sanctionsApi.check();
 
-    if (!response.data.success) {
+    if (!response.success) {
       throw new Error(
-        response.data.message || "Fehler beim Eskalieren der Sanktionen"
+        response.error || response.message || "Fehler beim Eskalieren der Sanktionen"
       );
     }
 
-    return response.data.escalatedCount;
+    return response.escalatedCount || 0;
   } catch (error) {
     console.error("Fehler bei escalateExpiredSanctions:", error);
     throw error;
@@ -256,11 +249,11 @@ export const escalateExpiredSanctions = async (): Promise<number> => {
  */
 export const deleteSanction = async (sanctionId: string): Promise<boolean> => {
   try {
-    const response = await axios.delete(`/api/sanctions/${sanctionId}`);
+    const response = await sanctionsApi.delete(sanctionId);
 
-    if (!response.data.success) {
+    if (!response.success) {
       throw new Error(
-        response.data.message || "Fehler beim Löschen der Sanktion"
+        response.error || response.message || "Fehler beim Löschen der Sanktion"
       );
     }
 
@@ -279,18 +272,18 @@ export const deleteSanction = async (sanctionId: string): Promise<boolean> => {
  * @returns Promise<ISanction> - Die eskalierte Sanktion
  */
 export const escalateSanction = async (sanctionId: string): Promise<any> => {
-  const response = await fetch(`/api/sanctions/escalate`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ sanctionId }),
-  });
+  try {
+    const response = await sanctionsApi.escalate(sanctionId);
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Fehler beim Eskalieren der Sanktion");
+    if (!response.success) {
+      throw new Error(
+        response.error || response.message || "Fehler beim Eskalieren der Sanktion"
+      );
+    }
+
+    return response;
+  } catch (error) {
+    console.error("Fehler bei escalateSanction:", error);
+    throw error;
   }
-
-  return response.json();
 };

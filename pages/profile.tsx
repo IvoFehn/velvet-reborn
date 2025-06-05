@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @next/next/no-img-element */
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Box,
   Typography,
@@ -37,6 +37,7 @@ import {
 } from "@/types/profile";
 import { CoinBookWidget } from "@/components/coinBookWidget/CoinBookWidget";
 import Survey from "@/components/Survey/Survey";
+import { useProfile, useUpdateProfile } from "@/hooks/useProfile";
 
 const auth = checkAuth();
 
@@ -45,17 +46,16 @@ const ProfilePage: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const router = useRouter();
 
-  // Profil-Daten
-  const [profile, setProfile] = useState<ProfileType | null>(null);
-  // Fehlerstatus (wird angezeigt, falls ein Fehler auftritt)
-  const [error, setError] = useState<string>("");
+  // Use the new API hooks
+  const { data: profile, loading, error, refetch } = useProfile();
+  const updateProfile = useUpdateProfile();
 
   // Lokaler Bearbeitungs-Status
   const [editMode, setEditMode] = useState<boolean>(false);
-  const [localName, setLocalName] = useState("");
-  const [localGold, setLocalGold] = useState(0);
-  const [localExp, setLocalExp] = useState(0);
-  const [localKeys, setLocalKeys] = useState(0);
+  const [localName, setLocalName] = useState(profile?.name || "");
+  const [localGold, setLocalGold] = useState(profile?.gold || 0);
+  const [localExp, setLocalExp] = useState(profile?.exp || 0);
+  const [localKeys, setLocalKeys] = useState(profile?.keys || 0);
 
   // Modal für Profilbild
   const [imageModalOpen, setImageModalOpen] = useState(false);
@@ -80,30 +80,16 @@ const ProfilePage: React.FC = () => {
     useState<boolean>(false);
   const [errorAllLootboxes, setErrorAllLootboxes] = useState<string>("");
 
-  // Profil abrufen
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await fetch("/api/profile/get");
-        if (!response.ok) {
-          throw new Error("Fehler beim Abrufen des Profils");
-        }
-        const data = await response.json();
-        const fetchedProfile = data.data as ProfileType;
-        setProfile(fetchedProfile);
-        setLocalName(fetchedProfile.name);
-        setLocalGold(fetchedProfile.gold);
-        setLocalExp(fetchedProfile.exp);
-        setLocalKeys(fetchedProfile.keys);
-        setTempImageUrl(fetchedProfile.profileImage || "");
-      } catch (err: any) {
-        console.error(err);
-        setError("Fehler beim Laden des Profils");
-      }
-    };
-
-    fetchProfile();
-  }, []);
+  // Update local state when profile data changes
+  React.useEffect(() => {
+    if (profile) {
+      setLocalName(profile.name);
+      setLocalGold(profile.gold);
+      setLocalExp(profile.exp);
+      setLocalKeys(profile.keys);
+      setTempImageUrl(profile.profileImage || "");
+    }
+  }, [profile]);
 
   // Alle Lootboxen laden
   useEffect(() => {
@@ -164,12 +150,22 @@ const ProfilePage: React.FC = () => {
   }
 
   // Falls das Profil noch nicht geladen wurde, Ladeanzeige
-  if (!profile) {
+  if (loading || !profile) {
     return (
       <Box
         sx={{ textAlign: "center", mt: 5, color: theme.palette.text.secondary }}
       >
         <Typography variant="h6">Lade Profil ...</Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box
+        sx={{ textAlign: "center", mt: 5, color: theme.palette.error.main }}
+      >
+        <Typography variant="h6">Fehler: {error}</Typography>
       </Box>
     );
   }
@@ -191,28 +187,12 @@ const ProfilePage: React.FC = () => {
         keys: localKeys,
       };
 
-      const response = await fetch("/api/profile/admin-update", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.message || "Update fehlgeschlagen");
-      }
-      setProfile({
-        ...profile,
-        name: localName,
-        gold: localGold,
-        exp: localExp,
-        keys: localKeys,
-      });
+      await updateProfile.mutate(payload);
       setEditMode(false);
-      setError("");
+      refetch(); // Refresh profile data
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Fehler beim Speichern der Änderungen");
+      // Error is already handled by the hook
     }
   };
 
@@ -223,23 +203,13 @@ const ProfilePage: React.FC = () => {
         id: profile._id,
         profileImage: tempImageUrl,
       };
-      const response = await fetch("/api/profile/update", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.message || "Update fehlgeschlagen");
-      }
-      setProfile((prev) =>
-        prev ? { ...prev, profileImage: tempImageUrl } : null
-      );
+      
+      await updateProfile.mutate(payload);
       setImageModalOpen(false);
-      setError("");
+      refetch(); // Refresh profile data
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Fehler beim Aktualisieren des Bildes");
+      // Error is already handled by the hook
     }
   };
 

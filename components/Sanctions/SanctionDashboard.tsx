@@ -1,5 +1,5 @@
 // components/SanctionDashboard.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -12,46 +12,25 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { ISanction } from "@/types/index";
-import {
-  getSanctions,
-  escalateExpiredSanctions,
-  completeAllSanctions,
-} from "@/util/sanctionUtils";
+import { useSanctions, useCheckSanctions, useCompleteAllSanctions } from "@/hooks/useSanctions";
 import RandomSanctionForm from "./RandomSanctionForm";
 import SanctionActions from "./SanctionAction";
 import SanctionsList from "./SanctionList";
 import SpecificSanctionForm from "./SpecificSantionForm";
 
 const SanctionDashboard: React.FC = () => {
-  const [sanctions, setSanctions] = useState<ISanction[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
-
-  // Lade Sanktionen
-  useEffect(() => {
-    const loadSanctions = async () => {
-      try {
-        setLoading(true);
-        const data = await getSanctions("alle");
-        setSanctions(data);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadSanctions();
-  }, [refreshTrigger]);
+  
+  // Use the new API hooks
+  const { data: sanctions = [], loading, error, refetch } = useSanctions();
+  const checkSanctions = useCheckSanctions();
+  const completeAllSanctions = useCompleteAllSanctions();
 
   // Behandlung für Sanktionserstellung
   const handleSanctionCreated = (sanction: ISanction) => {
     setSuccessMessage(`Sanktion "${sanction.title}" erfolgreich erstellt!`);
-    // Aktualisiere die Liste durch Erhöhen des Refresh-Triggers
-    setRefreshTrigger((prev) => prev + 1);
+    // Aktualisiere die Liste
+    refetch();
 
     // Lösche die Erfolgsmeldung nach 3 Sekunden
     setTimeout(() => {
@@ -62,33 +41,30 @@ const SanctionDashboard: React.FC = () => {
   // Behandlung für Massenaktionen
   const handleMassAction = async (action: "escalate" | "completeAll") => {
     try {
-      setLoading(true);
-
       if (action === "escalate") {
-        const count = await escalateExpiredSanctions();
-        setSuccessMessage(`${count} Sanktion(en) eskaliert.`);
+        const result = await checkSanctions.mutate();
+        setSuccessMessage(`${result.escalatedCount || 0} Sanktion(en) eskaliert.`);
       } else if (action === "completeAll") {
-        const count = await completeAllSanctions();
-        setSuccessMessage(`${count} Sanktion(en) als erledigt markiert.`);
+        const result = await completeAllSanctions.mutate();
+        setSuccessMessage(`${result.count || 0} Sanktion(en) als erledigt markiert.`);
       }
 
       // Aktualisiere die Liste
-      setRefreshTrigger((prev) => prev + 1);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-
+      refetch();
+      
       // Lösche die Erfolgsmeldung nach 3 Sekunden
       setTimeout(() => {
         setSuccessMessage(null);
       }, 3000);
+    } catch (err) {
+      // Errors are already handled by the hooks
+      console.error('Mass action error:', err);
     }
   };
 
   // Manuelles Aktualisieren der Daten
   const handleRefresh = () => {
-    setRefreshTrigger((prev) => prev + 1);
+    refetch();
   };
 
   return (
@@ -215,7 +191,7 @@ const SanctionDashboard: React.FC = () => {
                 <SanctionsList
                   sanctions={sanctions}
                   loading={loading}
-                  onRefresh={() => setRefreshTrigger((prev) => prev + 1)}
+                  onRefresh={refetch}
                 />
               </CardContent>
             </Card>
@@ -229,7 +205,7 @@ const SanctionDashboard: React.FC = () => {
               <CardContent className="p-6">
                 <SanctionActions
                   onAction={handleMassAction}
-                  loading={loading}
+                  loading={loading || checkSanctions.loading || completeAllSanctions.loading}
                 />
               </CardContent>
             </Card>
