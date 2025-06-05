@@ -37,7 +37,8 @@ import {
 } from "@/types/profile";
 import { CoinBookWidget } from "@/components/coinBookWidget/CoinBookWidget";
 import Survey from "@/components/Survey/Survey";
-import { useProfile, useUpdateProfile } from "@/hooks/useProfile";
+import { useProfile, useUpdateProfile, useOptimisticProfileUpdate } from "@/hooks/useProfile";
+import { useAppStore } from "@/stores/appStore";
 
 const auth = checkAuth();
 
@@ -46,9 +47,11 @@ const ProfilePage: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const router = useRouter();
 
-  // Use the new API hooks
+  // Use the new store-based hooks (minimal API calls)
   const { data: profile, loading, error, refetch } = useProfile();
   const updateProfile = useUpdateProfile();
+  const { updateOptimistic } = useOptimisticProfileUpdate();
+  const { addLoadingOperation, removeLoadingOperation } = useAppStore();
 
   // Lokaler Bearbeitungs-Status
   const [editMode, setEditMode] = useState<boolean>(false);
@@ -175,9 +178,13 @@ const ProfilePage: React.FC = () => {
     ? profile.inventory || []
     : (profile.inventory || []).slice(0, isMobile ? 4 : 8);
 
-  // Handler für Bearbeitungsfunktionen im Admin-Modus (Admin-Endpoint)
-  const handleSaveEdits = async () => {
+  // Handler für Bearbeitungsfunktionen (optimistic updates)
+  const handleSaveEdits = React.useCallback(async () => {
     if (!profile) return;
+    
+    const operationId = 'profile-save-edits';
+    addLoadingOperation(operationId);
+    
     try {
       const payload = {
         id: profile._id,
@@ -187,31 +194,50 @@ const ProfilePage: React.FC = () => {
         keys: localKeys,
       };
 
+      // Optimistic update first (immediate UI response)
+      updateOptimistic({
+        name: localName,
+        gold: localGold,
+        exp: localExp,
+        keys: localKeys,
+      });
+
+      // Then sync with server
       await updateProfile.mutate(payload);
       setEditMode(false);
-      refetch(); // Refresh profile data
     } catch (err: any) {
       console.error(err);
-      // Error is already handled by the hook
+      // Error is already handled by the hook, profile will revert
+    } finally {
+      removeLoadingOperation(operationId);
     }
-  };
+  }, [profile, localName, localGold, localExp, localKeys, updateOptimistic, updateProfile, addLoadingOperation, removeLoadingOperation]);
 
-  const handleImageUpdate = async () => {
+  const handleImageUpdate = React.useCallback(async () => {
     if (!profile) return;
+    
+    const operationId = 'profile-image-update';
+    addLoadingOperation(operationId);
+    
     try {
       const payload = {
         id: profile._id,
         profileImage: tempImageUrl,
       };
       
+      // Optimistic update first
+      updateOptimistic({ profileImage: tempImageUrl });
+      
+      // Then sync with server
       await updateProfile.mutate(payload);
       setImageModalOpen(false);
-      refetch(); // Refresh profile data
     } catch (err: any) {
       console.error(err);
-      // Error is already handled by the hook
+      // Error is already handled by the hook, profile will revert
+    } finally {
+      removeLoadingOperation(operationId);
     }
-  };
+  }, [profile, tempImageUrl, updateOptimistic, updateProfile, addLoadingOperation, removeLoadingOperation]);
 
   // Handler für die Verwendung eines Inventar-Items
   const handleUseItem = async () => {

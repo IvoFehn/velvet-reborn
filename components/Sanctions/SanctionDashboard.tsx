@@ -1,5 +1,5 @@
 // components/SanctionDashboard.tsx
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -12,7 +12,13 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { ISanction } from "@/types/index";
-import { useSanctions, useCheckSanctions, useCompleteAllSanctions } from "@/hooks/useSanctions";
+import { 
+  useSanctions, 
+  useCheckSanctions, 
+  useCompleteAllSanctions,
+  useOptimisticSanctionsUpdate 
+} from "@/hooks/useSanctions";
+import { useAppStore } from "@/stores/appStore";
 import RandomSanctionForm from "./RandomSanctionForm";
 import SanctionActions from "./SanctionAction";
 import SanctionsList from "./SanctionList";
@@ -21,51 +27,51 @@ import SpecificSanctionForm from "./SpecificSantionForm";
 const SanctionDashboard: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
-  // Use the new API hooks
+  // Use the new store-based hooks (minimal API calls)
   const { data: sanctions = [], loading, error, refetch } = useSanctions();
   const checkSanctions = useCheckSanctions();
   const completeAllSanctions = useCompleteAllSanctions();
+  const { addLoadingOperation, removeLoadingOperation } = useAppStore();
 
-  // Behandlung für Sanktionserstellung
-  const handleSanctionCreated = (sanction: ISanction) => {
+  // Behandlung für Sanktionserstellung (no API call needed, already optimistic)
+  const handleSanctionCreated = useCallback((sanction: ISanction) => {
     setSuccessMessage(`Sanktion "${sanction.title}" erfolgreich erstellt!`);
-    // Aktualisiere die Liste
-    refetch();
-
-    // Lösche die Erfolgsmeldung nach 3 Sekunden
+    
+    // Clear success message after 3 seconds
     setTimeout(() => {
       setSuccessMessage(null);
     }, 3000);
-  };
+  }, []);
 
-  // Behandlung für Massenaktionen
-  const handleMassAction = async (action: "escalate" | "completeAll") => {
+  // Behandlung für Massenaktionen (optimistic updates)
+  const handleMassAction = useCallback(async (action: "escalate" | "completeAll") => {
+    const operationId = `mass-action-${action}`;
+    addLoadingOperation(operationId);
+    
     try {
       if (action === "escalate") {
         const result = await checkSanctions.mutate();
         setSuccessMessage(`${result.escalatedCount || 0} Sanktion(en) eskaliert.`);
       } else if (action === "completeAll") {
         const result = await completeAllSanctions.mutate();
-        setSuccessMessage(`${result.count || 0} Sanktion(en) als erledigt markiert.`);
+        setSuccessMessage(`${result || 0} Sanktion(en) als erledigt markiert.`);
       }
-
-      // Aktualisiere die Liste
-      refetch();
       
-      // Lösche die Erfolgsmeldung nach 3 Sekunden
+      // Clear success message after 3 seconds
       setTimeout(() => {
         setSuccessMessage(null);
       }, 3000);
     } catch (err) {
-      // Errors are already handled by the hooks
       console.error('Mass action error:', err);
+    } finally {
+      removeLoadingOperation(operationId);
     }
-  };
+  }, [checkSanctions, completeAllSanctions, addLoadingOperation, removeLoadingOperation]);
 
-  // Manuelles Aktualisieren der Daten
-  const handleRefresh = () => {
+  // Manual refresh (force API call)
+  const handleRefresh = useCallback(() => {
     refetch();
-  };
+  }, [refetch]);
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
@@ -191,7 +197,7 @@ const SanctionDashboard: React.FC = () => {
                 <SanctionsList
                   sanctions={sanctions}
                   loading={loading}
-                  onRefresh={refetch}
+                  onRefresh={handleRefresh}
                 />
               </CardContent>
             </Card>
@@ -205,7 +211,7 @@ const SanctionDashboard: React.FC = () => {
               <CardContent className="p-6">
                 <SanctionActions
                   onAction={handleMassAction}
-                  loading={loading || checkSanctions.loading || completeAllSanctions.loading}
+                  loading={checkSanctions.loading || completeAllSanctions.loading}
                 />
               </CardContent>
             </Card>

@@ -1,27 +1,78 @@
-import { useApiCall, useApiMutation } from './useApi';
-import { profileApi, UpdateProfilePayload, AdminUpdatePayload } from '../lib/api';
+import { useEffect } from 'react';
+import { useProfileStore } from '@/stores/profileStore';
+import type { UpdateProfilePayload, AdminUpdatePayload } from '../lib/api';
 
 // Hook for getting profile data
 export function useProfile() {
-  return useApiCall(() => profileApi.get());
+  const {
+    profile,
+    loading,
+    error,
+    fetchProfile,
+    shouldRefetch
+  } = useProfileStore();
+
+  useEffect(() => {
+    if (shouldRefetch()) {
+      fetchProfile();
+    }
+  }, [fetchProfile, shouldRefetch]);
+
+  return {
+    data: profile,
+    loading,
+    error,
+    refetch: () => fetchProfile()
+  };
 }
 
 // Hook for updating profile
 export function useUpdateProfile() {
-  return useApiMutation((data: UpdateProfilePayload) => profileApi.update(data));
+  const { updateProfile, loading, error } = useProfileStore(
+    (state) => ({
+      updateProfile: state.updateProfile,
+      loading: state.loading,
+      error: state.error
+    })
+  );
+
+  return {
+    mutate: async (data: UpdateProfilePayload) => {
+      await updateProfile(data);
+      return useProfileStore.getState().profile;
+    },
+    loading,
+    error
+  };
 }
 
 // Hook for admin profile updates
 export function useAdminUpdateProfile() {
-  return useApiMutation((data: AdminUpdatePayload) => profileApi.adminUpdate(data));
+  const { updateProfile, loading, error } = useProfileStore(
+    (state) => ({
+      updateProfile: state.updateProfile,
+      loading: state.loading,
+      error: state.error
+    })
+  );
+
+  return {
+    mutate: async (data: AdminUpdatePayload) => {
+      await updateProfile(data);
+      return useProfileStore.getState().profile;
+    },
+    loading,
+    error
+  };
 }
 
-// Hook for creating profile
-export function useCreateProfile() {
-  return useApiMutation((data: any) => profileApi.create(data));
-}
+// Hook for optimistic profile updates (no API call)
+export function useOptimisticProfileUpdate() {
+  const updateProfileOptimistic = useProfileStore(
+    (state) => state.updateProfileOptimistic
+  );
 
-// Hook for adding lootbox to profile
-export function useAddLootboxToProfile() {
-  return useApiMutation((data: any) => profileApi.addLootbox(data));
+  return {
+    updateOptimistic: updateProfileOptimistic
+  };
 }

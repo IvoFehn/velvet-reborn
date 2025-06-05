@@ -6,6 +6,7 @@ export interface ApiResponse<T = any> {
   error?: string;
   count?: number;
   totalCount?: number;
+  escalatedCount?: number;
   pagination?: {
     total: number;
     page: number;
