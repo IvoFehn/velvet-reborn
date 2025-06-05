@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { profileApi } from '@/lib/api';
+import { zalandoApiClient } from '@/lib/api/client-v2';
 import type { Profile } from '@/types/profile';
 
 interface ProfileStore {
@@ -53,9 +53,9 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      const response = await profileApi.get();
+      const response = await zalandoApiClient.profile.getMe();
       
-      if (response.success && response.data) {
+      if (response.data) {
         set({ 
           profile: response.data, 
           loading: false, 
@@ -65,7 +65,7 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
       } else {
         set({ 
           loading: false, 
-          error: response.error || response.message || 'Fehler beim Laden des Profils' 
+          error: response.error?.message || 'Fehler beim Laden des Profils' 
         });
       }
     } catch (error) {
@@ -86,9 +86,9 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
     set({ profile: updatedProfile });
 
     try {
-      const response = await profileApi.update(updates);
+      const response = await zalandoApiClient.profile.updateMe(updates);
       
-      if (response.success && response.data) {
+      if (response.data) {
         set({ 
           profile: response.data, 
           error: null,
@@ -98,7 +98,7 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
         // Revert optimistic update on error
         set({ 
           profile, 
-          error: response.error || response.message || 'Fehler beim Aktualisieren' 
+          error: response.error?.message || 'Fehler beim Aktualisieren' 
         });
       }
     } catch (error) {

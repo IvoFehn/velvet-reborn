@@ -1,7 +1,6 @@
 import { create } from 'zustand';
-import { sanctionsApi } from '@/lib/api';
+import { zalandoApiClient } from '@/lib/api/client-v2';
 import type { ISanction } from '@/types/index.d';
-import type { CreateSanctionPayload, SanctionFilters } from '@/lib/api/types';
 
 interface SanctionsStore {
   // State
@@ -9,11 +8,11 @@ interface SanctionsStore {
   loading: boolean;
   error: string | null;
   lastFetch: number | null;
-  currentFilters: SanctionFilters | null;
+  currentFilters: any | null;
   
   // Actions
-  fetchSanctions: (filters?: SanctionFilters, force?: boolean) => Promise<void>;
-  createSanction: (data: CreateSanctionPayload) => Promise<ISanction | null>;
+  fetchSanctions: (filters?: any, force?: boolean) => Promise<void>;
+  createSanction: (data: any) => Promise<ISanction | null>;
   createRandomSanction: (data: { severity?: number; category?: string }) => Promise<ISanction | null>;
   completeSanction: (id: string) => Promise<void>;
   completeAllSanctions: () => Promise<number>;
@@ -30,7 +29,7 @@ interface SanctionsStore {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
-  shouldRefetch: (filters?: SanctionFilters) => boolean;
+  shouldRefetch: (filters?: any) => boolean;
   invalidateCache: () => void;
 }
 
@@ -69,9 +68,9 @@ export const useSanctionsStore = create<SanctionsStore>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      const response = await sanctionsApi.list(filters);
+      const response = await zalandoApiClient.sanctions.list(filters);
       
-      if (response.success && response.data) {
+      if (response.data) {
         set({ 
           sanctions: response.data, 
           loading: false, 
@@ -82,7 +81,7 @@ export const useSanctionsStore = create<SanctionsStore>((set, get) => ({
       } else {
         set({ 
           loading: false, 
-          error: response.error || response.message || 'Fehler beim Laden der Sanktionen' 
+          error: response.error?.message || 'Fehler beim Laden der Sanktionen' 
         });
       }
     } catch (error) {
@@ -96,9 +95,14 @@ export const useSanctionsStore = create<SanctionsStore>((set, get) => ({
   // Create new sanction
   createSanction: async (data) => {
     try {
-      const response = await sanctionsApi.create(data);
+      const response = await zalandoApiClient.sanctions.create({
+        type: 'custom',
+        template: data,
+        severity: data.severity,
+        reason: data.reason
+      });
       
-      if (response.success && response.data) {
+      if (response.data) {
         // Add to local state immediately
         set(state => ({ 
           sanctions: [...state.sanctions, response.data!],
@@ -107,7 +111,7 @@ export const useSanctionsStore = create<SanctionsStore>((set, get) => ({
         }));
         return response.data;
       } else {
-        set({ error: response.error || response.message || 'Fehler beim Erstellen' });
+        set({ error: response.error?.message || 'Fehler beim Erstellen' });
         return null;
       }
     } catch (error) {
@@ -119,9 +123,13 @@ export const useSanctionsStore = create<SanctionsStore>((set, get) => ({
   // Create random sanction
   createRandomSanction: async (data) => {
     try {
-      const response = await sanctionsApi.createRandom(data);
+      const response = await zalandoApiClient.sanctions.create({
+        type: 'random',
+        severity: data.severity,
+        reason: data.reason
+      });
       
-      if (response.success && response.data) {
+      if (response.data) {
         // Add to local state immediately
         set(state => ({ 
           sanctions: [...state.sanctions, response.data!],
@@ -130,7 +138,7 @@ export const useSanctionsStore = create<SanctionsStore>((set, get) => ({
         }));
         return response.data;
       } else {
-        set({ error: response.error || response.message || 'Fehler beim Erstellen' });
+        set({ error: response.error?.message || 'Fehler beim Erstellen' });
         return null;
       }
     } catch (error) {
@@ -149,9 +157,9 @@ export const useSanctionsStore = create<SanctionsStore>((set, get) => ({
     }));
 
     try {
-      const response = await sanctionsApi.complete(id);
+      const response = await zalandoApiClient.sanctions.complete(id);
       
-      if (response.success && response.data) {
+      if (response.data) {
         set(state => ({
           sanctions: state.sanctions.map(s => 
             s._id.toString() === id ? response.data! : s
@@ -162,7 +170,7 @@ export const useSanctionsStore = create<SanctionsStore>((set, get) => ({
       } else {
         // Revert optimistic update
         await get().fetchSanctions(get().currentFilters || undefined, true);
-        set({ error: response.error || response.message || 'Fehler beim Abschließen' });
+        set({ error: response.error?.message || 'Fehler beim Abschließen' });
       }
     } catch (error) {
       // Revert optimistic update
@@ -181,15 +189,15 @@ export const useSanctionsStore = create<SanctionsStore>((set, get) => ({
     }));
 
     try {
-      const response = await sanctionsApi.completeAll();
+      const response = await zalandoApiClient.sanctions.bulkComplete();
       
-      if (response.success) {
+      if (response.data) {
         set({ error: null, lastFetch: Date.now() });
-        return response.count || 0;
+        return response.data.completed || 0;
       } else {
         // Revert optimistic update
         await get().fetchSanctions(get().currentFilters || undefined, true);
-        set({ error: response.error || response.message || 'Fehler beim Abschließen' });
+        set({ error: response.error?.message || 'Fehler beim Abschließen' });
         return 0;
       }
     } catch (error) {
