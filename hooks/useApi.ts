@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ApiResponse, ApiError } from '../lib/api';
 
 // Generic API hook for data fetching
@@ -9,6 +9,32 @@ export function useApiCall<T>(
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const executeCall = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await apiCall();
+        
+        if (response.success && response.data) {
+          setData(response.data);
+        } else {
+          setError(response.error || response.message || 'Unknown error');
+        }
+      } catch (err) {
+        if (err instanceof ApiError) {
+          setError(err.message);
+        } else {
+          setError('Network error occurred');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    executeCall();
+  }, [apiCall, ...dependencies]);
 
   const execute = useCallback(async () => {
     try {
@@ -30,11 +56,7 @@ export function useApiCall<T>(
     } finally {
       setLoading(false);
     }
-  }, dependencies);
-
-  useEffect(() => {
-    execute();
-  }, [execute]);
+  }, [apiCall, ...dependencies]);
 
   const refetch = useCallback(() => {
     execute();

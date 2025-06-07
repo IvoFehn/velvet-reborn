@@ -126,7 +126,7 @@ const Generator: React.FC = () => {
 
   // Neue sendToBackend-Funktion, die GeneratorDataToSend akzeptiert
   const sendToBackend = async (data: any) => {
-    const response = await fetch("/api/generator", {
+    const response = await fetch("/api/gaming?action=generator", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

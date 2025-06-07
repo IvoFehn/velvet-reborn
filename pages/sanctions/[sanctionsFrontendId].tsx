@@ -58,15 +58,15 @@ export default function SanctionDetailPage() {
 
       try {
         setLoading(true);
-        const response = await fetch(`/api/sanctions/${sanctionsFrontendId}`);
+        const response = await fetch(`/api/content?type=sanctions&id=${sanctionsFrontendId}`);
         if (!response.ok) {
           throw new Error("Fehler beim Abrufen der Sanktionsdetails");
         }
         const data = await response.json();
-        if (data.success) {
-          setSanction(data.data);
+        if (data.data) {
+          setSanction(data.data.sanction);
         } else {
-          throw new Error(data.message || "Fehler bei der Datenverarbeitung");
+          throw new Error(data.error?.message || "Fehler bei der Datenverarbeitung");
         }
       } catch (error) {
         setError(

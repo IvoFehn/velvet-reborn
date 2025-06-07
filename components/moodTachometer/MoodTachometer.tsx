@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import dayjs from "dayjs";
 
 // Typ-Definition für die komplette API-Antwort
@@ -44,21 +44,21 @@ const MoodTachometer = () => {
   const [showModal, setShowModal] = useState(false);
 
   // Funktion zum Abrufen des Mood-Status - kann bei Bedarf erneut aufgerufen werden
-  const fetchMoodStatus = () => {
+  const fetchMoodStatus = useCallback(() => {
     setLoading(true);
 
     console.log("Mood-Status wird abgerufen...");
-    fetch("/api/mood-status")
+    fetch("/api/system?module=mood&action=status")
       .then((response) => response.json())
       .then((data: ApiResponse) => {
         console.log("Mood-Status API-Antwort:", data);
 
-        if (data.success) {
-          setMoodData(data.data);
+        if ('data' in data && data.data) {
+          setMoodData('data' in data ? data.data : null);
           setFetchError(false);
 
           // Detaillierte Konsolenausgabe
-          if (data.data.generator) {
+          if ('data' in data && data.data?.generator) {
             const createdDate = dayjs(data.data.generator.createdAt);
             const now = dayjs();
             const daysDiff = now.diff(createdDate, "day", true);
@@ -88,9 +88,12 @@ const MoodTachometer = () => {
               console.log(`Keine MoodOverride aktiv`);
             }
           }
+        } else if ('error' in data && data.error) {
+          setFetchError(true);
+          console.error("API-Fehler:", 'error' in data && data.error && typeof data.error === 'object' && 'message' in data.error ? data.error.message : 'Unbekannter Fehler');
         } else {
           setFetchError(true);
-          console.error("API-Fehler:", data.message);
+          console.error("Unbekannter API-Fehler");
         }
       })
       .catch((err) => {
@@ -98,12 +101,12 @@ const MoodTachometer = () => {
         setFetchError(true);
       })
       .finally(() => setLoading(false));
-  };
+  }, []);
 
   // Beim Mounten den Mood-Status abrufen
   useEffect(() => {
     fetchMoodStatus();
-  }, []);
+  }, [fetchMoodStatus]);
 
   // Regelmäßige Aktualisierung des Status (alle 5 Minuten)
   useEffect(() => {
@@ -112,7 +115,7 @@ const MoodTachometer = () => {
     }, 5 * 60 * 1000); // 5 Minuten
 
     return () => clearInterval(intervalId);
-  }, []);
+  }, [fetchMoodStatus]);
 
   if (loading) {
     return <div className="p-4 text-center">Lade Daten...</div>;
@@ -132,8 +135,8 @@ const MoodTachometer = () => {
     );
   }
 
-  // Effektives Level verwenden
-  const level = moodData.effectiveLevel;
+  // Effektives Level verwenden mit bounds checking
+  const level = Math.max(0, Math.min(4, moodData.effectiveLevel || 0));
 
   // Definition der verfügbaren Mood-Emojis
   const moods = [
@@ -321,15 +324,17 @@ const MoodTachometer = () => {
       </div>
 
       {/* Tip Section */}
-      <div className="my-4 rounded-lg border border-gray-100 bg-gray-50 p-4 text-center">
-        <h3 className="mb-1 text-lg font-medium text-gray-900">
-          {tips[level].title}
-        </h3>
-        <p className="text-sm text-gray-600">{tips[level].description}</p>
-      </div>
+      {tips[level] && (
+        <div className="my-4 rounded-lg border border-gray-100 bg-gray-50 p-4 text-center">
+          <h3 className="mb-1 text-lg font-medium text-gray-900">
+            {tips[level].title}
+          </h3>
+          <p className="text-sm text-gray-600">{tips[level].description}</p>
+        </div>
+      )}
 
       {/* Extra Tips */}
-      {extraTips[level].length > 0 && (
+      {extraTips[level] && extraTips[level].length > 0 && (
         <div className="mx-auto max-w-full">
           <div
             className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50"

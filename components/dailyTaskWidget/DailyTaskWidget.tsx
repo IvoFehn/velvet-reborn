@@ -8,7 +8,7 @@ import {
 import { CheckCircleIcon as CheckCircleSolidIcon } from "@heroicons/react/24/solid";
 import InfoIcon from "@mui/icons-material/Info";
 import { Modal, IconButton } from "@mui/material";
-import { checkAuth } from "../navigation/NavBar";
+import { checkAuth } from "../navigation/SimpleNavBar";
 import { IDailyTask } from "@/models/DailyTask";
 
 interface DailyTask {
@@ -37,11 +37,11 @@ export default function DailyTasksWidget() {
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        const res = await fetch("/api/tasks");
+        const res = await fetch("/api/content?type=tasks");
         if (res.ok) {
-          const data = await res.json();
-          if (data && Array.isArray(data)) {
-            const tasksWithId = data.map((task: IDailyTask) => ({
+          const response = await res.json();
+          if (response.data && Array.isArray(response.data)) {
+            const tasksWithId = response.data.map((task: IDailyTask) => ({
               ...task,
               id: task._id ? task._id.toString() : task.id,
             }));
@@ -66,15 +66,15 @@ export default function DailyTasksWidget() {
 
   const toggleTask = async (taskId: string) => {
     try {
-      const res = await fetch(`/api/tasks/${taskId}/toggle`, {
+      const res = await fetch(`/api/content?type=tasks&action=toggle&id=${taskId}`, {
         method: "PUT",
       });
       if (res.ok) {
-        const updatedTask = await res.json();
+        const response = await res.json();
         setTasks((prev) =>
           prev.map((task) =>
             task.id === taskId
-              ? { ...task, completed: updatedTask.completed }
+              ? { ...task, completed: response.data.completed }
               : task
           )
         );
@@ -87,7 +87,7 @@ export default function DailyTasksWidget() {
   const deleteTask = async (taskId: string) => {
     if (!isAuthed) return;
     try {
-      const res = await fetch(`/api/tasks/${taskId}`, {
+      const res = await fetch(`/api/content?type=tasks&id=${taskId}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -110,7 +110,7 @@ export default function DailyTasksWidget() {
   const saveEdit = async (taskId: string, newTitle: string) => {
     if (!isAuthed) return;
     try {
-      const res = await fetch(`/api/tasks/${taskId}`, {
+      const res = await fetch(`/api/content?type=tasks&id=${taskId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: newTitle }),
@@ -133,7 +133,7 @@ export default function DailyTasksWidget() {
     if (!isAuthed) return;
     if (newTaskTitle.trim()) {
       try {
-        const res = await fetch("/api/tasks", {
+        const res = await fetch("/api/content?type=tasks", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -142,9 +142,9 @@ export default function DailyTasksWidget() {
           }),
         });
         if (res.ok) {
-          const newTaskData = await res.json();
-          if (newTaskData?.task) {
-            const task = newTaskData.task;
+          const response = await res.json();
+          if (response?.data) {
+            const task = response.data;
             const transformedTask: DailyTask = {
               ...task,
               id: task._id ? task._id.toString() : task.id,

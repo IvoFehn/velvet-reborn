@@ -26,8 +26,8 @@ const Shop = () => {
     const fetchData = async () => {
       try {
         const [itemsRes, profileRes] = await Promise.all([
-          fetch("/api/items"),
-          fetch("/api/profile/get"),
+          fetch("/api/gaming?action=items"),
+          fetch("/api/user?action=profile"),
         ]);
 
         const [itemsData, profileData] = await Promise.all([
@@ -35,7 +35,7 @@ const Shop = () => {
           profileRes.json(),
         ]);
 
-        const categorized = itemsData.reduce(
+        const categorized = itemsData.data.reduce(
           (acc: ItemsByCategory, item: Item) => {
             acc[item.category] = [...(acc[item.category] || []), item];
             return acc;
@@ -60,7 +60,7 @@ const Shop = () => {
     if (!profile || profile.gold < price) return;
 
     try {
-      const res = await fetch("/api/shop/buy", {
+      const res = await fetch("/api/gaming?action=purchase", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ itemId }),

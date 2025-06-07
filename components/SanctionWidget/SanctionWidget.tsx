@@ -19,14 +19,14 @@ const SanctionWidget: React.FC = () => {
   useEffect(() => {
     const checkForWarnings = async () => {
       try {
-        const response = await fetch("/api/warnings?unacknowledged=true");
+        const response = await fetch("/api/system?module=warnings");
 
         if (!response.ok) {
           throw new Error("Fehler beim Abrufen der Warnungen");
         }
 
         const data = await response.json();
-        setHasActiveWarning(data.success && data.data && data.data.length > 0);
+        setHasActiveWarning(data.data && data.data.length > 0);
       } catch (error) {
         console.error("Fehler beim Prüfen auf Warnungen:", error);
       }
@@ -40,14 +40,14 @@ const SanctionWidget: React.FC = () => {
     const fetchLatestSanction = async () => {
       try {
         setLoading(true);
-        const response = await fetch("/api/sanctions?latest=true");
+        const response = await fetch("/api/content?type=sanctions&size=1");
 
         if (!response.ok) {
           throw new Error("Fehler beim Abrufen der Sanktion");
         }
 
         const data = await response.json();
-        if (data.success && data.data && data.data.length > 0) {
+        if (data.data && data.data.length > 0) {
           setLatestSanction(data.data[0]);
         }
       } catch (error) {

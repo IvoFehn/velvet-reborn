@@ -22,6 +22,7 @@ interface AppStore {
   setLastSync: (timestamp: number) => void;
   invalidateAllCaches: () => void;
   setPendingSync: (pending: boolean) => void;
+  cleanup: () => void;
   
   // Computed
   isAnyLoading: () => boolean;
@@ -80,38 +81,111 @@ export const useAppStore = create<AppStore>()(
       const { globalLoading, loadingOperations } = get();
       return globalLoading || loadingOperations.size > 2; // Show when many operations
     },
+
+    // Cleanup function to prevent memory leaks
+    cleanup: () => {
+      // Reset state without calling cleanupAppStore to avoid circular reference
+      set({
+        globalLoading: false,
+        loadingOperations: new Set(),
+        isOnline: true,
+        lastSync: null,
+        cacheInvalidationTimestamp: Date.now(),
+        pendingSync: false
+      });
+      console.log('AppStore cleanup called');
+    },
   }))
 );
 
-// Network status monitoring
+// Network status monitoring with proper cleanup
+let onlineHandler: (() => void) | null = null;
+let offlineHandler: (() => void) | null = null;
+let cacheSubscription: (() => void) | null = null;
+
 if (typeof window !== 'undefined') {
   const updateOnlineStatus = () => {
     useAppStore.getState().setOnlineStatus(navigator.onLine);
   };
 
-  window.addEventListener('online', updateOnlineStatus);
-  window.addEventListener('offline', updateOnlineStatus);
+  onlineHandler = updateOnlineStatus;
+  offlineHandler = updateOnlineStatus;
+
+  window.addEventListener('online', onlineHandler);
+  window.addEventListener('offline', offlineHandler);
   
   // Initial status
   updateOnlineStatus();
 }
 
 // Subscribe to cache invalidation and propagate to all stores
-useAppStore.subscribe(
+cacheSubscription = useAppStore.subscribe(
   (state) => state.cacheInvalidationTimestamp,
-  () => {
-    // Import stores dynamically to avoid circular dependencies
-    import('./profileStore').then(({ useProfileStore }) => {
-      useProfileStore.getState().invalidateCache();
-    });
-    import('./sanctionsStore').then(({ useSanctionsStore }) => {
-      useSanctionsStore.getState().invalidateCache();
-    });
-    import('./eventsStore').then(({ useEventsStore }) => {
-      useEventsStore.getState().invalidateCache();
-    });
-    import('./tasksStore').then(({ useTasksStore }) => {
-      useTasksStore.getState().invalidateCache();
+  async () => {
+    // Use Promise.allSettled to handle errors gracefully
+    const storeImports = await Promise.allSettled([
+      import('./profileStore').then(({ useProfileStore }) => 
+        useProfileStore.getState().invalidateCache()
+      ),
+      import('./sanctionsStore').then(({ useSanctionsStore }) => 
+        useSanctionsStore.getState().invalidateCache()
+      ),
+      import('./eventsStore').then(({ useEventsStore }) => 
+        useEventsStore.getState().invalidateCache()
+      ),
+      import('./tasksStore').then(({ useTasksStore }) => 
+        useTasksStore.getState().invalidateCache()
+      ),
+    ]);
+
+    // Log any failed store invalidations
+    storeImports.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.warn(`Failed to invalidate store ${index}:`, result.reason);
+      }
     });
   }
 );
+
+// Cleanup all stores function
+export const cleanupAllStores = async () => {
+  try {
+    // Call cleanup on all store modules (they export these functions)
+    const cleanupPromises = await Promise.allSettled([
+      import('./profileStore').then((module) => module.cleanupProfileStore()),
+      import('./sanctionsStore').then((module) => module.cleanupSanctionsStore()),
+      import('./eventsStore').then((module) => module.cleanupEventsStore()),
+      import('./tasksStore').then((module) => module.cleanupTasksStore()),
+    ]);
+    
+    // Log any failed cleanups
+    cleanupPromises.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.warn(`Failed to cleanup store ${index}:`, result.reason);
+      }
+    });
+    
+    // Cleanup app store last
+    cleanupAppStore();
+  } catch (error) {
+    console.error('Error during store cleanup:', error);
+  }
+};
+
+// Global cleanup function
+export const cleanupAppStore = () => {
+  if (typeof window !== 'undefined') {
+    if (onlineHandler) {
+      window.removeEventListener('online', onlineHandler);
+      window.removeEventListener('offline', onlineHandler);
+    }
+  }
+  
+  if (cacheSubscription) {
+    cacheSubscription();
+    cacheSubscription = null;
+  }
+  
+  onlineHandler = null;
+  offlineHandler = null;
+};

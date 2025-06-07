@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '@/lib/dbConnect';
 
-interface ApiResponse<T = any> {
+interface ApiResponse<T = unknown> {
   data?: T;
   meta?: {
     timestamp: string;
@@ -10,7 +10,7 @@ interface ApiResponse<T = any> {
   error?: {
     code: string;
     message: string;
-    details?: any[];
+    details?: string[];
     instance: string;
     timestamp: string;
   };
@@ -19,7 +19,7 @@ interface ApiResponse<T = any> {
 export default async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
   await dbConnect();
 
-  const { method, query } = req;
+  const { query } = req;
   const service = query.service as string;
   const action = query.action as string;
 
@@ -56,9 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
 // Telegram Integration
 async function handleTelegram(req: NextApiRequest, res: NextApiResponse<ApiResponse>, action?: string) {
-  const { method } = req;
-
-  switch (method) {
+  switch (req.method) {
     case 'POST':
       if (action === 'send') {
         return await sendTelegramMessage(req, res);
@@ -69,7 +67,7 @@ async function handleTelegram(req: NextApiRequest, res: NextApiResponse<ApiRespo
       return res.status(405).json({
         error: {
           code: 'METHOD_NOT_ALLOWED',
-          message: `Method ${method} not allowed for telegram`,
+          message: `Method ${req.method} not allowed for telegram`,
           instance: '/api/webhooks?service=telegram',
           timestamp: new Date().toISOString(),
         }
@@ -159,7 +157,7 @@ async function sendTelegramMessage(req: NextApiRequest, res: NextApiResponse<Api
         version: 'v1',
       }
     });
-  } catch (error) {
+  } catch {
     return res.status(500).json({
       error: {
         code: 'TELEGRAM_REQUEST_FAILED',
@@ -238,9 +236,7 @@ async function handleTelegramWebhook(req: NextApiRequest, res: NextApiResponse<A
 
 // Generic Webhook Handler
 async function handleGenericWebhook(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
-  const { method } = req;
-
-  if (method !== 'POST') {
+  if (req.method !== 'POST') {
     return res.status(405).json({
       error: {
         code: 'METHOD_NOT_ALLOWED',
@@ -290,9 +286,7 @@ async function handleGenericWebhook(req: NextApiRequest, res: NextApiResponse<Ap
 
 // Notification System
 async function handleNotification(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
-  const { method } = req;
-
-  if (method !== 'POST') {
+  if (req.method !== 'POST') {
     return res.status(405).json({
       error: {
         code: 'METHOD_NOT_ALLOWED',
@@ -343,13 +337,13 @@ async function handleNotification(req: NextApiRequest, res: NextApiResponse<ApiR
   switch (channel) {
     case 'telegram':
       try {
-        const telegramResponse = await sendTelegramMessage(
+        await sendTelegramMessage(
           { body: { message: formattedMessage } } as NextApiRequest,
           res
         );
         notificationResult = { channel: 'telegram', success: true };
       } catch (error) {
-        notificationResult = { channel: 'telegram', success: false, error: error.message };
+        notificationResult = { channel: 'telegram', success: false, error: error instanceof Error ? error.message : String(error) };
       }
       break;
 

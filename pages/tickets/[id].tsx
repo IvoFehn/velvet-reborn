@@ -7,7 +7,7 @@ import { useRouter } from "next/router";
 import dayjs from "dayjs";
 import "dayjs/locale/de";
 import { ShieldCheckIcon, ClockIcon } from "@heroicons/react/24/outline";
-import { checkAuth } from "@/components/navigation/NavBar";
+import { checkAuth } from "@/components/navigation/SimpleNavBar";
 import { sendTelegramMessage } from "@/util/sendTelegramMessage";
 
 dayjs.locale("de");

@@ -22,6 +22,10 @@ export interface IProfile extends Document {
   name: string;
   gold: number;
   exp: number;
+  level: number;
+  email?: string;
+  streakCount: number;
+  lastLogin?: Date;
   inventory: Array<Schema.Types.ObjectId | IInventoryItem>;
   keys: number;
   // lootboxes enthält jetzt Objekte mit Verweis und Menge
@@ -39,6 +43,10 @@ const ProfileSchema = new Schema<IProfile>(
     name: { type: String, required: true },
     gold: { type: Number, default: 0 },
     exp: { type: Number, default: 0 },
+    level: { type: Number, default: 1 },
+    email: { type: String },
+    streakCount: { type: Number, default: 0 },
+    lastLogin: { type: Date },
     inventory: [{ type: Schema.Types.ObjectId, ref: "InventoryItem" }],
     keys: { type: Number, default: 0 },
     lootboxes: [
@@ -51,5 +59,11 @@ const ProfileSchema = new Schema<IProfile>(
   },
   { timestamps: true }
 );
+
+// Add indexes for performance
+ProfileSchema.index({ name: 1 });
+ProfileSchema.index({ gold: -1 });
+ProfileSchema.index({ exp: -1 });
+ProfileSchema.index({ level: -1 });
 
 export default models.Profile || model<IProfile>("Profile", ProfileSchema);

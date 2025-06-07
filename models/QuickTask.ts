@@ -1,10 +1,5 @@
 import mongoose, { Document, Schema, Model, models } from "mongoose";
-
-/** Rating-Skala von 0 bis 5 */
-export type Rating = 0 | 1 | 2 | 3 | 4 | 5;
-
-/** News-Typen */
-export type NewsType = "general" | "review" | "failed";
+import { Rating, NewsType } from "../types/common";
 
 /** Basis-Interface für alle News */
 export interface INews extends Document {

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from "react";
+import { useRouter } from "next/router";
 import { ICoinItem } from "@/models/CoinItem";
 
 export type RarityType = "Common" | "Uncommon" | "Rare" | "Epic" | "Legendary";
@@ -151,6 +152,7 @@ const Spinner: React.FC<Props> = ({
   hasKeys,
   lootboxExistsInProfile,
 }) => {
+  const router = useRouter();
   // Erstelle eine gewichtete Liste von Items basierend auf TARGET_ITEMS
   const weightedItems = useMemo(() => {
     const counts = distributeItems(baseRarityWeights, TARGET_ITEMS);
@@ -185,8 +187,15 @@ const Spinner: React.FC<Props> = ({
       : weightedItems;
   }, [weightedItems]);
 
-  const shuffledItems = useMemo(() => shuffleArray(filledItems), [filledItems]);
+  const [shuffledItems, setShuffledItems] = useState<ICoinItem[]>([]);
+  const [isHydrated, setIsHydrated] = useState(false);
   const itemCount = shuffledItems.length;
+
+  // Initialize shuffled items only on client side to avoid hydration issues
+  useEffect(() => {
+    setShuffledItems(shuffleArray(filledItems));
+    setIsHydrated(true);
+  }, [filledItems]);
   const visibleCount = 5;
   const buffer = 4;
 
@@ -278,17 +287,28 @@ const Spinner: React.FC<Props> = ({
   };
 
   // --- Sound beim Markerwechsel ---
-  const tickAudioRef = useRef<HTMLAudioElement>(new Audio("/tick.mp3"));
+  const tickAudioRef = useRef<HTMLAudioElement | null>(null);
+  
+  useEffect(() => {
+    // Initialize audio only on client side
+    if (typeof window !== 'undefined') {
+      tickAudioRef.current = new Audio("/tick.mp3");
+    }
+  }, []);
   const isFirstRender = useRef(true);
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     }
-    tickAudioRef.current.currentTime = 0;
-    tickAudioRef.current
-      .play()
-      .catch((err) => console.error("Audio playback failed:", err));
+    
+    // Only play audio if initialized and on client side
+    if (tickAudioRef.current && typeof window !== 'undefined') {
+      tickAudioRef.current.currentTime = 0;
+      tickAudioRef.current
+        .play()
+        .catch((err) => console.error("Audio playback failed:", err));
+    }
   }, [currentIndex]);
   // --------------------------------
 
@@ -368,6 +388,26 @@ const Spinner: React.FC<Props> = ({
 
     spinStep(1);
   };
+
+  // Show loading state until items are hydrated
+  if (!isHydrated || shuffledItems.length === 0) {
+    return (
+      <div className="relative w-full min-h-screen bg-gray-900 p-4 sm:p-8 flex flex-col items-center justify-center">
+        <div className="text-center">
+          <div className="animate-pulse">
+            <div className="w-32 h-8 bg-gray-700 rounded mx-auto mb-4"></div>
+            <div className="flex gap-4 justify-center mb-8">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="w-16 h-16 bg-gray-700 rounded-lg"></div>
+              ))}
+            </div>
+            <div className="w-24 h-12 bg-gray-700 rounded mx-auto"></div>
+          </div>
+          <p className="mt-4 text-gray-400">Lade Spinner...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full min-h-screen bg-gray-900 p-4 sm:p-8 flex flex-col items-center justify-center">
@@ -488,7 +528,7 @@ const Spinner: React.FC<Props> = ({
       {/* Navigation: Button, um zurück zum Profil zu gelangen */}
       <div className="mt-8">
         <button
-          onClick={() => window.location.assign("/profile")}
+          onClick={() => router.push("/profile")}
           className="px-6 py-3 bg-gray-700 text-white rounded-lg shadow hover:bg-gray-600 transition-all duration-200"
         >
           Zurück zum Profil

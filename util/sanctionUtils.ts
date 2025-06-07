@@ -21,7 +21,7 @@ export const giveSanction = async (
       severity: level,
       deadlineDays,
       reason,
-    });
+    } as any);
 
     if (!response.success || !response.data) {
       throw new Error(
@@ -29,7 +29,7 @@ export const giveSanction = async (
       );
     }
 
-    return response.data;
+    return response.data as any;
   } catch (error) {
     console.error("Fehler bei giveSanction:", error);
     throw error;
@@ -88,7 +88,7 @@ export const giveSpecificSanction = async (
       severity: level,
       deadlineDays,
       reason,
-    });
+    } as any);
 
     if (!response.success || !response.data) {
       throw new Error(
@@ -97,7 +97,7 @@ export const giveSpecificSanction = async (
       );
     }
 
-    return response.data;
+    return response.data as any;
   } catch (error) {
     console.error("Fehler bei giveSpecificSanction:", error);
     throw error;
@@ -167,7 +167,7 @@ export const getSanctions = async (
       );
     }
 
-    return response.data;
+    return response.data as any;
   } catch (error) {
     console.error("Fehler bei getSanctions:", error);
     throw error;
@@ -192,7 +192,7 @@ export const completeSanction = async (
       );
     }
 
-    return response.data;
+    return response.data as any;
   } catch (error) {
     console.error("Fehler bei completeSanction:", error);
     throw error;

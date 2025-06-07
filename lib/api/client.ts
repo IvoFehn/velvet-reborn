@@ -1,4 +1,4 @@
-import { ApiResponse, ApiError, RequestConfig } from './types';
+import { ApiResponse, RequestConfig } from './types';
 
 class ApiClient {
   private baseURL = '/api';
@@ -75,19 +75,19 @@ class ApiClient {
   }
 
   // Generic HTTP methods
-  async get<T>(endpoint: string, params?: Record<string, any>, signal?: AbortSignal): Promise<ApiResponse<T>> {
+  async get<T>(endpoint: string, params?: Record<string, string | number | boolean>, signal?: AbortSignal): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: 'GET', params, signal });
   }
 
-  async post<T>(endpoint: string, body?: any, signal?: AbortSignal): Promise<ApiResponse<T>> {
+  async post<T>(endpoint: string, body?: unknown, signal?: AbortSignal): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: 'POST', body, signal });
   }
 
-  async put<T>(endpoint: string, body?: any, signal?: AbortSignal): Promise<ApiResponse<T>> {
+  async put<T>(endpoint: string, body?: unknown, signal?: AbortSignal): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: 'PUT', body, signal });
   }
 
-  async patch<T>(endpoint: string, body?: any, signal?: AbortSignal): Promise<ApiResponse<T>> {
+  async patch<T>(endpoint: string, body?: unknown, signal?: AbortSignal): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: 'PATCH', body, signal });
   }
 

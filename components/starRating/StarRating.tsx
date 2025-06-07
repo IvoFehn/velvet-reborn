@@ -1,4 +1,4 @@
-import { Rating } from "@/models/News";
+import { Rating } from "@/types/common";
 
 const StarRating: React.FC<{
   rating: Rating;

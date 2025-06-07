@@ -30,9 +30,9 @@ const DailyRewardsWidget: React.FC = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/profile/get`);
+      const response = await fetch(`/api/user?action=profile`);
       const data = await response.json();
-      if (data.success) setProfile(data.data);
+      if (data.data) setProfile(data.data);
     } catch (err) {
       console.error("Error loading profile:", err);
     } finally {
@@ -90,13 +90,17 @@ const DailyRewardsWidget: React.FC = () => {
 
       try {
         setLoading(true);
-        const response = await fetch(`/api/daily-login?userId=${userId}`);
+        const response = await fetch(`/api/user?action=daily-login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId })
+        });
         const data = await response.json();
 
-        if (data.success) {
+        if (data.data) {
           const streakBroken = isStreakBroken(
-            data.user.lastClaimAt,
-            data.user.consecutiveDays
+            data.data.lastClaimAt,
+            data.data.consecutiveDays
           );
 
           if (streakBroken) {
@@ -110,12 +114,12 @@ const DailyRewardsWidget: React.FC = () => {
             );
             console.log(`Streak für Benutzer ${userId} wurde zurückgesetzt`);
           } else {
-            setCurrentDay(data.user.consecutiveDays);
-            setClickable(data.clickable);
+            setCurrentDay(data.data.consecutiveDays || 0);
+            setClickable(data.clickable || false);
 
             // Zeitpunkt für nächsten Reward berechnen
-            if (!data.clickable && data.user.lastClaimAt) {
-              const lastClaim = new Date(data.user.lastClaimAt);
+            if (!data.clickable && data.data.lastClaimAt) {
+              const lastClaim = new Date(data.data.lastClaimAt);
               const twoHoursAfterClaim = lastClaim.getTime() + 2 * 3600 * 1000;
               const nextDay = new Date(lastClaim);
               nextDay.setDate(lastClaim.getDate() + 1);
@@ -125,9 +129,9 @@ const DailyRewardsWidget: React.FC = () => {
               );
             }
           }
-        } else {
+        } else if (data.error) {
           setError(
-            data.message || "Fehler beim Abrufen des Daily Login Status."
+            data.error.message || "Fehler beim Abrufen des Daily Login Status."
           );
         }
       } catch (err) {
@@ -150,35 +154,30 @@ const DailyRewardsWidget: React.FC = () => {
     if (profile?._id) {
       checkAndUpdateStreakStatus(profile._id);
     }
-  }, [profile, checkAndUpdateStreakStatus]);
+  }, [profile?._id, checkAndUpdateStreakStatus]);
 
-  // Timer aktualisieren - debounced to prevent excessive updates
+  // Timer aktualisieren - simple timer without status checks to prevent loops
   useEffect(() => {
-    if (!nextRewardTimestamp || !profile?._id) return;
+    if (!nextRewardTimestamp) return;
 
     const timer = setInterval(() => {
       const diff = nextRewardTimestamp - Date.now();
       setTimeLeft(diff > 0 ? diff : 0);
-
-      // Wenn der Timer abgelaufen ist, können wir den Status aktualisieren
-      // but only check occasionally to prevent loops
-      if (diff <= 0 && !clickable) {
-        const now = Date.now();
-        // Only check if we haven't checked in the last minute
-        if (now - lastCheckTime > 60000) {
-          checkAndUpdateStreakStatus(profile._id);
-        }
-      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [
-    nextRewardTimestamp,
-    clickable,
-    profile,
-    checkAndUpdateStreakStatus,
-    lastCheckTime,
-  ]);
+  }, [nextRewardTimestamp]);
+
+  // Separate effect for status checking to prevent timer dependency loops
+  useEffect(() => {
+    if (!profile?._id || clickable || timeLeft > 0) return;
+    
+    const now = Date.now();
+    // Only check if we haven't checked in the last 5 minutes
+    if (now - lastCheckTime > 300000) {
+      checkAndUpdateStreakStatus(profile._id);
+    }
+  }, [profile?._id, clickable, timeLeft, lastCheckTime, checkAndUpdateStreakStatus]);
 
   const formatTime = (ms: number) => {
     const hours = Math.floor(ms / 3600000);

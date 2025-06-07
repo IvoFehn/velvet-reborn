@@ -72,6 +72,13 @@ const eventSchema: Schema<IEvent> = new Schema(
   }
 );
 
+// Add indexes for performance
+eventSchema.index({ startDate: 1 });
+eventSchema.index({ endDate: 1 });
+eventSchema.index({ recurring: 1 });
+eventSchema.index({ title: 1 });
+eventSchema.index({ startDate: 1, endDate: 1 }); // Compound index for date ranges
+
 const Event: Model<IEvent> =
   mongoose.models.Event || mongoose.model<IEvent>("Event", eventSchema);
 

@@ -207,7 +207,7 @@ const PreferenceSurvey: React.FC<SurveyProps> = ({
   useEffect(() => {
     const checkSurveyStatus = async () => {
       try {
-        const response = await fetch("/api/survey/status");
+        const response = await fetch("/api/content?type=survey&action=status");
         if (!response.ok) {
           throw new Error("Fehler beim Abrufen des Survey-Status");
         }
@@ -299,7 +299,7 @@ const PreferenceSurvey: React.FC<SurveyProps> = ({
     setSubmitError(null);
 
     try {
-      const response = await fetch("/api/survey", {
+      const response = await fetch("/api/content?type=survey", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

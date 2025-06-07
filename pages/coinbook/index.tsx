@@ -144,8 +144,8 @@ export default function CoinBookPage() {
     const fetchData = async () => {
       try {
         const [coinBookRes, coinItemsRes] = await Promise.all([
-          fetch("/api/coinbooks"),
-          fetch("/api/coinitems"),
+          fetch("/api/gaming?action=coinbook"),
+          fetch("/api/gaming?action=items"),
         ]);
 
         if (!coinBookRes.ok)
@@ -156,11 +156,11 @@ export default function CoinBookPage() {
         const coinBookData: CoinBookWrapper = await coinBookRes.json();
         const coinItemsData: CoinItemWrapper = await coinItemsRes.json();
 
-        setCoinBook(coinBookData.coinBook);
-        setCoinItems(coinItemsData.coinItems);
-      } catch (err: any) {
+        setCoinBook('data' in coinBookData ? coinBookData.data as ICoinBook : null);
+        setCoinItems('data' in coinItemsData ? coinItemsData.data as ICoinItem[] : []);
+      } catch (err: unknown) {
         console.error(err);
-        setError(err.message || "Unbekannter Fehler");
+        setError(err instanceof Error ? err.message : "Unbekannter Fehler");
       } finally {
         setLoading(false);
       }
@@ -172,7 +172,7 @@ export default function CoinBookPage() {
   const handleConfirmRedeem = async () => {
     if (!selectedEntry) return;
     try {
-      const res = await fetch("/api/coinbooks", {
+      const res = await fetch("/api/gaming?action=coinbook", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -181,8 +181,8 @@ export default function CoinBookPage() {
         }),
       });
       if (!res.ok) throw new Error("Einlösen fehlgeschlagen");
-      const data: CoinBookWrapper = await res.json();
-      setCoinBook(data.coinBook);
+      const data = await res.json();
+      setCoinBook(data.data);
       setSelectedEntry(null);
     } catch (err: any) {
       console.error(err);

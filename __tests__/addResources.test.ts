@@ -15,14 +15,14 @@ describe('resource utilities', () => {
 
   it('addExp posts to API', async () => {
     await addExp(5);
-    expect(mockFetch).toHaveBeenCalledWith('/api/profile/update', expect.objectContaining({
+    expect(mockFetch).toHaveBeenCalledWith('/api/user?action=profile', expect.objectContaining({
       method: 'PUT',
     }));
   });
 
   it('addGold posts to API', async () => {
     await addGold(10);
-    expect(mockFetch).toHaveBeenCalledWith('/api/profile/update', expect.objectContaining({
+    expect(mockFetch).toHaveBeenCalledWith('/api/user?action=profile', expect.objectContaining({
       method: 'PUT',
     }));
   });

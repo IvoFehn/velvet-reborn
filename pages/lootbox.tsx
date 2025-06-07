@@ -26,9 +26,9 @@ const LootboxPage: NextPage = () => {
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        const res = await fetch("/api/coinitems");
+        const res = await fetch("/api/gaming?action=coinbook");
         const data = await res.json();
-        if (data.success) setItems(data.coinItems || []);
+        if (data.data) setItems(data.data.items || []);
       } catch (error) {
         console.error("Fetch error:", error);
       }
@@ -41,9 +41,9 @@ const LootboxPage: NextPage = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await fetch("/api/profile/get");
+        const res = await fetch("/api/user?action=profile");
         const data = await res.json();
-        if (data.success) setProfile(data.data || null);
+        if (data.data) setProfile(data.data || null);
       } catch (error) {
         console.error("Profile fetch error:", error);
       }
@@ -60,10 +60,10 @@ const LootboxPage: NextPage = () => {
         return;
       }
       try {
-        const res = await fetch(`/api/lootbox?id=${lootboxId}`);
+        const res = await fetch(`/api/gaming?action=lootbox&id=${lootboxId}`);
         const data = await res.json();
-        if (data.success && data.lootbox) {
-          setLootbox(data.lootbox);
+        if (data.data) {
+          setLootbox(data.data);
         }
       } catch (error) {
         console.error("Lootbox fetch error:", error);

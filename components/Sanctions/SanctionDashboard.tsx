@@ -15,8 +15,7 @@ import { ISanction } from "@/types/index";
 import { 
   useSanctions, 
   useCheckSanctions, 
-  useCompleteAllSanctions,
-  useOptimisticSanctionsUpdate 
+  useCompleteAllSanctions
 } from "@/hooks/useSanctions";
 import { useAppStore } from "@/stores/appStore";
 import RandomSanctionForm from "./RandomSanctionForm";
@@ -38,10 +37,13 @@ const SanctionDashboard: React.FC = () => {
     setSuccessMessage(`Sanktion "${sanction.title}" erfolgreich erstellt!`);
     
     // Clear success message after 3 seconds
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       setSuccessMessage(null);
     }, 3000);
-  }, []);
+    
+    // Cleanup timeout on unmount
+    return () => clearTimeout(timeoutId);
+  }, [setSuccessMessage]);
 
   // Behandlung für Massenaktionen (optimistic updates)
   const handleMassAction = useCallback(async (action: "escalate" | "completeAll") => {
@@ -66,7 +68,7 @@ const SanctionDashboard: React.FC = () => {
     } finally {
       removeLoadingOperation(operationId);
     }
-  }, [checkSanctions, completeAllSanctions, addLoadingOperation, removeLoadingOperation]);
+  }, [checkSanctions, completeAllSanctions, addLoadingOperation, removeLoadingOperation, setSuccessMessage]);
 
   // Manual refresh (force API call)
   const handleRefresh = useCallback(() => {

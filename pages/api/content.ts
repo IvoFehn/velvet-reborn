@@ -4,14 +4,10 @@ import Sanction from '@/models/Sanction';
 import Event from '@/models/Event';
 import DailyTask from '@/models/DailyTask';
 import News from '@/models/News';
-import WikiPage from '@/models/WikiPage';
-import Ticket from '@/models/Ticket';
-import Survey from '@/models/Survey';
-import QuickTask from '@/models/QuickTask';
 import sanctionCatalog from '@/data/sanctionCatalog';
 import { ISanctionCatalog } from '@/types/index.d';
 
-interface ApiResponse<T = any> {
+interface ApiResponse<T = unknown> {
   data?: T;
   meta?: {
     timestamp: string;
@@ -26,7 +22,7 @@ interface ApiResponse<T = any> {
   error?: {
     code: string;
     message: string;
-    details?: any[];
+    details?: unknown[];
     instance: string;
     timestamp: string;
   };
@@ -35,7 +31,7 @@ interface ApiResponse<T = any> {
 export default async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
   await dbConnect();
 
-  const { method, query } = req;
+  const { query } = req;
   const type = query.type as string;
 
   try {
@@ -89,7 +85,13 @@ async function handleSanctions(req: NextApiRequest, res: NextApiResponse<ApiResp
     case 'GET':
       return await getSanctions(req, res);
     case 'POST':
-      return await createSanction(req, res);
+      if (action === 'complete-all') {
+        return await bulkCompleteSanctions(req, res);
+      } else if (action === 'check') {
+        return await checkSanctions(res);
+      } else {
+        return await createSanction(req, res);
+      }
     case 'PUT':
       if (action === 'complete') {
         return await completeSanction(id, res);
@@ -119,7 +121,7 @@ async function handleSanctions(req: NextApiRequest, res: NextApiResponse<ApiResp
 async function getSanctions(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
   const { status, category, severity, page = '1', size = '20' } = req.query;
 
-  const filter: any = {};
+  const filter: Record<string, unknown> = {};
   if (status && status !== 'all') filter.status = status;
   if (category) filter.category = category;
   if (severity) filter.severity = parseInt(severity as string);
@@ -302,6 +304,74 @@ async function deleteSanction(id: string, res: NextApiResponse<ApiResponse>) {
   return res.status(204).end();
 }
 
+async function bulkCompleteSanctions(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
+  const { ids } = req.body;
+  
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({
+      error: {
+        code: 'INVALID_IDS',
+        message: 'Valid array of sanction IDs is required',
+        instance: '/api/content?type=sanctions',
+        timestamp: new Date().toISOString(),
+      }
+    });
+  }
+
+  const result = await Sanction.updateMany(
+    { _id: { $in: ids } },
+    { $set: { status: 'erledigt' } }
+  );
+
+  return res.status(200).json({
+    data: {
+      modifiedCount: result.modifiedCount,
+      matchedCount: result.matchedCount,
+      completedIds: ids
+    },
+    meta: {
+      timestamp: new Date().toISOString(),
+      version: 'v1',
+    }
+  });
+}
+
+async function checkSanctions(res: NextApiResponse<ApiResponse>) {
+  const now = new Date();
+  
+  // Find overdue sanctions that haven't been escalated
+  const overdueSanctions = await Sanction.find({
+    status: 'offen',
+    deadline: { $lt: now }
+  });
+
+  // Escalate overdue sanctions
+  const escalationPromises = overdueSanctions.map(async (sanction) => {
+    sanction.status = 'eskaliert';
+    sanction.escalationCount += 1;
+    sanction.amount *= sanction.escalationFactor;
+    return sanction.save();
+  });
+
+  const escalatedSanctions = await Promise.all(escalationPromises);
+
+  return res.status(200).json({
+    data: {
+      overdueCount: overdueSanctions.length,
+      escalatedSanctions: escalatedSanctions.map(s => ({
+        id: s._id,
+        title: s.title,
+        newAmount: s.amount,
+        escalationCount: s.escalationCount
+      }))
+    },
+    meta: {
+      timestamp: new Date().toISOString(),
+      version: 'v1',
+    }
+  });
+}
+
 // Events Management
 async function handleEvents(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
   const { method, query } = req;
@@ -331,9 +401,9 @@ async function handleEvents(req: NextApiRequest, res: NextApiResponse<ApiRespons
 }
 
 async function getEvents(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
-  const { active, type, from, to } = req.query;
+  const { active, type } = req.query;
 
-  const filter: any = {};
+  const filter: Record<string, unknown> = {};
   if (active !== undefined) filter.isActive = active === 'true';
   if (type) filter.type = type;
 
@@ -434,7 +504,11 @@ async function handleTasks(req: NextApiRequest, res: NextApiResponse<ApiResponse
 
   switch (method) {
     case 'GET':
-      return await getTasks(req, res);
+      if (id) {
+        return await getTask(id, res);
+      } else {
+        return await getTasks(req, res);
+      }
     case 'POST':
       return await createTask(req, res);
     case 'PUT':
@@ -462,7 +536,7 @@ async function handleTasks(req: NextApiRequest, res: NextApiResponse<ApiResponse
 async function getTasks(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
   const { completed, type, difficulty } = req.query;
 
-  const filter: any = {};
+  const filter: Record<string, unknown> = {};
   if (completed !== undefined) filter.completed = completed === 'true';
   if (type) filter.type = type;
   if (difficulty) filter.difficulty = parseInt(difficulty as string);
@@ -471,6 +545,29 @@ async function getTasks(req: NextApiRequest, res: NextApiResponse<ApiResponse>) 
 
   return res.status(200).json({
     data: tasks,
+    meta: {
+      timestamp: new Date().toISOString(),
+      version: 'v1',
+    }
+  });
+}
+
+async function getTask(id: string, res: NextApiResponse<ApiResponse>) {
+  const task = await DailyTask.findById(id).lean();
+  
+  if (!task) {
+    return res.status(404).json({
+      error: {
+        code: 'TASK_NOT_FOUND',
+        message: 'Task not found',
+        instance: '/api/content?type=tasks',
+        timestamp: new Date().toISOString(),
+      }
+    });
+  }
+
+  return res.status(200).json({
+    data: task,
     meta: {
       timestamp: new Date().toISOString(),
       version: 'v1',

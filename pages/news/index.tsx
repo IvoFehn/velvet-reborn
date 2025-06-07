@@ -6,11 +6,9 @@ import { INewsInput } from "@/models/News";
 import { GeneratorData } from "@/types";
 import { createNews } from "@/util/createNews";
 import { sendTelegramMessage } from "@/util/sendTelegramMessage";
+import { Rating } from "@/types/common";
 import dayjs from "dayjs";
 import { useEffect, useState, ChangeEvent, FormEvent } from "react";
-
-/** Rating-Skala von 1 bis 5 */
-export type Rating = 1 | 2 | 3 | 4 | 5;
 
 /** Erweiterte Formulardaten, inkl. Felder für fehlgeschlagene Generatoren */
 export interface GeneratorReviewFormData {

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useProfileStore } from '@/stores/profileStore';
 import type { UpdateProfilePayload, AdminUpdatePayload } from '../lib/api';
 
@@ -12,11 +12,16 @@ export function useProfile() {
     shouldRefetch
   } = useProfileStore();
 
-  useEffect(() => {
-    if (shouldRefetch()) {
+  // Memoize the fetch function to prevent unnecessary re-renders
+  const stableFetchProfile = useCallback(() => {
+    if (!profile && !loading && !error) {
       fetchProfile();
     }
-  }, [fetchProfile, shouldRefetch]);
+  }, [profile, loading, error, fetchProfile]);
+
+  useEffect(() => {
+    stableFetchProfile();
+  }, []); // Only run once on mount
 
   return {
     data: profile,

@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import StarRating from "@/components/starRating/StarRating";
-import { Rating } from "@/models/News";
+import { Rating } from "@/types/common";
 import { sendTelegramMessage } from "@/util/sendTelegramMessage";
 import {
   FiCheckCircle,

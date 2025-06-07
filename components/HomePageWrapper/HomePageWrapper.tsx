@@ -18,12 +18,20 @@ export default function HomePageWrapper({ children }: HomePageWrapperProps) {
 
   // State für das Rules-Modal
   const [showRulesModal, setShowRulesModal] = useState(false);
+  
+  // Hydration guard
+  const [isHydrated, setIsHydrated] = useState(false);
 
   // Router für Pfad-Überprüfung
   const router = useRouter();
 
   // Verwendung des useWindowSize Hooks von react-use
   const { width, height } = useWindowSize();
+
+  // Set hydration flag
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   // useEffect: Prüfe, ob ein aktives Event vorliegt
   useEffect(() => {
@@ -57,24 +65,18 @@ export default function HomePageWrapper({ children }: HomePageWrapperProps) {
       return;
     }
 
-    // Prüfe, ob Nutzer Regeln akzeptiert hat
-    const hasAcceptedRules = document.cookie.includes("acceptedRules=true");
-    setShowRulesModal(!hasAcceptedRules);
+    // Prüfe, ob Nutzer Regeln akzeptiert hat (nur im Browser)
+    if (typeof window !== "undefined") {
+      const hasAcceptedRules = document.cookie.includes("acceptedRules=true");
+      setShowRulesModal(!hasAcceptedRules);
+    }
   }, [router.pathname]);
-
-  // Separiere Navbar-Element und Content-Element aus children
-  // Annahme: Das erste Element ist die NavBar
-  const childrenArray = React.Children.toArray(children);
-  const navBarElement = childrenArray[0];
-  const contentElements = childrenArray.slice(1);
 
   return (
     <>
-      {/* NavBar-Element bleibt außerhalb des Inhaltsbereichs */}
-      {navBarElement}
 
       {/* Confetti anzeigen, wenn ein aktives Event vorliegt */}
-      {/* {activeEvent && (
+      {/* {isHydrated && activeEvent && (
         <Confetti width={width} height={height} numberOfPieces={50} />
       )} */}
 
@@ -128,7 +130,7 @@ export default function HomePageWrapper({ children }: HomePageWrapperProps) {
           paddingTop: activeEvent && bannerVisible ? "60px" : undefined,
         }}
       >
-        {contentElements}
+        {children}
       </div>
     </>
   );

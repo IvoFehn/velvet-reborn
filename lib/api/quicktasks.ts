@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import { CreateQuickTaskPayload, UpdateQuickTaskPayload } from './types';
 
 export const quickTasksApi = {
   // Get all quick tasks
@@ -7,7 +8,7 @@ export const quickTasksApi = {
   },
 
   // Create new quick task
-  create: (data: any, signal?: AbortSignal) => {
+  create: (data: CreateQuickTaskPayload, signal?: AbortSignal) => {
     return apiClient.post('/quicktasks', data, signal);
   },
 
@@ -17,7 +18,7 @@ export const quickTasksApi = {
   },
 
   // Update quick task
-  update: (id: string, data: any, signal?: AbortSignal) => {
+  update: (id: string, data: UpdateQuickTaskPayload, signal?: AbortSignal) => {
     return apiClient.put(`/quicktasks/${id}`, data, signal);
   },
 

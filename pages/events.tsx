@@ -158,8 +158,9 @@ const EventsPage: React.FC = () => {
   const fetchEvents = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/events");
-      const { events } = await res.json();
+      const res = await fetch("/api/content?type=events");
+      const data = await res.json();
+      const events = data.data?.events || [];
 
       // Doppelte Events filtern, bevor sie gesetzt werden
       const filteredEvents = filterDuplicateEvents(events);
@@ -209,14 +210,15 @@ const EventsPage: React.FC = () => {
     };
 
     try {
-      const res = await fetch("/api/events", {
+      const res = await fetch("/api/content?type=events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(eventData),
       });
 
       if (res.ok) {
-        const { event } = await res.json(); // Get the newly created event from response
+        const data = await res.json();
+        const event = data.data?.event; // Get the newly created event from response
 
         // Typabsicherung: Wenn das API keine vollständige Antwort liefert, erstellen wir das Objekt selbst
         const newEvent: EventData = event || {
@@ -239,7 +241,7 @@ const EventsPage: React.FC = () => {
         resetCreateForm();
       } else {
         const errorData = await res.json();
-        setError(errorData.message || "Fehler beim Erstellen des Events");
+        setError(errorData.error?.message || "Fehler beim Erstellen des Events");
       }
     } catch (err) {
       setError("Fehler bei der Anfrage");
@@ -297,7 +299,7 @@ const EventsPage: React.FC = () => {
     const eventId = currentEvent?._id || currentEvent?.originalEventId;
 
     try {
-      const res = await fetch(`/api/events/${eventId}`, {
+      const res = await fetch(`/api/content?type=events&id=${eventId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(eventData),
@@ -334,7 +336,7 @@ const EventsPage: React.FC = () => {
         setEditDialogOpen(false);
       } else {
         const errorData = await res.json();
-        setError(errorData.message || "Fehler beim Aktualisieren des Events");
+        setError(errorData.error?.message || "Fehler beim Aktualisieren des Events");
       }
     } catch (err) {
       setError("Fehler bei der Anfrage");
@@ -377,7 +379,7 @@ const EventsPage: React.FC = () => {
 
       console.log("Versuche Event mit ID zu löschen:", eventId); // Debugging
 
-      const res = await fetch(`/api/events/${eventId}`, { method: "DELETE" });
+      const res = await fetch(`/api/content?type=events&id=${eventId}`, { method: "DELETE" });
       if (res.ok) {
         // Remove the event from state immediately for instant UI update
         setEvents((prevEvents) => {
@@ -390,7 +392,7 @@ const EventsPage: React.FC = () => {
         setSuccess("Event erfolgreich gelöscht");
       } else {
         const errorData = await res.json();
-        setError(errorData.message || "Fehler beim Löschen des Events");
+        setError(errorData.error?.message || "Fehler beim Löschen des Events");
       }
     } catch (err) {
       console.error("Delete error:", err);

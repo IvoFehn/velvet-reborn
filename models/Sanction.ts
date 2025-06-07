@@ -1,6 +1,7 @@
 // models/Sanction.ts
 import mongoose, { Model } from "mongoose";
 import { ISanction } from "@/types/index";
+import { SanctionUnit, SanctionStatus, SanctionCategory } from "../types/common";
 
 const SanctionSchema = new mongoose.Schema({
   title: {
@@ -17,6 +18,11 @@ const SanctionSchema = new mongoose.Schema({
     type: String,
     required: [true, "Bitte geben Sie eine Aufgabe an"],
     trim: true,
+  },
+  sanctionsFrontendId: {
+    type: String,
+    unique: true,
+    required: true,
   },
   severity: {
     type: Number,
@@ -79,6 +85,12 @@ const SanctionSchema = new mongoose.Schema({
     trim: true,
   },
 });
+
+// Add indexes for performance
+SanctionSchema.index({ status: 1 });
+SanctionSchema.index({ category: 1 });
+SanctionSchema.index({ deadline: 1 });
+SanctionSchema.index({ createdAt: -1 });
 
 // Methode zur Überprüfung und Eskalation einer Sanktion
 SanctionSchema.methods.checkAndEscalate = function (): boolean {

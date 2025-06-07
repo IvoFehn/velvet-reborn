@@ -18,14 +18,23 @@ interface CustomDateTimePickerProps {
 const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
   value,
   onChange,
-  minDate = dayjs(),
+  minDate,
 }) => {
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [clientMinDate, setClientMinDate] = useState<Dayjs | null>(null);
+  
+  // Initialize client-side only to avoid hydration issues
+  React.useEffect(() => {
+    setClientMinDate(minDate || dayjs());
+    setIsHydrated(true);
+  }, [minDate]);
+
   // Speichere das aktuell ausgewählte Datum (inklusive Zeit) – falls vorhanden
   const [selectedDate, setSelectedDate] = useState<Dayjs | null>(value);
   // Die initialen Stunden und Minuten basieren auf dem übergebenen Wert oder auf der aktuellen Uhrzeit
   const [selectedTime, setSelectedTime] = useState({
-    hours: value ? value.hour() : dayjs().hour(),
-    minutes: value ? value.minute() : dayjs().minute(),
+    hours: value ? value.hour() : 12, // Use default values instead of current time
+    minutes: value ? value.minute() : 0,
   });
   // Der aktuell angezeigte Monat im Kalender (entspricht dem Monat des ausgewählten Datums, falls vorhanden)
   const [currentMonth, setCurrentMonth] = useState(
@@ -71,7 +80,7 @@ const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
       onChange(newDate);
       setShowTimePicker(false);
     },
-    [selectedTime, onChange]
+    [selectedTime.hours, selectedTime.minutes, onChange]
   );
 
   // Wenn die Zeit (Stunden oder Minuten) geändert wird, aktualisieren wir sowohl die Zeit-Zustände
@@ -98,6 +107,22 @@ const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
       direction === "next" ? prev.add(1, "month") : prev.subtract(1, "month")
     );
   }, []);
+
+  if (!isHydrated) {
+    return (
+      <div className="bg-white rounded-xl shadow-lg p-4 w-full max-w-md">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-300 rounded w-32 mx-auto mb-4"></div>
+          <div className="grid grid-cols-7 gap-1 mb-4">
+            {[...Array(35)].map((_, i) => (
+              <div key={i} className="h-8 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+          <div className="h-10 bg-gray-300 rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-4 w-full max-w-md">
@@ -139,11 +164,11 @@ const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
                   : ""
               }
               ${
-                day && day.isBefore(minDate, "day")
+                day && clientMinDate && day.isBefore(clientMinDate, "day")
                   ? "opacity-50 cursor-not-allowed"
                   : ""
               }`}
-            disabled={day ? day.isBefore(minDate, "day") : true}
+            disabled={day ? Boolean(clientMinDate && day.isBefore(clientMinDate, "day")) : true}
           >
             {day ? day.format("D") : ""}
           </button>

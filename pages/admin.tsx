@@ -1,7 +1,7 @@
 import React from "react";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
-import { checkAuth } from "@/components/navigation/NavBar";
+import { checkAuth } from "@/components/navigation/SimpleNavBar";
 import AdminDashboard from "@/components/AdminDashboard/AdminDashboard";
 
 const AdminPage: React.FC = () => {

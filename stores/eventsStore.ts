@@ -1,6 +1,9 @@
 import { create } from 'zustand';
-import { eventsApi } from '@/lib/api';
+import { zalandoApiClient } from '@/lib/api/client-v2';
 import type { CreateEventPayload } from '@/lib/api/types';
+
+// Request deduplication map
+const pendingRequests = new Map<string, Promise<any>>();
 
 interface Event {
   _id: string;
@@ -39,6 +42,7 @@ interface EventsStore {
   clearError: () => void;
   shouldRefetch: () => boolean;
   invalidateCache: () => void;
+  cleanup: () => void;
 }
 
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes (events change less frequently)
@@ -60,7 +64,7 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
   // Invalidate cache
   invalidateCache: () => set({ lastFetch: null }),
 
-  // Fetch events from API
+  // Fetch events from API with request deduplication
   fetchEvents: async (force = false) => {
     const { loading, shouldRefetch } = get();
     
@@ -68,47 +72,61 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
       return;
     }
 
-    set({ loading: true, error: null });
-
-    try {
-      const response = await eventsApi.list();
-      
-      if (response.success && response.data) {
-        set({ 
-          events: response.data, 
-          loading: false, 
-          error: null,
-          lastFetch: Date.now()
-        });
-      } else {
-        set({ 
-          loading: false, 
-          error: response.error || response.message || 'Fehler beim Laden der Events' 
-        });
-      }
-    } catch (error) {
-      set({ 
-        loading: false, 
-        error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
-      });
+    const requestKey = 'fetchEvents';
+    
+    // Return existing request if one is pending
+    if (pendingRequests.has(requestKey)) {
+      return pendingRequests.get(requestKey);
     }
+
+    const requestPromise = (async () => {
+      set({ loading: true, error: null });
+
+      try {
+        const response = await zalandoApiClient.events.list();
+        
+        if (response.data) {
+          set({ 
+            events: response.data as unknown as Event[], 
+            loading: false, 
+            error: null,
+            lastFetch: Date.now()
+          });
+        } else {
+          set({ 
+            loading: false, 
+            error: response.error?.message || 'Fehler beim Laden der Events' 
+          });
+        }
+      } catch (error) {
+        set({ 
+          loading: false, 
+          error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
+        });
+      } finally {
+        pendingRequests.delete(requestKey);
+      }
+    })();
+
+    pendingRequests.set(requestKey, requestPromise);
+    return requestPromise;
   },
 
   // Create new event
-  createEvent: async (data) => {
+  createEvent: async (data): Promise<Event | null> => {
     try {
-      const response = await eventsApi.create(data);
+      const response = await zalandoApiClient.events.create(data as unknown as Parameters<typeof zalandoApiClient.events.create>[0]);
       
-      if (response.success && response.data) {
+      if (response.data) {
         // Add to local state immediately
         set(state => ({ 
-          events: [...state.events, response.data!],
+          events: [...state.events, response.data as unknown as Event],
           error: null,
           lastFetch: Date.now()
         }));
-        return response.data;
+        return response.data as unknown as Event;
       } else {
-        set({ error: response.error || response.message || 'Fehler beim Erstellen' });
+        set({ error: response.error?.message || 'Fehler beim Erstellen' });
         return null;
       }
     } catch (error) {
@@ -127,12 +145,12 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
     }));
 
     try {
-      const response = await eventsApi.update(id, data);
+      const response = await zalandoApiClient.events.update(id, data);
       
-      if (response.success && response.data) {
+      if (response.data) {
         set(state => ({
           events: state.events.map(e => 
-            e._id === id ? response.data! : e
+            e._id === id ? response.data as unknown as Event : e
           ),
           error: null,
           lastFetch: Date.now()
@@ -140,7 +158,7 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
       } else {
         // Revert optimistic update
         await get().fetchEvents(true);
-        set({ error: response.error || response.message || 'Fehler beim Aktualisieren' });
+        set({ error: response.error?.message || 'Fehler beim Aktualisieren' });
       }
     } catch (error) {
       // Revert optimistic update
@@ -157,15 +175,10 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
     }));
 
     try {
-      const response = await eventsApi.delete(id);
+      const response = await zalandoApiClient.events.delete(id);
       
-      if (response.success) {
-        set({ error: null, lastFetch: Date.now() });
-      } else {
-        // Revert optimistic update
-        await get().fetchEvents(true);
-        set({ error: response.error || response.message || 'Fehler beim Löschen' });
-      }
+      // Note: delete returns void, so check for no error
+      set({ error: null, lastFetch: Date.now() });
     } catch (error) {
       // Revert optimistic update
       await get().fetchEvents(true);
@@ -175,20 +188,27 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
 
   // Toggle event active status
   toggleEventActive: async (id) => {
+    // Get current event to determine new active state
+    const { events } = get();
+    const currentEvent = events.find(e => e._id === id);
+    if (!currentEvent) return;
+
+    const newActiveState = !currentEvent.isActive;
+
     // Optimistic update
     set(state => ({
       events: state.events.map(e => 
-        e._id === id ? { ...e, isActive: !e.isActive } : e
+        e._id === id ? { ...e, isActive: newActiveState } : e
       )
     }));
 
     try {
-      const response = await eventsApi.toggleActive(id);
+      const response = await zalandoApiClient.events.update(id, { isActive: newActiveState } as any);
       
-      if (response.success && response.data) {
+      if (response.data) {
         set(state => ({
           events: state.events.map(e => 
-            e._id === id ? response.data! : e
+            e._id === id ? response.data as unknown as Event : e
           ),
           error: null,
           lastFetch: Date.now()
@@ -196,7 +216,7 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
       } else {
         // Revert optimistic update
         await get().fetchEvents(true);
-        set({ error: response.error || response.message || 'Fehler beim Umschalten' });
+        set({ error: response.error?.message || 'Fehler beim Umschalten' });
       }
     } catch (error) {
       // Revert optimistic update
@@ -228,4 +248,23 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
   clearError: () => set({ error: null }),
+  
+  // Cleanup function
+  cleanup: () => {
+    // Clear all pending requests
+    pendingRequests.clear();
+    // Reset state
+    set({
+      events: [],
+      loading: false,
+      error: null,
+      lastFetch: null
+    });
+  },
 }));
+
+// Global cleanup function
+export const cleanupEventsStore = () => {
+  pendingRequests.clear();
+  useEventsStore.getState().cleanup();
+};

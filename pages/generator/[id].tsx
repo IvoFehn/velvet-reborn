@@ -172,7 +172,7 @@ export default function GeneratorPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/generator?id=${id}`); // Passe API-Pfad an
+      const response = await fetch(`/api/gaming?action=generator&id=${id}`); // Passe API-Pfad an
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || `HTTP Fehler: ${response.status}`);

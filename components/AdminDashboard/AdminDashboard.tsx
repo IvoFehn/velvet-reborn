@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { checkAuth } from "../navigation/NavBar";
+import { checkAuth } from "../navigation/SimpleNavBar";
 import AdminHealthReports from "../AdminHealthReports/AdminHealthReports";
 import SanctionDashboard from "@/components/Sanctions/SanctionDashboard";
 import MoodLevelAdmin from "@/components/MoodLevelAdmin/MoodLevelAdmin";

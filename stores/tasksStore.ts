@@ -1,6 +1,9 @@
 import { create } from 'zustand';
-import { tasksApi } from '@/lib/api';
+import { zalandoApiClient } from '@/lib/api/client-v2';
 import type { CreateTaskPayload } from '@/lib/api/types';
+
+// Request deduplication map
+const pendingRequests = new Map<string, Promise<any>>();
 
 interface Task {
   _id: string;
@@ -41,6 +44,7 @@ interface TasksStore {
   clearError: () => void;
   shouldRefetch: () => boolean;
   invalidateCache: () => void;
+  cleanup: () => void;
   
   // Computed
   getCompletedTasks: () => Task[];
@@ -66,7 +70,7 @@ export const useTasksStore = create<TasksStore>((set, get) => ({
   // Invalidate cache
   invalidateCache: () => set({ lastFetch: null }),
 
-  // Fetch tasks from API
+  // Fetch tasks from API with request deduplication
   fetchTasks: async (force = false) => {
     const { loading, shouldRefetch } = get();
     
@@ -74,47 +78,61 @@ export const useTasksStore = create<TasksStore>((set, get) => ({
       return;
     }
 
-    set({ loading: true, error: null });
-
-    try {
-      const response = await tasksApi.list();
-      
-      if (response.success && response.data) {
-        set({ 
-          tasks: response.data, 
-          loading: false, 
-          error: null,
-          lastFetch: Date.now()
-        });
-      } else {
-        set({ 
-          loading: false, 
-          error: response.error || response.message || 'Fehler beim Laden der Aufgaben' 
-        });
-      }
-    } catch (error) {
-      set({ 
-        loading: false, 
-        error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
-      });
+    const requestKey = 'fetchTasks';
+    
+    // Return existing request if one is pending
+    if (pendingRequests.has(requestKey)) {
+      return pendingRequests.get(requestKey);
     }
+
+    const requestPromise = (async () => {
+      set({ loading: true, error: null });
+
+      try {
+        const response = await zalandoApiClient.tasks.list();
+        
+        if (response.data) {
+          set({ 
+            tasks: response.data as any, 
+            loading: false, 
+            error: null,
+            lastFetch: Date.now()
+          });
+        } else {
+          set({ 
+            loading: false, 
+            error: response.error?.message || 'Fehler beim Laden der Aufgaben' 
+          });
+        }
+      } catch (error) {
+        set({ 
+          loading: false, 
+          error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
+        });
+      } finally {
+        pendingRequests.delete(requestKey);
+      }
+    })();
+
+    pendingRequests.set(requestKey, requestPromise);
+    return requestPromise;
   },
 
   // Create new task
-  createTask: async (data) => {
+  createTask: async (data): Promise<Task | null> => {
     try {
-      const response = await tasksApi.create(data);
+      const response = await zalandoApiClient.tasks.create(data);
       
-      if (response.success && response.data) {
+      if (response.data) {
         // Add to local state immediately
         set(state => ({ 
-          tasks: [...state.tasks, response.data!],
+          tasks: [...state.tasks, response.data as any],
           error: null,
           lastFetch: Date.now()
         }));
-        return response.data;
+        return response.data as any;
       } else {
-        set({ error: response.error || response.message || 'Fehler beim Erstellen' });
+        set({ error: response.error?.message || 'Fehler beim Erstellen' });
         return null;
       }
     } catch (error) {
@@ -133,12 +151,12 @@ export const useTasksStore = create<TasksStore>((set, get) => ({
     }));
 
     try {
-      const response = await tasksApi.update(id, data);
+      const response = await zalandoApiClient.tasks.update(id, data);
       
-      if (response.success && response.data) {
+      if (response.data) {
         set(state => ({
           tasks: state.tasks.map(t => 
-            t._id === id ? response.data! : t
+            t._id === id ? response.data as any : t
           ),
           error: null,
           lastFetch: Date.now()
@@ -146,7 +164,7 @@ export const useTasksStore = create<TasksStore>((set, get) => ({
       } else {
         // Revert optimistic update
         await get().fetchTasks(true);
-        set({ error: response.error || response.message || 'Fehler beim Aktualisieren' });
+        set({ error: response.error?.message || 'Fehler beim Aktualisieren' });
       }
     } catch (error) {
       // Revert optimistic update
@@ -163,15 +181,10 @@ export const useTasksStore = create<TasksStore>((set, get) => ({
     }));
 
     try {
-      const response = await tasksApi.delete(id);
+      const response = await zalandoApiClient.tasks.delete(id);
       
-      if (response.success) {
-        set({ error: null, lastFetch: Date.now() });
-      } else {
-        // Revert optimistic update
-        await get().fetchTasks(true);
-        set({ error: response.error || response.message || 'Fehler beim Löschen' });
-      }
+      // Note: delete returns void, so check for no error
+      set({ error: null, lastFetch: Date.now() });
     } catch (error) {
       // Revert optimistic update
       await get().fetchTasks(true);
@@ -179,40 +192,64 @@ export const useTasksStore = create<TasksStore>((set, get) => ({
     }
   },
 
-  // Toggle task completion
+  // Toggle task completion with better race condition handling
   toggleTask: async (id) => {
-    // Optimistic update
-    set(state => ({
-      tasks: state.tasks.map(t => 
-        t._id === id ? { 
-          ...t, 
-          completed: !t.completed,
-          completedAt: !t.completed ? new Date() : undefined
-        } : t
-      )
-    }));
-
-    try {
-      const response = await tasksApi.toggle(id);
-      
-      if (response.success && response.data) {
-        set(state => ({
-          tasks: state.tasks.map(t => 
-            t._id === id ? response.data! : t
-          ),
-          error: null,
-          lastFetch: Date.now()
-        }));
-      } else {
-        // Revert optimistic update
-        await get().fetchTasks(true);
-        set({ error: response.error || response.message || 'Fehler beim Umschalten' });
-      }
-    } catch (error) {
-      // Revert optimistic update
-      await get().fetchTasks(true);
-      set({ error: error instanceof Error ? error.message : 'Unbekannter Fehler' });
+    const requestKey = `toggleTask-${id}`;
+    
+    // Prevent duplicate requests
+    if (pendingRequests.has(requestKey)) {
+      return pendingRequests.get(requestKey);
     }
+
+    const requestPromise = (async () => {
+      // Store original state for rollback
+      const originalTasks = [...get().tasks];
+      const currentTask = originalTasks.find(t => t._id === id);
+      
+      if (!currentTask) return;
+      
+      // Optimistic update
+      set(state => ({
+        tasks: state.tasks.map(t => 
+          t._id === id ? { 
+            ...t, 
+            completed: !t.completed,
+            completedAt: !t.completed ? new Date() : undefined
+          } : t
+        )
+      }));
+
+      try {
+        const response = await zalandoApiClient.tasks.complete(id);
+        
+        if (response.data) {
+          set(state => ({
+            tasks: state.tasks.map(t => 
+              t._id === id ? response.data as any : t
+            ),
+            error: null,
+            lastFetch: Date.now()
+          }));
+        } else {
+          // Revert to original state
+          set({ 
+            tasks: originalTasks,
+            error: response.error?.message || 'Fehler beim Umschalten' 
+          });
+        }
+      } catch (error) {
+        // Revert to original state
+        set({ 
+          tasks: originalTasks,
+          error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
+        });
+      } finally {
+        pendingRequests.delete(requestKey);
+      }
+    })();
+
+    pendingRequests.set(requestKey, requestPromise);
+    return requestPromise;
   },
 
   // Optimistic updates
@@ -247,4 +284,23 @@ export const useTasksStore = create<TasksStore>((set, get) => ({
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
   clearError: () => set({ error: null }),
+  
+  // Cleanup function
+  cleanup: () => {
+    // Clear all pending requests
+    pendingRequests.clear();
+    // Reset state
+    set({
+      tasks: [],
+      loading: false,
+      error: null,
+      lastFetch: null
+    });
+  },
 }));
+
+// Global cleanup function
+export const cleanupTasksStore = () => {
+  pendingRequests.clear();
+  useTasksStore.getState().cleanup();
+};

@@ -3,6 +3,15 @@ import React, { useState, useEffect } from "react";
 import questions, { Question } from "@/data/questions";
 import rulesData from "@/data/rules";
 
+// Deterministic shuffle using seed for SSR compatibility
+function seededRandom(seed: number) {
+  let value = seed;
+  return function() {
+    value = (value * 9301 + 49297) % 233280;
+    return value / 233280;
+  };
+}
+
 interface RulesQuizProps {
   onQuizPass?: () => void;
   onAccept?: () => void;
@@ -19,6 +28,7 @@ const RulesQuiz: React.FC<RulesQuizProps> = ({ onQuizPass, onAccept }) => {
   const [quizFinished, setQuizFinished] = useState<boolean>(false);
   const [showPasswordInput, setShowPasswordInput] = useState<boolean>(false);
   const [passwordInput, setPasswordInput] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Hilfsfunktion: Auswahl von 15 Fragen,
   // sodass wenn möglich zu jeder Regel mindestens eine Frage ausgewählt wird.
@@ -26,6 +36,11 @@ const RulesQuiz: React.FC<RulesQuizProps> = ({ onQuizPass, onAccept }) => {
     questionsList: Question[],
     count: number
   ): Question[] => {
+    // Use deterministic seed based on current date (changes daily)
+    const today = new Date();
+    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    const random = seededRandom(seed);
+    
     const groups: { [rule: string]: Question[] } = {};
     questionsList.forEach((q) => {
       if (!groups[q.rule]) groups[q.rule] = [];
@@ -36,7 +51,7 @@ const RulesQuiz: React.FC<RulesQuizProps> = ({ onQuizPass, onAccept }) => {
     // Eine Frage pro Gruppe (wenn Gruppenanzahl <= count)
     Object.values(groups).forEach((group) => {
       if (selected.length < count) {
-        const randomIndex = Math.floor(Math.random() * group.length);
+        const randomIndex = Math.floor(random() * group.length);
         selected.push(group[randomIndex]);
       }
     });
@@ -44,20 +59,28 @@ const RulesQuiz: React.FC<RulesQuizProps> = ({ onQuizPass, onAccept }) => {
     // Auffüllen bis count erreicht wird
     const remaining = questionsList.filter((q) => !selected.includes(q));
     while (selected.length < count && remaining.length > 0) {
-      const randIndex = Math.floor(Math.random() * remaining.length);
+      const randIndex = Math.floor(random() * remaining.length);
       selected.push(remaining[randIndex]);
       remaining.splice(randIndex, 1);
     }
 
-    return selected.sort(() => Math.random() - 0.5);
+    // Deterministic shuffle
+    return selected.sort(() => random() - 0.5);
   };
 
-  // Initialisiere das Quiz bei Erstladung
+  // Initialisiere das Quiz bei Erstladung - nur client-side
   useEffect(() => {
-    const selectedQuestions = selectRandomQuestions(questions, 15);
-    // Für jede Frage ein AnswerRecord anlegen, ohne Vorauswahl
-    const initialRecords = selectedQuestions.map((q) => ({ question: q }));
-    setQuizAnswers(initialRecords);
+    // Delay to ensure client-side execution
+    const initQuiz = () => {
+      const selectedQuestions = selectRandomQuestions(questions, 15);
+      // Für jede Frage ein AnswerRecord anlegen, ohne Vorauswahl
+      const initialRecords = selectedQuestions.map((q) => ({ question: q }));
+      setQuizAnswers(initialRecords);
+      setIsLoading(false);
+    };
+    
+    // Use setTimeout to ensure this runs after hydration
+    setTimeout(initQuiz, 0);
   }, []);
 
   const handleAnswerSelect = (answerIndex: number) => {
@@ -137,8 +160,19 @@ const RulesQuiz: React.FC<RulesQuizProps> = ({ onQuizPass, onAccept }) => {
     setShowPasswordInput(false);
   };
 
-  if (quizAnswers.length === 0) {
-    return <div>Lade Quiz...</div>;
+  // Show loading state during initial load and hydration
+  if (isLoading || quizAnswers.length === 0) {
+    return (
+      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-pulse">
+            <div className="h-4 bg-gray-300 rounded w-32 mx-auto mb-4"></div>
+            <div className="h-4 bg-gray-300 rounded w-24 mx-auto"></div>
+          </div>
+          <p className="mt-4 text-gray-600">Lade Quiz...</p>
+        </div>
+      </div>
+    );
   }
 
   // Styling Konstanten

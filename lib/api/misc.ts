@@ -1,4 +1,17 @@
 import { apiClient } from './client';
+import { 
+  ShopBuyPayload, 
+  CreateCoinBookPayload, 
+  CreateCoinItemPayload, 
+  CreateItemPayload, 
+  LevelThresholdsPayload, 
+  AddLootboxPayload, 
+  CreateWikiPagePayload, 
+  UpdateWikiPagePayload, 
+  TelegramMessagePayload, 
+  GoldWeightsPayload,
+  CreateNewsPayload
+} from './types';
 
 export const miscApi = {
   // Daily login operations
@@ -14,7 +27,7 @@ export const miscApi = {
 
   // Shop operations
   shop: {
-    buy: (data: { itemId: string; quantity?: number }, signal?: AbortSignal) => {
+    buy: (data: ShopBuyPayload, signal?: AbortSignal) => {
       return apiClient.post('/shop/buy', data, signal);
     }
   },
@@ -25,7 +38,7 @@ export const miscApi = {
       return apiClient.get('/coinbooks', undefined, signal);
     },
     
-    create: (data: any, signal?: AbortSignal) => {
+    create: (data: CreateCoinBookPayload, signal?: AbortSignal) => {
       return apiClient.post('/coinbooks', data, signal);
     }
   },
@@ -36,7 +49,7 @@ export const miscApi = {
       return apiClient.get('/coinitems', undefined, signal);
     },
     
-    create: (data: any, signal?: AbortSignal) => {
+    create: (data: CreateCoinItemPayload, signal?: AbortSignal) => {
       return apiClient.post('/coinitems', data, signal);
     }
   },
@@ -47,7 +60,7 @@ export const miscApi = {
       return apiClient.get('/items', undefined, signal);
     },
     
-    create: (data: any, signal?: AbortSignal) => {
+    create: (data: CreateItemPayload, signal?: AbortSignal) => {
       return apiClient.post('/items/create', data, signal);
     }
   },
@@ -58,7 +71,7 @@ export const miscApi = {
       return apiClient.get('/level-thresholds', undefined, signal);
     },
     
-    update: (data: any, signal?: AbortSignal) => {
+    update: (data: LevelThresholdsPayload, signal?: AbortSignal) => {
       return apiClient.put('/level-thresholds', data, signal);
     }
   },
@@ -69,7 +82,7 @@ export const miscApi = {
       return apiClient.get('/lootbox', undefined, signal);
     },
     
-    add: (data: any, signal?: AbortSignal) => {
+    add: (data: AddLootboxPayload, signal?: AbortSignal) => {
       return apiClient.post('/lootbox/add', data, signal);
     }
   },
@@ -80,7 +93,7 @@ export const miscApi = {
       return apiClient.get('/news', undefined, signal);
     },
     
-    create: (data: any, signal?: AbortSignal) => {
+    create: (data: CreateNewsPayload, signal?: AbortSignal) => {
       return apiClient.post('/news', data, signal);
     }
   },
@@ -95,11 +108,11 @@ export const miscApi = {
       return apiClient.get(`/wiki/${id}`, undefined, signal);
     },
     
-    create: (data: any, signal?: AbortSignal) => {
+    create: (data: CreateWikiPagePayload, signal?: AbortSignal) => {
       return apiClient.post('/wiki', data, signal);
     },
     
-    update: (id: string, data: any, signal?: AbortSignal) => {
+    update: (id: string, data: UpdateWikiPagePayload, signal?: AbortSignal) => {
       return apiClient.put(`/wiki/${id}`, data, signal);
     }
   },
@@ -113,11 +126,11 @@ export const miscApi = {
 
   // Telegram operations
   telegram: {
-    send: (data: { message: string; chatId?: string }, signal?: AbortSignal) => {
+    send: (data: TelegramMessagePayload, signal?: AbortSignal) => {
       return apiClient.post('/telegram', data, signal);
     },
     
-    sendMessage: (data: { message: string; chatId?: string }, signal?: AbortSignal) => {
+    sendMessage: (data: TelegramMessagePayload, signal?: AbortSignal) => {
       return apiClient.post('/sendMessage', data, signal);
     }
   },
@@ -128,7 +141,7 @@ export const miscApi = {
       return apiClient.get('/goldWeights', undefined, signal);
     },
     
-    update: (data: any, signal?: AbortSignal) => {
+    update: (data: GoldWeightsPayload, signal?: AbortSignal) => {
       return apiClient.put('/goldWeights', data, signal);
     }
   }

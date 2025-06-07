@@ -40,17 +40,17 @@ export default function SanctionsPage() {
       try {
         setLoading(true);
         const statusParam = activeTab !== "alle" ? `?status=${activeTab}` : "";
-        const response = await fetch(`/api/sanctions${statusParam}`);
+        const response = await fetch(`/api/content?type=sanctions${statusParam}`);
 
         if (!response.ok) {
           throw new Error("Fehler beim Abrufen der Sanktionen");
         }
 
         const data = await response.json();
-        if (data.success) {
-          setSanctions(data.data || []);
+        if (data.data) {
+          setSanctions(data.data.sanctions || []);
         } else {
-          throw new Error(data.message || "Fehler bei der Datenverarbeitung");
+          throw new Error(data.error?.message || "Fehler bei der Datenverarbeitung");
         }
       } catch (error) {
         setError(

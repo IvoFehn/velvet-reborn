@@ -161,7 +161,7 @@ function UserView() {
 
   const fetchOpenTickets = async () => {
     try {
-      const res = await fetch("/api/tickets?archived=false");
+      const res = await fetch("/api/content?type=tickets&archived=false");
       const data = await res.json();
       setOpenTickets(data.tickets || []);
     } catch (err) {
@@ -171,7 +171,7 @@ function UserView() {
 
   const fetchArchivedTickets = async () => {
     try {
-      const res = await fetch("/api/tickets?archived=true");
+      const res = await fetch("/api/content?type=tickets&archived=true");
       const data = await res.json();
       setArchivedTickets(data.tickets || []);
     } catch (err) {
@@ -181,7 +181,7 @@ function UserView() {
 
   const fetchGeneratorsForTicket = async () => {
     try {
-      const res = await fetch("/api/generator?exclude_status=DONE,DECLINED");
+      const res = await fetch("/api/gaming?action=generator&exclude_status=DONE,DECLINED");
       const data = await res.json();
       if (data.success) {
         setAvailableGenerators(data.data);
@@ -194,7 +194,7 @@ function UserView() {
 
   const fetchSanctionsForTicket = async () => {
     try {
-      const res = await fetch("/api/sanctions?status=offen,eskaliert");
+      const res = await fetch("/api/content?type=sanctions&status=offen,eskaliert");
       const data = await res.json();
       if (data.success) {
         setAvailableSanctions(data.data || []);
@@ -231,7 +231,7 @@ function UserView() {
     }
 
     try {
-      const res = await fetch("/api/tickets", {
+      const res = await fetch("/api/content?type=tickets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -253,7 +253,7 @@ function UserView() {
 
         if (selectedGeneratorId) {
           try {
-            const putRes = await fetch("/api/generator", {
+            const putRes = await fetch("/api/gaming?action=generator", {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -312,7 +312,7 @@ function UserView() {
     if (!id) return;
 
     try {
-      const res = await fetch(`/api/sanctions/${id}`);
+      const res = await fetch(`/api/content?type=sanctions&id=${id}`);
       const data = await res.json();
 
       if (data.success && data.data) {

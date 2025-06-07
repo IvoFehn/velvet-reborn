@@ -1,10 +1,5 @@
 import mongoose, { Document, Schema, Model, models } from "mongoose";
-
-/** Rating-Skala von 1 bis 5 */
-export type Rating = 1 | 2 | 3 | 4 | 5;
-
-/** News-Typen */
-export type NewsType = "general" | "review" | "failed";
+import { Rating, NewsType } from "../types/common";
 
 /** Basis-Interface für alle News */
 export interface INews extends Document {
@@ -69,16 +64,16 @@ const NewsSchemaFields = {
 
 /** Felder für Bewertungen (Reviews) */
 const ReviewFields = {
-  obedience: { type: Number, enum: [1, 2, 3, 4, 5] },
+  obedience: { type: Number, enum: [0, 1, 2, 3, 4, 5] },
   didSquirt: { type: Boolean },
-  vibeDuringSex: { type: Number, enum: [1, 2, 3, 4, 5] },
-  vibeAfterSex: { type: Number, enum: [1, 2, 3, 4, 5] },
-  orgasmIntensity: { type: Number, enum: [1, 2, 3, 4, 5] },
-  painlessness: { type: Number, enum: [1, 2, 3, 4, 5] },
+  vibeDuringSex: { type: Number, enum: [0, 1, 2, 3, 4, 5] },
+  vibeAfterSex: { type: Number, enum: [0, 1, 2, 3, 4, 5] },
+  orgasmIntensity: { type: Number, enum: [0, 1, 2, 3, 4, 5] },
+  painlessness: { type: Number, enum: [0, 1, 2, 3, 4, 5] },
   wasAnal: { type: Boolean },
-  ballsWorshipping: { type: Number, enum: [1, 2, 3, 4, 5] },
-  cumWorshipping: { type: Number, enum: [1, 2, 3, 4, 5] },
-  didEverythingForHisPleasure: { type: Number, enum: [1, 2, 3, 4, 5] },
+  ballsWorshipping: { type: Number, enum: [0, 1, 2, 3, 4, 5] },
+  cumWorshipping: { type: Number, enum: [0, 1, 2, 3, 4, 5] },
+  didEverythingForHisPleasure: { type: Number, enum: [0, 1, 2, 3, 4, 5] },
   bestMoment: { type: String },
   improvementSuggestion: { type: String },
   additionalNotes: { type: String },

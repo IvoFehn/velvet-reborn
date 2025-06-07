@@ -4,7 +4,7 @@
  */
 export async function addExp(amount: number) {
   try {
-    const response = await fetch("/api/profile/update", {
+    const response = await fetch("/api/user?action=profile", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ exp: amount }),

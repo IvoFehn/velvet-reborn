@@ -3,10 +3,10 @@ export async function sendTelegramMessage(
   message: string
 ) {
   try {
-    const response = await fetch("/api/sendMessage", {
+    const response = await fetch("/api/webhooks?service=telegram&action=send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role, message }),
+      body: JSON.stringify({ message: `[${role}] ${message}` }),
     });
 
     const result = await response.json();

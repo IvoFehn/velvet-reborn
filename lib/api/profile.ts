@@ -1,5 +1,11 @@
 import { apiClient } from './client';
-import { UpdateProfilePayload, AdminUpdatePayload } from './types';
+import { 
+  UpdateProfilePayload, 
+  AdminUpdatePayload, 
+  CreateProfilePayload, 
+  AddLootboxToProfilePayload, 
+  UpdateProfileItemPayload 
+} from './types';
 
 export const profileApi = {
   // Get profile data
@@ -18,12 +24,12 @@ export const profileApi = {
   },
 
   // Create profile
-  create: (data: any, signal?: AbortSignal) => {
+  create: (data: CreateProfilePayload, signal?: AbortSignal) => {
     return apiClient.post('/profile/create', data, signal);
   },
 
   // Add lootbox to profile
-  addLootbox: (data: any, signal?: AbortSignal) => {
+  addLootbox: (data: AddLootboxToProfilePayload, signal?: AbortSignal) => {
     return apiClient.post('/profile/add-lootbox', data, signal);
   },
 
@@ -33,7 +39,7 @@ export const profileApi = {
   },
 
   // Update profile item
-  updateItem: (itemId: string, data: any, signal?: AbortSignal) => {
+  updateItem: (itemId: string, data: UpdateProfileItemPayload, signal?: AbortSignal) => {
     return apiClient.put(`/profile/${itemId}`, data, signal);
   },
 

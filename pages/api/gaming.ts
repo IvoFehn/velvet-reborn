@@ -5,10 +5,9 @@ import Item from '@/models/Item';
 import Lootbox from '@/models/Lootbox';
 import LevelThresholds from '@/models/LevelThresholds';
 import CoinBook from '@/models/CoinBook';
-import CoinItem from '@/models/CoinItem';
 import Generator from '@/models/Generator';
 
-interface ApiResponse<T = any> {
+interface ApiResponse<T = unknown> {
   data?: T;
   meta?: {
     timestamp: string;
@@ -17,7 +16,7 @@ interface ApiResponse<T = any> {
   error?: {
     code: string;
     message: string;
-    details?: any[];
+    details?: string[];
     instance: string;
     timestamp: string;
   };
@@ -26,7 +25,7 @@ interface ApiResponse<T = any> {
 export default async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
   await dbConnect();
 
-  const { method, query } = req;
+  const { query } = req;
   const action = query.action as string;
 
   try {
@@ -74,10 +73,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
 // Shop Management
 async function handleShop(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
-  const { method, query } = req;
+  const { query } = req;
   const category = query.category as string;
 
-  if (method !== 'GET') {
+  if (req.method !== 'GET') {
     return res.status(405).json({
       error: {
         code: 'METHOD_NOT_ALLOWED',
@@ -88,7 +87,7 @@ async function handleShop(req: NextApiRequest, res: NextApiResponse<ApiResponse>
     });
   }
 
-  const filter: any = {};
+  const filter: Record<string, unknown> = {};
   if (category) filter.category = category;
 
   const items = await Item.find(filter).lean();
@@ -173,7 +172,7 @@ async function handlePurchase(req: NextApiRequest, res: NextApiResponse<ApiRespo
   
   if (!profile.inventory) profile.inventory = [];
   
-  const existingItem = profile.inventory.find(invItem => invItem.item.toString() === itemId);
+  const existingItem = profile.inventory.find((invItem: { item: { toString(): string }, quantity: number }) => invItem.item.toString() === itemId);
   if (existingItem) {
     existingItem.quantity += quantity;
   } else {
@@ -207,9 +206,7 @@ async function handlePurchase(req: NextApiRequest, res: NextApiResponse<ApiRespo
 
 // Coin Book System
 async function handleCoinBook(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
-  const { method } = req;
-
-  switch (method) {
+  switch (req.method) {
     case 'GET':
       const coinBook = await CoinBook.findOne({}).populate('items.item').lean();
       return res.status(200).json({
@@ -228,7 +225,7 @@ async function handleCoinBook(req: NextApiRequest, res: NextApiResponse<ApiRespo
         coinBook2 = new CoinBook({ items: [] });
       }
 
-      const existingEntry = coinBook2.items.find(entry => entry.item.toString() === itemId);
+      const existingEntry = coinBook2.items.find((entry: { item: { toString(): string }, amount: number }) => entry.item.toString() === itemId);
       if (existingEntry) {
         existingEntry.amount += amount;
       } else {
@@ -249,7 +246,7 @@ async function handleCoinBook(req: NextApiRequest, res: NextApiResponse<ApiRespo
       return res.status(405).json({
         error: {
           code: 'METHOD_NOT_ALLOWED',
-          message: `Method ${method} not allowed for coinbook`,
+          message: `Method ${req.method} not allowed for coinbook`,
           instance: '/api/gaming?action=coinbook',
           timestamp: new Date().toISOString(),
         }
@@ -341,10 +338,10 @@ async function handleSpin(req: NextApiRequest, res: NextApiResponse<ApiResponse>
 
 // Lootbox System
 async function handleLootbox(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
-  const { method, query } = req;
+  const { query } = req;
   const lootboxId = query.id as string;
 
-  switch (method) {
+  switch (req.method) {
     case 'GET':
       const lootboxes = await Lootbox.find({}).lean();
       return res.status(200).json({
@@ -423,7 +420,7 @@ async function handleLootbox(req: NextApiRequest, res: NextApiResponse<ApiRespon
       return res.status(405).json({
         error: {
           code: 'METHOD_NOT_ALLOWED',
-          message: `Method ${method} not allowed for lootbox`,
+          message: `Method ${req.method} not allowed for lootbox`,
           instance: '/api/gaming?action=lootbox',
           timestamp: new Date().toISOString(),
         }
@@ -433,9 +430,7 @@ async function handleLootbox(req: NextApiRequest, res: NextApiResponse<ApiRespon
 
 // Level System
 async function handleLevels(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
-  const { method } = req;
-
-  switch (method) {
+  switch (req.method) {
     case 'GET':
       const thresholds = await LevelThresholds.findOne({}).lean();
       return res.status(200).json({
@@ -465,7 +460,7 @@ async function handleLevels(req: NextApiRequest, res: NextApiResponse<ApiRespons
       return res.status(405).json({
         error: {
           code: 'METHOD_NOT_ALLOWED',
-          message: `Method ${method} not allowed for levels`,
+          message: `Method ${req.method} not allowed for levels`,
           instance: '/api/gaming?action=levels',
           timestamp: new Date().toISOString(),
         }
@@ -475,8 +470,6 @@ async function handleLevels(req: NextApiRequest, res: NextApiResponse<ApiRespons
 
 // Gold Weights System
 async function handleWeights(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
-  const { method } = req;
-
   // Simple placeholder - in real app would have a GoldWeights model
   const defaultWeights = {
     obedience: 1.0,
@@ -489,7 +482,7 @@ async function handleWeights(req: NextApiRequest, res: NextApiResponse<ApiRespon
     didEverythingForHisPleasure: 1.5,
   };
 
-  switch (method) {
+  switch (req.method) {
     case 'GET':
       return res.status(200).json({
         data: defaultWeights,
@@ -513,7 +506,7 @@ async function handleWeights(req: NextApiRequest, res: NextApiResponse<ApiRespon
       return res.status(405).json({
         error: {
           code: 'METHOD_NOT_ALLOWED',
-          message: `Method ${method} not allowed for weights`,
+          message: `Method ${req.method} not allowed for weights`,
           instance: '/api/gaming?action=weights',
           timestamp: new Date().toISOString(),
         }
@@ -523,10 +516,10 @@ async function handleWeights(req: NextApiRequest, res: NextApiResponse<ApiRespon
 
 // Generator System
 async function handleGenerator(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
-  const { method, query } = req;
+  const { query } = req;
   const subAction = query.subAction as string;
 
-  switch (method) {
+  switch (req.method) {
     case 'GET':
       const generators = await Generator.find({}).sort({ createdAt: -1 }).lean();
       return res.status(200).json({
@@ -587,7 +580,7 @@ async function handleGenerator(req: NextApiRequest, res: NextApiResponse<ApiResp
       return res.status(405).json({
         error: {
           code: 'METHOD_NOT_ALLOWED',
-          message: `Method ${method} not allowed for generator`,
+          message: `Method ${req.method} not allowed for generator`,
           instance: '/api/gaming?action=generator',
           timestamp: new Date().toISOString(),
         }
@@ -597,9 +590,7 @@ async function handleGenerator(req: NextApiRequest, res: NextApiResponse<ApiResp
 
 // Items Management
 async function handleItems(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
-  const { method } = req;
-
-  switch (method) {
+  switch (req.method) {
     case 'GET':
       const items = await Item.find({}).lean();
       return res.status(200).json({
@@ -627,7 +618,7 @@ async function handleItems(req: NextApiRequest, res: NextApiResponse<ApiResponse
       return res.status(405).json({
         error: {
           code: 'METHOD_NOT_ALLOWED',
-          message: `Method ${method} not allowed for items`,
+          message: `Method ${req.method} not allowed for items`,
           instance: '/api/gaming?action=items',
           timestamp: new Date().toISOString(),
         }

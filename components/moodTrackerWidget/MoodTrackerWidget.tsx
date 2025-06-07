@@ -44,7 +44,7 @@ const MoodTrackerWidget: React.FC = () => {
   useEffect(() => {
     const fetchCurrentMood = async (): Promise<void> => {
       try {
-        const response = await fetch("/api/mood/current");
+        const response = await fetch("/api/system?module=mood&action=current");
         if (!response.ok) {
           // Wenn kein Mood gefunden wurde, ist das okay
           if (response.status === 404) {
@@ -103,7 +103,7 @@ const MoodTrackerWidget: React.FC = () => {
 
     try {
       console.log("Updating mood with feeling:", feeling);
-      const response = await fetch("/api/mood", {
+      const response = await fetch("/api/system?module=mood", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -161,7 +161,7 @@ const MoodTrackerWidget: React.FC = () => {
         },
       };
 
-      const response = await fetch("/api/mood", {
+      const response = await fetch("/api/system?module=mood&action=submit", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

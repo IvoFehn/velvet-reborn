@@ -1,8 +1,134 @@
 // New Zalando-compliant API Client
-import { ApiResponse, ApiError } from './types';
+import { UpdateProfilePayload } from './types';
+import type { IProfile } from '../../models/Profile';
+import type { IInventoryItem } from '../../models/InventoryItem';
+import type { ISanction } from '../../types/index';
+import type { IEvent, EventData } from '../../models/Event';
+import type { IMood, MoodFeeling, HealthStatus } from '../../models/Mood';
+
+// Additional type definitions for API responses
+interface ShopItem {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  image?: string;
+}
+
+interface SpinReward {
+  type: 'gold' | 'exp' | 'keys';
+  amount: number;
+}
+
+interface LootboxReward {
+  type: 'gold' | 'exp' | 'keys';
+  amount: number;
+}
+
+
+interface IProfileStats {
+  level: number;
+  exp: number;
+  gold: number;
+  keys: number;
+  streakCount: number;
+  lastLogin?: Date;
+}
+
+interface TaskData {
+  _id?: string;
+  title: string;
+  description: string;
+  difficulty: number;
+  completed?: boolean;
+  type?: string;
+  goldReward?: number;
+  expReward?: number;
+  completedAt?: Date;
+}
+
+
+
+interface BulkCompleteResult {
+  completed: number;
+  matched: number;
+}
+
+interface EscalationResult {
+  escalatedCount: number;
+}
+
+interface InventoryActionResult {
+  message: string;
+  itemId: string;
+  remainingQuantity: number;
+  inventory: IInventoryItem[];
+}
+
+interface PurchaseResult {
+  purchased: {
+    item: string;
+    quantity: number;
+    totalCost: number;
+  };
+  profile: {
+    gold: number;
+    inventory: IInventoryItem[];
+  };
+}
+
+interface DailyLoginResult {
+  message: string;
+  rewards?: {
+    gold?: number;
+    exp?: number;
+    keys?: number;
+  };
+  profile: IProfileStats;
+}
+
+interface SpinResult {
+  reward: SpinReward;
+  cost: number;
+  profile: {
+    gold: number;
+    exp: number;
+    keys: number;
+  };
+}
+
+interface LootboxResult {
+  reward: LootboxReward;
+  lootbox: string;
+  profile: {
+    gold: number;
+    exp: number;
+    keys: number;
+  };
+}
+
+interface MoodSubmitData {
+  level: number;
+  note?: string;
+}
+
+interface MoodResult {
+  feeling: MoodFeeling;
+  healthStatus?: HealthStatus;
+  createdAt: Date;
+}
+
+// ApiError class definition
+class ApiError extends Error {
+  constructor(public message: string, public status: number, public code?: string) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
 
 // Zalando-compliant response format
-interface ZalandoApiResponse<T = any> {
+interface ZalandoApiResponse<T = unknown> {
   data?: T;
   meta?: {
     timestamp: string;
@@ -55,6 +181,26 @@ class ZalandoApiClient {
         );
       }
 
+      // Adapter for existing API format with 'success' field
+      if ('success' in data) {
+        if (!data.success) {
+          throw new ApiError(
+            data.error?.message || 'API request failed',
+            response.status,
+            data.error?.code
+          );
+        }
+        // Convert to Zalando format
+        return {
+          data: data.data,
+          meta: data.meta || {
+            timestamp: new Date().toISOString(),
+            version: '1.0'
+          }
+        };
+      }
+
+      // Already in Zalando format
       return data;
     } catch (error) {
       if (error instanceof ApiError) {
@@ -67,15 +213,15 @@ class ZalandoApiClient {
     }
   }
 
-  // Profile API
+  // IProfile API - adapted for existing user.ts API
   profile = {
     // Get current user profile
     getMe: (signal?: AbortSignal) => 
-      this.request<any>('/profiles/me', { signal }),
+      this.request<IProfile>('/user?action=profile', { signal }),
 
     // Update current user profile
-    updateMe: (data: any, signal?: AbortSignal) => 
-      this.request<any>('/profiles/me', {
+    updateMe: (data: UpdateProfilePayload, signal?: AbortSignal) => 
+      this.request<IProfile>('/user?action=profile', {
         method: 'PUT',
         body: JSON.stringify(data),
         signal
@@ -83,23 +229,23 @@ class ZalandoApiClient {
 
     // Get profile inventory
     getInventory: (signal?: AbortSignal) => 
-      this.request<any[]>('/profiles/me/inventory', { signal }),
+      this.request<IInventoryItem[]>('/user?action=inventory', { signal }),
 
     // Use inventory item
     useInventoryItem: (itemId: string, signal?: AbortSignal) => 
-      this.request<any>(`/profiles/me/inventory/${itemId}`, {
+      this.request<InventoryActionResult>(`/user?action=inventory&itemId=${itemId}`, {
         method: 'PUT',
         signal
       }),
 
     // Get profile stats
     getStats: (signal?: AbortSignal) => 
-      this.request<any>('/profiles/me/stats', { signal }),
+      this.request<IProfileStats>('/user?action=stats', { signal }),
   };
 
-  // Sanctions API
+  // ISanctions API
   sanctions = {
-    // List sanctions with filters
+    // List sanctions with filters - adapted for content.ts API
     list: (params?: {
       status?: string;
       category?: string;
@@ -107,7 +253,7 @@ class ZalandoApiClient {
       page?: number;
       size?: number;
     }, signal?: AbortSignal) => {
-      const searchParams = new URLSearchParams();
+      const searchParams = new URLSearchParams({ type: 'sanctions' });
       if (params) {
         Object.entries(params).forEach(([key, value]) => {
           if (value !== undefined) {
@@ -116,73 +262,73 @@ class ZalandoApiClient {
         });
       }
       const query = searchParams.toString();
-      return this.request<any[]>(`/sanctions${query ? `?${query}` : ''}`, { signal });
+      return this.request<ISanction[]>(`/content?${query}`, { signal });
     },
 
-    // Create sanction (random or custom)
+    // Create sanction (random or custom) - adapted for content.ts API
     create: (data: {
       type: 'random' | 'custom';
       severity?: number;
-      template?: any;
+      template?: Partial<ISanction>;
       reason?: string;
       deadlineDays?: number;
     }, signal?: AbortSignal) => 
-      this.request<any>('/sanctions', {
+      this.request<ISanction>('/content?type=sanctions', {
         method: 'POST',
         body: JSON.stringify(data),
         signal
       }),
 
-    // Get specific sanction
+    // Get specific sanction - adapted for content.ts API
     get: (id: string, signal?: AbortSignal) => 
-      this.request<any>(`/sanctions/${id}`, { signal }),
+      this.request<ISanction>(`/content?type=sanctions&id=${id}`, { signal }),
 
-    // Update sanction
-    update: (id: string, data: any, signal?: AbortSignal) => 
-      this.request<any>(`/sanctions/${id}`, {
+    // Update sanction - adapted for content.ts API
+    update: (id: string, data: Partial<ISanction>, signal?: AbortSignal) => 
+      this.request<ISanction>(`/content?type=sanctions&id=${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
         signal
       }),
 
-    // Delete sanction
+    // Delete sanction - adapted for content.ts API
     delete: (id: string, signal?: AbortSignal) => 
-      this.request<void>(`/sanctions/${id}`, {
+      this.request<void>(`/content?type=sanctions&id=${id}`, {
         method: 'DELETE',
         signal
       }),
 
-    // Complete sanction
+    // Complete sanction - adapted for content.ts API
     complete: (id: string, signal?: AbortSignal) => 
-      this.request<any>(`/sanctions/${id}/complete`, {
-        method: 'POST',
+      this.request<ISanction>(`/content?type=sanctions&action=complete&id=${id}`, {
+        method: 'PUT',
         signal
       }),
 
-    // Bulk complete sanctions
+    // Bulk complete sanctions - adapted for content.ts API
     bulkComplete: (sanctionIds?: string[], signal?: AbortSignal) => 
-      this.request<{ completed: number; matched: number }>('/sanctions/bulk-complete', {
+      this.request<BulkCompleteResult>('/content?type=sanctions&action=complete-all', {
         method: 'POST',
         body: JSON.stringify({ sanctionIds }),
         signal
       }),
 
-    // Escalate sanction
+    // Escalate sanction - adapted for content.ts API
     escalate: (id: string, signal?: AbortSignal) => 
-      this.request<any>(`/sanctions/${id}/escalate`, {
-        method: 'POST',
+      this.request<ISanction>(`/content?type=sanctions&action=escalate&id=${id}`, {
+        method: 'PUT',
         signal
       }),
 
-    // Check sanctions for escalation
+    // Check sanctions for escalation - adapted for content.ts API
     check: (signal?: AbortSignal) => 
-      this.request<{ escalatedCount: number }>('/sanctions/check', {
+      this.request<EscalationResult>('/content?type=sanctions&action=check', {
         method: 'POST',
         signal
       }),
   };
 
-  // Events API
+  // Events API - adapted for content.ts API
   events = {
     // List events
     list: (params?: {
@@ -193,7 +339,7 @@ class ZalandoApiClient {
       page?: number;
       size?: number;
     }, signal?: AbortSignal) => {
-      const searchParams = new URLSearchParams();
+      const searchParams = new URLSearchParams({ type: 'events' });
       if (params) {
         Object.entries(params).forEach(([key, value]) => {
           if (value !== undefined) {
@@ -202,10 +348,10 @@ class ZalandoApiClient {
         });
       }
       const query = searchParams.toString();
-      return this.request<any[]>(`/events${query ? `?${query}` : ''}`, { signal });
+      return this.request<IEvent[]>(`/content?${query}`, { signal });
     },
 
-    // Create event
+    // Create event - adapted for content.ts API
     create: (data: {
       title: string;
       description: string;
@@ -214,33 +360,33 @@ class ZalandoApiClient {
       type: string;
       isActive?: boolean;
     }, signal?: AbortSignal) => 
-      this.request<any>('/events', {
+      this.request<IEvent>('/content?type=events', {
         method: 'POST',
         body: JSON.stringify(data),
         signal
       }),
 
-    // Get specific event
+    // Get specific event - adapted for content.ts API
     get: (id: string, signal?: AbortSignal) => 
-      this.request<any>(`/events/${id}`, { signal }),
+      this.request<IEvent>(`/content?type=events&id=${id}`, { signal }),
 
-    // Update event
-    update: (id: string, data: any, signal?: AbortSignal) => 
-      this.request<any>(`/events/${id}`, {
+    // Update event - adapted for content.ts API
+    update: (id: string, data: Partial<EventData>, signal?: AbortSignal) => 
+      this.request<IEvent>(`/content?type=events&id=${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
         signal
       }),
 
-    // Delete event
+    // Delete event - adapted for content.ts API
     delete: (id: string, signal?: AbortSignal) => 
-      this.request<void>(`/events/${id}`, {
+      this.request<void>(`/content?type=events&id=${id}`, {
         method: 'DELETE',
         signal
       }),
   };
 
-  // Tasks API
+  // Tasks API - adapted for content.ts API
   tasks = {
     // List tasks
     list: (params?: {
@@ -251,7 +397,7 @@ class ZalandoApiClient {
       page?: number;
       size?: number;
     }, signal?: AbortSignal) => {
-      const searchParams = new URLSearchParams();
+      const searchParams = new URLSearchParams({ type: 'tasks' });
       if (params) {
         Object.entries(params).forEach(([key, value]) => {
           if (value !== undefined) {
@@ -260,10 +406,10 @@ class ZalandoApiClient {
         });
       }
       const query = searchParams.toString();
-      return this.request<any[]>(`/tasks${query ? `?${query}` : ''}`, { signal });
+      return this.request<TaskData[]>(`/content?${query}`, { signal });
     },
 
-    // Create task
+    // Create task - adapted for content.ts API
     create: (data: {
       title: string;
       description: string;
@@ -272,51 +418,51 @@ class ZalandoApiClient {
       goldReward?: number;
       expReward?: number;
     }, signal?: AbortSignal) => 
-      this.request<any>('/tasks', {
+      this.request<TaskData>('/content?type=tasks', {
         method: 'POST',
         body: JSON.stringify(data),
         signal
       }),
 
-    // Get specific task
+    // Get specific task - adapted for content.ts API
     get: (id: string, signal?: AbortSignal) => 
-      this.request<any>(`/tasks/${id}`, { signal }),
+      this.request<TaskData>(`/content?type=tasks&id=${id}`, { signal }),
 
-    // Update task
-    update: (id: string, data: any, signal?: AbortSignal) => 
-      this.request<any>(`/tasks/${id}`, {
+    // Update task - adapted for content.ts API
+    update: (id: string, data: Partial<TaskData>, signal?: AbortSignal) => 
+      this.request<TaskData>(`/content?type=tasks&id=${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
         signal
       }),
 
-    // Delete task
+    // Delete task - adapted for content.ts API
     delete: (id: string, signal?: AbortSignal) => 
-      this.request<void>(`/tasks/${id}`, {
+      this.request<void>(`/content?type=tasks&id=${id}`, {
         method: 'DELETE',
         signal
       }),
 
-    // Complete/toggle task
+    // Complete/toggle task - adapted for content.ts API
     complete: (id: string, signal?: AbortSignal) => 
-      this.request<any>(`/tasks/${id}/complete`, {
-        method: 'POST',
+      this.request<TaskData>(`/content?type=tasks&action=toggle&id=${id}`, {
+        method: 'PUT',
         signal
       }),
   };
 
-  // Profile Actions
+  // IProfile Actions
   profileActions = {
     // Daily login
     dailyLogin: (signal?: AbortSignal) => 
-      this.request<any>('/profiles/me/daily-login', {
+      this.request<DailyLoginResult>('/user?action=daily-login', {
         method: 'POST',
         signal
       }),
 
     // Open lootbox
     openLootbox: (lootboxId: string, signal?: AbortSignal) => 
-      this.request<any>('/profiles/me/lootbox', {
+      this.request<LootboxResult>('/gaming?action=lootbox', {
         method: 'POST',
         body: JSON.stringify({ lootboxId }),
         signal
@@ -324,7 +470,7 @@ class ZalandoApiClient {
 
     // Spin wheel
     spin: (signal?: AbortSignal) => 
-      this.request<any>('/profiles/me/spin', {
+      this.request<SpinResult>('/gaming?action=spin', {
         method: 'POST',
         signal
       }),
@@ -334,14 +480,14 @@ class ZalandoApiClient {
   shop = {
     // Get shop items
     getItems: (signal?: AbortSignal) => 
-      this.request<any[]>('/shop/items', { signal }),
+      this.request<ShopItem[]>('/gaming?action=shop', { signal }),
 
     // Purchase item
     purchase: (data: {
       itemId: string;
       quantity?: number;
     }, signal?: AbortSignal) => 
-      this.request<any>('/shop/purchase', {
+      this.request<PurchaseResult>('/gaming?action=purchase', {
         method: 'POST',
         body: JSON.stringify(data),
         signal
@@ -352,14 +498,11 @@ class ZalandoApiClient {
   mood = {
     // Get current mood
     getCurrent: (signal?: AbortSignal) => 
-      this.request<any>('/mood/current', { signal }),
+      this.request<IMood>('/system?module=mood&action=current', { signal }),
 
     // Submit mood
-    submit: (data: {
-      level: number;
-      note?: string;
-    }, signal?: AbortSignal) => 
-      this.request<any>('/mood/submit', {
+    submit: (data: MoodSubmitData, signal?: AbortSignal) => 
+      this.request<MoodResult>('/system?module=mood&action=submit', {
         method: 'POST',
         body: JSON.stringify(data),
         signal
@@ -367,7 +510,7 @@ class ZalandoApiClient {
 
     // Reset mood (admin)
     reset: (signal?: AbortSignal) => 
-      this.request<any>('/mood/reset', {
+      this.request<{ message: string }>('/system?module=mood&action=reset', {
         method: 'POST',
         signal
       }),

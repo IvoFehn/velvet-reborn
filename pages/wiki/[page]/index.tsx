@@ -1,7 +1,7 @@
 // pages/wiki/[page].tsx
 import { useEffect, useState } from "react";
 import Wiki from "@/components/Wiki/Wiki";
-import { checkAuth } from "@/components/navigation/NavBar";
+import { checkAuth } from "@/components/navigation/SimpleNavBar";
 
 export default function WikiPage() {
   const [isAuthed, setIsAuthed] = useState(false);

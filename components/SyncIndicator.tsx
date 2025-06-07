@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { Loader2, Wifi, WifiOff } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { useDataProvider } from './providers/DataProvider';
 

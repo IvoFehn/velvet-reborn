@@ -90,6 +90,13 @@ const TicketSchema = new Schema<ITicket>(
   }
 );
 
+// Add indexes for performance
+TicketSchema.index({ archived: 1 });
+TicketSchema.index({ sanctionsFrontendId: 1 });
+TicketSchema.index({ createdAt: -1 });
+TicketSchema.index({ responseDeadline: 1 });
+TicketSchema.index({ subject: 1 });
+
 // Calculate response deadline considering night hours (00:00 - 08:00)
 TicketSchema.methods.calculateResponseDeadline = function (
   this: ITicket,

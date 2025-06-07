@@ -1,8 +1,33 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm install:*)",
-      "Bash(rm:*)"
+      "*",
+      "Bash(*)",
+      "FileEditor(*)",
+      "FileSystem(*)",
+      "CodeExecution(*)",
+      "NetworkAccess(*)",
+      "SystemInfo(*)",
+      "ProcessManagement(*)",
+      "GitOperations(*)",
+      "PackageManager(*)",
+      "EnvironmentVariables(*)",
+      "ShellAccess(*)",
+      "DirectoryOperations(*)",
+      "FileOperations(*)",
+      "ScriptExecution(*)",
+      "TerminalAccess(*)",
+      "CommandExecution(*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(rg:*)",
+      "Bash(/home/ragou/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg \"style=.*margin.*auto\" --type tsx)",
+      "Bash(/home/ragou/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg \"style=.*margin.*auto\" --glob \"*.tsx\")",
+      "Bash(npm run dev:*)",
+      "Bash(rm:*)",
+      "Bash(npm run build:*)",
+      "Bash(curl:*)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }

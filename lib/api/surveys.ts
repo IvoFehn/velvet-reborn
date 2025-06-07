@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { SubmitSurveyPayload } from './types';
+import { SubmitSurveyPayload, CreateSurveyPayload } from './types';
 
 export const surveysApi = {
   // Get survey status
@@ -18,7 +18,7 @@ export const surveysApi = {
   },
 
   // Admin: Create new survey
-  adminCreate: (data: any, signal?: AbortSignal) => {
+  adminCreate: (data: CreateSurveyPayload, signal?: AbortSignal) => {
     return apiClient.post('/admin/surveys', data, signal);
   }
 };

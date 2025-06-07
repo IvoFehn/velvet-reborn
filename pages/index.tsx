@@ -56,7 +56,9 @@ export default function HomePage() {
 
   // Kombiniere Generatoren und Quick Tasks und sortiere nach Datum
   const combinedItems: CombinedItem[] = useMemo(() => {
-    const gens: CombinedItem[] = currentGenerators.map((g) => ({
+    // Sichere Array-Prüfung für Generatoren
+    const safeGenerators = Array.isArray(currentGenerators) ? currentGenerators : [];
+    const gens: CombinedItem[] = safeGenerators.map((g) => ({
       _id: g._id ?? "",
       title: g.dringlichkeit?.title || "Unbekannter Kunde",
       createdAt: g.createdAt,
@@ -65,7 +67,9 @@ export default function HomePage() {
       type: "generator",
     }));
 
-    const tasks: CombinedItem[] = quickTasks.map((t) => ({
+    // Sichere Array-Prüfung für QuickTasks
+    const safeQuickTasks = Array.isArray(quickTasks) ? quickTasks : [];
+    const tasks: CombinedItem[] = safeQuickTasks.map((t) => ({
       _id: t._id,
       title: t.title,
       createdAt: t.createdAt,
@@ -85,13 +89,16 @@ export default function HomePage() {
     (async () => {
       try {
         const res = await fetch(
-          "/api/generator?exclude_status=DONE&exclude_status=DECLINED"
+          "/api/gaming?action=generator&exclude_status=DONE&exclude_status=DECLINED"
         );
         if (!res.ok) throw new Error("Fehler beim Abrufen der Generatoren");
         const json = await res.json();
-        if (json.success) setCurrentGenerators(json.data);
-        else
-          throw new Error(json.message || "Fehler bei der Datenverarbeitung");
+        if (json.data && Array.isArray(json.data)) {
+          setCurrentGenerators(json.data);
+        } else {
+          console.warn("Generators API returned non-array data:", json);
+          setCurrentGenerators([]);
+        }
       } catch (e) {
         setErrorGenerators(e instanceof Error ? e.message : String(e));
       } finally {
@@ -104,12 +111,15 @@ export default function HomePage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/news?limit=20&type=review,failed");
+        const res = await fetch("/api/content?type=news&limit=20&category=review,failed");
         if (!res.ok) throw new Error("Fehler beim Abrufen der Nachrichten");
         const json = await res.json();
-        if (json.success) setNewsMessages(json.data);
-        else
-          throw new Error(json.message || "Fehler bei der Datenverarbeitung");
+        if (json.data && Array.isArray(json.data)) {
+          setNewsMessages(json.data);
+        } else {
+          console.warn("News API returned non-array data:", json);
+          setNewsMessages([]);
+        }
       } catch (e) {
         setNewsError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -122,12 +132,18 @@ export default function HomePage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/quicktasks?status=NEW&status=ACCEPTED");
+        const res = await fetch("/api/content?type=quicktasks&status=NEW&status=ACCEPTED");
         if (res.ok) {
           const json = await res.json();
-          if (json.success) setQuickTasks(json.data);
-          else setQuickTasks([]);
-        } else setQuickTasks([]);
+          if (json.data && Array.isArray(json.data)) {
+            setQuickTasks(json.data);
+          } else {
+            console.warn("QuickTasks API returned non-array data:", json);
+            setQuickTasks([]);
+          }
+        } else {
+          setQuickTasks([]);
+        }
       } catch {
         setQuickTasks([]);
       } finally {

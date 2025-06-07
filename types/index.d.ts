@@ -7,15 +7,16 @@ export interface ISanctionBase {
   title: string;
   description: string;
   task: string;
+  sanctionsFrontendId: string;
   severity: number;
   amount: number;
-  unit: "Minuten" | "Stunden" | "Tage" | "Mal";
+  unit: "Minuten" | "Stunden" | "Tage" | "Mal" | "Schläge" | "Stunden/Tag";
   status: "offen" | "erledigt" | "abgelaufen" | "eskaliert";
   createdAt: Date;
   deadline: Date;
   escalationFactor: number;
   escalationCount: number;
-  category: "Hausarbeit" | "Lernen" | "Sport" | "Soziales" | "Sonstiges";
+  category: "Hausarbeit" | "Lernen" | "Sport" | "Soziales" | "Sonstiges" | "Erotik" | "Anal" | "Spanking" | "Kraulen" | "Alleine einkaufen";
   reason?: string; // Begründung (optional)
 }
 

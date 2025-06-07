@@ -3,6 +3,16 @@ import React, { useState, useEffect } from "react";
 import RulesQuiz from "@/components/RulesQuiz/RulesQuiz";
 import sections from "@/data/rules";
 
+// Generate stable date string for SSR
+function getStableDateString(): string {
+  if (typeof window === 'undefined') {
+    // Server-side: return a generic date to prevent hydration mismatch
+    return 'aktuelle Fassung';
+  }
+  // Client-side: return actual formatted date
+  return new Date().toLocaleDateString('de-DE');
+}
+
 const LegalBook: React.FC = () => {
   const [hasAccepted, setHasAccepted] = useState<boolean>(false);
   const [hasPassedQuiz, setHasPassedQuiz] = useState<boolean>(false);
@@ -29,7 +39,7 @@ const LegalBook: React.FC = () => {
         <div className="mb-12 text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-3">Gesetzbuch</h1>
           <p className="text-gray-600 text-lg">
-            Aktuelle Fassung vom {new Date().toLocaleDateString("de-DE")}
+            Aktuelle Fassung vom {getStableDateString()}
           </p>
         </div>
 

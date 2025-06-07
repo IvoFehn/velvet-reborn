@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useSanctionsStore } from '@/stores/sanctionsStore';
 import type { CreateSanctionPayload, SanctionFilters } from '../lib/api';
 
@@ -12,11 +12,19 @@ export function useSanctions(filters?: SanctionFilters) {
     shouldRefetch
   } = useSanctionsStore();
 
+  // Memoize filters to prevent infinite re-renders
+  const memoizedFilters = useMemo(() => filters, [
+    filters?.status,
+    filters?.category,
+    filters?.severity
+  ]);
+
   useEffect(() => {
-    if (shouldRefetch(filters)) {
-      fetchSanctions(filters);
+    // Only fetch if no data and not loading
+    if (sanctions.length === 0 && !loading) {
+      fetchSanctions(memoizedFilters); // Direct call - Zustand actions are stable
     }
-  }, [fetchSanctions, shouldRefetch, JSON.stringify(filters)]);
+  }, [sanctions.length, loading, memoizedFilters]); // Remove fetchSanctions from dependencies
 
   return {
     data: sanctions,

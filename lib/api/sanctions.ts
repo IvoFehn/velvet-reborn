@@ -5,7 +5,7 @@ import type { ISanction } from '../../types/index.d';
 export const sanctionsApi = {
   // Get sanctions list with optional filters
   list: (filters?: SanctionFilters, signal?: AbortSignal) => {
-    return apiClient.get<ISanction[]>('/sanctions', filters, signal);
+    return apiClient.get<ISanction[]>('/sanctions', filters as Record<string, string | number | boolean>, signal);
   },
 
   // Create new sanction

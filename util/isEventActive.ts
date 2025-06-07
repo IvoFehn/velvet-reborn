@@ -8,14 +8,15 @@ export async function isEventActive(): Promise<boolean> {
     console.log("Überprüfe aktive Events mit vorhandener API...");
 
     // Nutze die bestehende Events-API
-    const response = await fetch("/api/events");
+    const response = await fetch("/api/content?type=events&active=true");
 
     if (!response.ok) {
       console.error("Fehler beim Abrufen der Events:", response.statusText);
       return false;
     }
 
-    const { events } = await response.json();
+    const responseData = await response.json();
+    const events = responseData.data;
 
     if (!events || !Array.isArray(events) || events.length === 0) {
       console.log("Keine Events vorhanden");
